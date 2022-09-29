@@ -1,0 +1,1 @@
+worker: node --experimental-json-modules ./dist/src/index.js

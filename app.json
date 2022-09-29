@@ -1,0 +1,45 @@
+{
+	"name": "lava",
+	"description": "A multi-purpose discord bot.",
+	"buildpacks": [
+		{
+			"url": "heroku/nodejs"
+		}
+	],
+	"formation": {
+		"web": {
+			"quantity": 1,
+			"size": "free"
+		}
+	},
+	"env": {
+		"DISCORD_TOKEN": {
+			"description": "Your discord bot's client token.",
+			"required": true
+		},
+		"AMARI_API_KEY": {
+			"description": "Your Amari API key. This key is used to make GET requests from Amari Bot.",
+			"required": true
+		},
+		"MONGO_URI": {
+			"description": "A mongodb connection string.",
+			"required": true
+		},
+		"MONGO_USER": {
+			"description": "Your mongodb username.",
+			"required": true
+		},
+		"MONGO_PASS": {
+			"description": "Your mongodb password.",
+			"required": true
+		},
+		"MONGO_DB_NAME": {
+			"description": "Your collection's database name.",
+			"value": "v5"
+		},
+		"SUPPORT_ID": {
+			"description": "Your bot's support server ID.",
+			"required": false
+		}
+	}
+}

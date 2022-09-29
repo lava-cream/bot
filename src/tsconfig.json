@@ -1,0 +1,18 @@
+{
+	"extends": "../tsconfig.base",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"module": "esnext",
+		"paths": {
+			"#lib/apis": ["lib/apis/index"],
+			"#lib/apis/*": ["lib/apis/*"],
+			"#lib/database": ["lib/database/index"],
+			"#lib/database/*": ["lib/database/*"],
+			"#lib/framework": ["lib/framework/index"],
+			"#lib/framework/*": ["lib/framework/*"],
+			"#lib/utilities": ["lib/utilities/index"],
+			"#lib/utilities/*": ["lib/utilities/*"],
+			"#pieces/*": ["pieces/*"],
+		}
+	}
+}
