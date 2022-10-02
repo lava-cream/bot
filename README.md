@@ -15,7 +15,7 @@
   <img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy">
 </a -->
 
-Lava runs on [Heroku](https://heroku.com) on a **free** plan. We are only granted **free 450 dyno hours (22 days)** to operate on their platform 24/7 since our team does not have any budget to operate the bot continuously. But starting November 1, 2022, the platform stated they will **no longer offer free tiers** since they found "abuse of their service" which we are confidently a part of. As a result, we had decided to remove the ability to host this on the aforementioned platform. Moreover, we had found an immediate solution so we are now **actively** finding another hosting service to resume Lava's operation.
+Lava runs on [Heroku](https://heroku.com) on a **free** plan. We were only granted **free 450 dyno hours (22 days)** to operate on their platform 24/7 since our team does not have any budget to operate the bot continuously. But starting November 1, 2022, the platform stated they will **no longer offer free tiers** since they found "abuse of their service" which we are confidently a part of. As a result, we had decided to remove the ability to host this on the aforementioned platform. Moreover, we had found an immediate solution so we are now **actively** finding another hosting service to resume Lava's operation.
 
 ## Requirements
 Hosting your own instance is an easy task but we are not offering you support for it. But to just start off really *basic* you must have the following:
