@@ -11,6 +11,7 @@ export class GuildMenuSchema extends SubSchema {
   @prop({ type: String })
   public name!: string;
 
+  // the limit is the limit on how many roles a member can only get from this role menu.
   @prop({ type: Number })
   public limit!: number;
 
@@ -21,8 +22,16 @@ export class GuildMenuSchema extends SubSchema {
     super(options.id);
     this.entries = new GuildMenuEntryManagerSchema();
     this.name = options.name;
-    this.limit = options.limit;
+    this.limit = GuildMenuSchema.getProperLimit(options.type, options.limit);
     this.type = options.type;
+  }
+
+  private static getProperLimit(type: GuildMenuSchemaTypes, limit: number): number {
+    return (<Record<GuildMenuSchemaTypes, number>>{
+      [GuildMenuSchemaTypes.Single]: 1,
+      [GuildMenuSchemaTypes.Limited]: limit,
+      [GuildMenuSchemaTypes.Multiple]: Infinity
+    })[type];
   }
 }
 
@@ -45,7 +54,7 @@ export class GuildMenuEntrySchema extends SubSchema {
   public emoji!: string;
 
   public constructor(options: OmitFunctions<GuildMenuEntrySchema>) {
-    super();
+    super(options.id);
     this.role = options.role;
     this.emoji = options.emoji;
   }

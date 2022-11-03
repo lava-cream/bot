@@ -8,6 +8,8 @@ import { PlayerUpgradesSchema } from './player.upgrades.schema.js';
 import { PlayerBetSchema } from './player.bet.schema.js';
 import { PlayerMultiplierSchema } from './player.multiplier.schema.js';
 import { PlayerAdvancementsManagerSchema } from './player.advancements.schema.js';
+import { PlayerPartyManagerSchema } from './player.party.schema.js';
+import { container } from '@sapphire/framework';
 
 export class PlayerSchema extends Schema {
   @prop({ type: () => PlayerWalletSchema, immutable: true, default: new PlayerWalletSchema() })
@@ -34,6 +36,9 @@ export class PlayerSchema extends Schema {
   @prop({ type: () => PlayerAdvancementsManagerSchema, immutable: true, default: new PlayerAdvancementsManagerSchema() })
   public readonly advancement!: PlayerAdvancementsManagerSchema;
 
+  @prop({ type: () => PlayerPartyManagerSchema, immutable: true, default: new PlayerPartyManagerSchema() })
+  public readonly party!: PlayerPartyManagerSchema;
+
   public get netWorth(): number {
     return this.wallet.value + this.bank.value;
   }
@@ -44,6 +49,17 @@ export class PlayerSchema extends Schema {
 
   public get minBet(): number {
     return Math.round(this.maxBet / 1_000);
+  }
+
+  public async calculateMultiplier() {
+    let multiplier = this.multiplier.value;
+
+    if (this.party.entries.length) {
+      const parties = await Promise.all(this.party.entries.map(p => container.db.parties.fetch(p.id)));
+      for (const party of parties.values()) multiplier += party.members.multiplier;
+    }
+
+    return multiplier;
   }
 }
 

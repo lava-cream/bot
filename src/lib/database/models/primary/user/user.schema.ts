@@ -2,8 +2,11 @@ import { Schema, CastDocument, CastJSON, prop, CreateResolvableSchemaType } from
 import { UserFriendManagerSchema } from './user.friend.schema.js';
 
 export const enum UserSchemaStatus {
+  // The user does not have any violation.
   None = 1,
+  // Blocked users cannot use the bot's features. This is revokeable.
   Blocked = 2,
+  // This is an unrevokeable block. The user's data is also wiped.
   Banned = 3
 }
 

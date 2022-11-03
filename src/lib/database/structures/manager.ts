@@ -21,6 +21,7 @@ export abstract class Manager<T extends Schema> extends BaseManager {
     this.cache = new Collection();
     this.model = getModelForClass(options.holds, {
       existingConnection: options.client.connection.connection ?? mongoose.connection,
+      existingMongoose: options.client.connection ?? mongoose,
       options: {
         allowMixed: Severity.ALLOW,
         customName: options.name

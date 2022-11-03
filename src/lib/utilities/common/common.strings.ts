@@ -3,6 +3,34 @@ import { DiscordSnowflake } from '@sapphire/snowflake';
 import { isNullOrUndefined } from '@sapphire/utilities';
 
 /**
+ * Transforms a numerical value into something humans could easily read. 
+ * The original {@link toReadable} util will be depreciated after the next minor release.
+ * This makes use of the internal {@link Intl} global namespace. Credits to Fireship.
+ * @param x The number to transform.
+ * @returns A shorthand number string.
+ * @since 6.0.0
+ */
+export function toNearestReadable(x: number): string {
+  const formatter = Intl.NumberFormat('en-US', { notation: 'compact' });
+  return formatter.format(x);
+}
+
+/**
+ * Creates a "Now" identification string based on a specific date.
+ * A "Now" id string has the following characteristics:
+ * * It's only 6 characters long.
+ * * All characters are alphanumeric.
+ * * All non-numerical characters are uppercased.
+ * * It always ends with the number zero (0).
+ * @param date A date object which the util should rely on.
+ * @returns A unique identification string.
+ * @since 6.0.0
+ */
+export function createNowId(date = new Date()): string {
+  return Math.round(date.getTime() * 0xffffff).toString(36).toUpperCase().slice(-7, -1);
+}
+
+/**
  * Transforms the value against the base number into a percent.
  * @param value The value.
  * @param base The ceiling.

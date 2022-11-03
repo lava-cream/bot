@@ -16,8 +16,11 @@ export class UserFriendSchema extends SubSchema {
 }
 
 export const enum UserFriendStatus {
+  // The recepient is yet to accept the request.
   Pending = 1,
+  // Pretty self-explanatory.
   Friend = 2,
+  // Pretty self-explanatory. 
   Blocked = 3
 }
 
