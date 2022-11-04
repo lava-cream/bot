@@ -11,10 +11,18 @@ export default class OwnerOnlyPrecondition extends Precondition {
   }
 
   private async sharedRun(user: User) {
-    if (!user.client.isReady()) return this.ok();
+    if (!user.client.isReady()) {
+      return this.error({
+        identifier: this.name,
+        message: 'The bot is still loading...'
+      });
+    }
 
     const app = await user.client.application.fetch();
-    return app.owner?.id === user.id ? this.ok() : this.error({ identifier: this.name });
+
+    return app.owner?.id !== user.id 
+      ? this.error({ identifier: this.name })
+      : this.ok();
   }
 
   public override messageRun(message: Message) {

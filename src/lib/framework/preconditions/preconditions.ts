@@ -10,11 +10,11 @@ export const enum PreconditionNames {
    */
   UserAccountAge = 'UserAccountAge',
   /**
-   * Guild Block Status
+   * Guild Status
    * -----
-   * This precondition prevents any user from running any commands inside a guild who's blocked from using the bot.
+   * This precondition controls whether the guild can or cannot use the bot.
    */
-  GuildBlockStatus = 'GuildBlockStatus',
+  GuildStatus = 'GuildStatus',
   /**
    * User Owner Only
    * -----
@@ -24,13 +24,13 @@ export const enum PreconditionNames {
   /**
    * User Staff Permissions
    * -----
-   * This precondition prevents a user from running staff-only commands. Staff-only commands are configured on a guild basis and should be managed by people with `Administrator` permissions.
+   * This precondition allows or disallows a user from running bot staff-only commands.
    */
   UserStaffPermissions = 'UserStaffPermissions',
   /**
-   * User Block Status
+   * User Status
    * -----
-   * This precondition prevents a user from running commands because they were blocked by the bot owner.
+   * This precondition controls whether the user can or cannot use the bot.
    */
-  UserBlockStatus = 'UserBlockStatus'
+  UserStatus = 'UserStatus'
 }

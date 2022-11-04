@@ -8,7 +8,7 @@ import type { User } from 'discord.js';
 
 export default class UserBlockPrecondition extends Precondition {
   public constructor(context: PieceContext) {
-    super(context, { name: PreconditionNames.UserBlockStatus, position: 1 });
+    super(context, { name: PreconditionNames.UserStatus, position: 1 });
   }
 
   public async sharedRun(user: User) {
@@ -32,6 +32,6 @@ export default class UserBlockPrecondition extends Precondition {
 
 declare module '@sapphire/framework' {
   interface Preconditions {
-    [PreconditionNames.UserBlockStatus]: never;
+    [PreconditionNames.UserStatus]: never;
   }
 }

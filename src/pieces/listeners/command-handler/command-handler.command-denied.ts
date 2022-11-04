@@ -1,7 +1,6 @@
 import { PreconditionNames } from '#lib/framework';
-import { joinAnd } from '#lib/utilities';
+import { joinAnd, send } from '#lib/utilities';
 import { bold } from '@discordjs/builders';
-import { MessageBuilder } from '@sapphire/discord.js-utilities';
 import type { ChatInputCommandDeniedPayload, Preconditions, UserError } from '@sapphire/framework';
 import { Events, Identifiers, Listener } from '@sapphire/framework';
 import { Constants, MessageEmbed } from 'discord.js';
@@ -13,20 +12,12 @@ export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatI
 
   public async run(error: UserError, payload: ChatInputCommandDeniedPayload) {
     const embed = new MessageEmbed({ color: Constants.Colors.RED });
-    const content = new MessageBuilder().setEmbeds([embed]);
-    const { interaction } = payload;
 
-    this.renderEmbed(embed, error, payload);
-    if (interaction.deferred) {
-      await interaction.editReply(content);
-    } else if (interaction.replied) {
-      await interaction.followUp(content);
-    } else {
-      await interaction.reply(content);
-    }
+    this.renderEmbedBasedOnThePreconditionSapphireHasThrownErrorTo(embed, error, payload);
+    await send(payload.interaction, builder => builder.addEmbed(() => embed));
   }
 
-  private renderEmbed(embed: MessageEmbed, error: UserError, _payload: ChatInputCommandDeniedPayload): void {
+  private renderEmbedBasedOnThePreconditionSapphireHasThrownErrorTo(embed: MessageEmbed, error: UserError, _payload: ChatInputCommandDeniedPayload): void {
     switch (error.identifier as Identifiers & PreconditionNames) {
       case PreconditionNames.UserStaffPermissions: {
         embed.setTitle('Missing Staff Permissions').setDescription(`You need to have the configured staff role to run this command!`);
@@ -38,7 +29,7 @@ export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatI
         break;
       }
 
-      case PreconditionNames.UserBlockStatus: {
+      case PreconditionNames.UserStatus: {
         embed.setTitle('User Blocked').setDescription("You're currently blocked from using this bot.");
         break;
       }
@@ -48,8 +39,8 @@ export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatI
         break;
       }
 
-      case PreconditionNames.GuildBlockStatus: {
-        embed.setTitle('Server Blocked').setDescription('This server is blocked from the bot therefore anyone from this server cannot use this bot.');
+      case PreconditionNames.GuildStatus: {
+        embed.setTitle('Server Blocked').setDescription(error.message);
         break;
       }
 
@@ -88,7 +79,7 @@ export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatI
       case Identifiers.PreconditionMissingChatInputHandler:
       case Identifiers.PreconditionMissingContextMenuHandler:
       case Identifiers.PreconditionMissingMessageHandler: {
-        embed.setTitle("I'm Clueless").setDescription('IDK but this command does not this command type anymore.');
+        embed.setTitle("I'm Clueless").setDescription('IDK but this command does not run from this command type anymore.');
         break;
       }
 
