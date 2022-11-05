@@ -1,7 +1,7 @@
 import type { GuildCacheMessage, CacheType, CommandInteraction, ButtonInteraction, SelectMenuInteraction } from 'discord.js';
 import { type BuilderCallback, InteractionMessageContentBuilder } from '#lib/utilities';
 import { isFunction } from '@sapphire/utilities';
-import { fromAsync } from '@sapphire/result';
+import { Result } from '@sapphire/result';
 
 /**
  * Represents a responder target.
@@ -62,6 +62,6 @@ export async function edit<Cached extends CacheType>(
  * @since 6.0.0
  */
 export async function unsend<Cached extends CacheType, Target extends ResponderTarget<Cached>>(target: Target): Promise<boolean> {
-  const result = await fromAsync(target.deleteReply());
-  return result.success;
+  const result = await Result.fromAsync(target.deleteReply());
+  return result.isOk();
 }

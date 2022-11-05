@@ -3,11 +3,11 @@ import { ApplyOptions } from '@sapphire/decorators';
 
 import * as Common from '#lib/utilities/common/index.js';
 import * as Discord from '#lib/utilities/discord/index.js';
-import { MessageContentBuilder } from '#lib/utilities/discord/index.js';
 import * as Coinflip from '#lib/utilities/games/coinflip/index.js';
 import { bold } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
+import { InteractionMessageContentBuilder } from '#lib/utilities';
 
 declare module '#lib/framework/structures/game/game.types' {
   interface Games {
@@ -33,14 +33,20 @@ export default class CoinFlipGame extends Game {
         const contextual = button.user.id === context.command.user.id;
         await button.deferUpdate();
         return contextual;
+      },
+      end: async (ctx) => {
+        if (ctx.wasInternallyStopped()) {
+          await context.edit(this.renderMainContent(context, game, true));
+          await context.end(true);
+        }
       }
     });
 
-    for (const customId of Object.values(Coinflip.Side)) {
-      const componentId = Discord.createComponentId({ customId, date: new Date(context.command.createdTimestamp) });
+    for (const componentId of Object.values(Coinflip.Side)) {
+      const customId = context.customId.create(componentId);
 
-      collector.actions.add(componentId.customId, async (ctx) => {
-        game.pick.call(game, customId);
+      collector.actions.add(customId.id, async (ctx) => {
+        game.pick.call(game, componentId);
 
         switch (true) {
           case game.isWin(): {
@@ -73,18 +79,11 @@ export default class CoinFlipGame extends Game {
       });
     }
 
-    collector.setEndAction(async (ctx) => {
-      if (ctx.wasInternallyStopped()) {
-        await ctx.message.edit(this.renderMainContent(context, game, true));
-        await context.end(true);
-      }
-    });
-
     await collector.start();
   }
 
-  private renderMainContent(context: Game.Context, game: Coinflip.Logic, ended: boolean, won = 0): MessageContentBuilder {
-    return new MessageContentBuilder()
+  private renderMainContent(context: Game.Context, game: Coinflip.Logic, ended: boolean, won = 0) {
+    return new InteractionMessageContentBuilder()
       .addEmbed((embed) =>
         embed
           .setAuthor({
@@ -103,12 +102,12 @@ export default class CoinFlipGame extends Game {
           )
           .setColor(!ended ? Constants.Colors.BLURPLE : game.isWin() ? Constants.Colors.GREEN : Constants.Colors.RED)
       )
-      .addComponentRow((row) =>
+      .addRow((row) =>
         Object.values(Coinflip.Side).reduce(
           (row, customId) =>
             row.addButtonComponent((btn) =>
               btn
-                .setCustomId(Discord.createComponentId({ customId, date: new Date(context.command.createdTimestamp) }).customId)
+                .setCustomId(context.customId.create(customId).id)
                 .setLabel(toTitleCase(customId))
                 .setDisabled(ended)
                 .setStyle(

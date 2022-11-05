@@ -1,11 +1,11 @@
 import type { DonationDeskEntryQuestionSchema, DonationDeskEntrySchema, DonationDeskSchema } from '#lib/database';
-import { edit, Collector, getGuildIconURL, getHighestRoleColor, getUserAvatarURL, join, MessageActionRowBuilder, minutes } from '#lib/utilities';
+import { Collector, getGuildIconURL, getHighestRoleColor, getUserAvatarURL, join, MessageActionRowBuilder, minutes } from '#lib/utilities';
 import { bold, memberNicknameMention, roleMention, userMention } from '@discordjs/builders';
 import { ApplyOptions } from '@sapphire/decorators';
 import { isTextChannel } from '@sapphire/discord.js-utilities';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { chunk, isNullOrUndefined, noop } from '@sapphire/utilities';
-import type { Option } from '@sapphire/framework/node_modules/@sapphire/result';
+import type { Option } from '@sapphire/result';
 import type { MessageOptions, ModalActionRowComponent, SelectMenuInteraction, WebhookEditMessageOptions } from 'discord.js';
 import { Constants, MessageActionRow, MessageEmbed, Modal, TextInputComponent } from 'discord.js';
 
@@ -108,7 +108,7 @@ export class DonationDeskInteractionHandler extends InteractionHandler {
                 });
 
                 for (const response of responses.values()) {
-                  request?.create({
+                  request?.data.create({
                     id: response.question.id,
                     response: response.value!
                   });

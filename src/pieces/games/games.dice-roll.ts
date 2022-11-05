@@ -1,5 +1,5 @@
 import { Game } from '#lib/framework';
-import { Collector, percent, getUserAvatarURL, createComponentId, join, seconds } from '#lib/utilities';
+import { Collector, percent, getUserAvatarURL, join, seconds } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
 import { ApplyOptions } from '@sapphire/decorators';
 import { WebhookEditMessageOptions, Constants, MessageEmbed, MessageButton, MessageActionRow } from 'discord.js';
@@ -37,16 +37,16 @@ export class DiceRollGame extends Game {
       iconURL: getUserAvatarURL(ctx.command.user)
     });
     const button = new MessageButton()
-      .setCustomId(createComponentId({ date: new Date(ctx.command.createdTimestamp), customId: 'reveal' }).customId)
+      .setCustomId(ctx.customId.create('reveal').id)
       .setDisabled(game.hasBothRolled());
     const row = new MessageActionRow().setComponents([button]);
 
     for (const user of [ctx.command.user, ctx.command.client.user!]) {
-      embed.addField(
-        user.username,
-        `Rolled a ${inlineCode(game.hasBothRolled() ? (user.id === ctx.command.user.id ? game.player.value : game.opponent.value).toString() : '?')}`,
-        true
-      );
+      embed.addFields({
+        name: user.username,
+        value: `Rolled a ${inlineCode(game.hasBothRolled() ? (user.id === ctx.command.user.id ? game.player.value : game.opponent.value).toString() : '?')}`,
+        inline: true
+      });
     }
 
     switch (true) {
@@ -118,10 +118,11 @@ export class DiceRollGame extends Game {
           const contextual = button.user.id === context.command.user.id;
           await button.deferUpdate();
           return contextual;
-        }
+        },
+        end: ctx => ctx.wasInternallyStopped() ? reject() : void 0
       });
 
-      collector.actions.add(createComponentId({ date: new Date(context.command.createdTimestamp), customId: 'reveal' }).customId, async (ctx) => {
+      collector.actions.add(context.customId.create('reveal').id, async (ctx) => {
         game.roll();
 
         await ctx.interaction.editReply(this.updateAndRenderMainContent(context, game));
@@ -130,7 +131,6 @@ export class DiceRollGame extends Game {
         return resolve();
       });
 
-      collector.setEndAction((ctx) => (ctx.wasInternallyStopped() ? reject() : void 0));
 
       await collector.start();
     });

@@ -17,7 +17,7 @@ export class DonationDeskManager extends Manager<DonationDeskSchema> {
 
     const channel = Resolvers.resolveGuildTextChannel(db.channels.desk.id, command.guild);
     if (channel.isErr()) {
-      if (!isNullOrUndefined(db.channels.desk.id)) await db.run((db) => db.channels.desk.update({ id: null, message: null })).save();
+      if (!isNullOrUndefined(db.channels.desk.id)) await db.run((db) => db.channels.desk.setId(null).setMessage(null)).save();
       return false;
     }
 

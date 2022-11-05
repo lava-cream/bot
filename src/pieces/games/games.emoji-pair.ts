@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { Collector, seconds, createComponentId, getUserAvatarURL, join, MessageContentBuilder } from '#lib/utilities';
+import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder } from '#lib/utilities';
 import { Game } from '#lib/framework/index.js';
 import { Constants, MessageEmbed } from 'discord.js';
 import { bold } from '@discordjs/builders';
@@ -37,13 +37,13 @@ export class EmojiPairGame extends Game {
           const context = button.user.id === ctx.command.user.id;
           await button.deferUpdate();
           return context;
-        }
+        },
+        end: ctx => ctx.wasInternallyStopped() ? resolve() : reject()
       });
 
-      collector.actions.add(createComponentId({ date: new Date(ctx.command.createdTimestamp), customId: 'reveal' }).customId, (ctx) =>
+      collector.actions.add(ctx.customId.create('reveal').id, (ctx) =>
         ctx.collector.stop(ctx.interaction.customId)
       );
-      collector.setEndAction((ctx) => (ctx.wasInternallyStopped() ? resolve() : reject()));
 
       await collector.start();
     });
@@ -51,10 +51,10 @@ export class EmojiPairGame extends Game {
 
   private static renderContent(logic: EmojiPair.Logic, ctx: Game.Context, ended: boolean) {
     const embed = new MessageEmbed().setAuthor({ name: `${ctx.command.user.username}'s pairing game`, iconURL: getUserAvatarURL(ctx.command.user) });
-    const builder = new MessageContentBuilder().addComponentRow((row) =>
+    const builder = new InteractionMessageContentBuilder().addRow((row) =>
       row.addButtonComponent((btn) =>
         btn
-          .setCustomId(createComponentId({ date: new Date(ctx.command.createdTimestamp), customId: 'reveal' }).customId)
+          .setCustomId(ctx.customId.create('reveal').id)
           .setLabel('Reveal')
           .setDisabled(ended)
           .setStyle(
@@ -102,7 +102,7 @@ export class EmojiPairGame extends Game {
       }
     }
 
-    return builder.setEmbeds([embed.setDescription(join(description))]);
+    return builder.addEmbed(() => embed.setDescription(join(description)));
   }
 
   /**

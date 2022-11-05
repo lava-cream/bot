@@ -23,6 +23,48 @@ import { fetch, FetchResultTypes } from '@sapphire/fetch';
 import { DiscordSnowflake } from '@sapphire/snowflake';
 
 /**
+ * Represents the util for creating custom message component IDs. 
+ * @since 6.0.0
+ */
+export class ComponentId {
+  /**
+   * The util's constructor.
+   * @param date The date to base on.
+   */
+  public constructor(public date = new Date()) {}
+
+  /**
+   * Sets the new date context.
+   * @param date The new date object to set.
+   * @returns This util.
+   */
+  public setDate(date: Date): this {
+    this.date = date;
+    return this;
+  }
+
+  /**
+   * Creates an ID with a snowflake assigned in it.
+   * @param id The id to create.
+   * @returns A {@link CustomId} object.
+   */
+  public create<Id extends string>(id: Id): CustomId<Id> {
+    return {
+      parts: { 
+        id, 
+        snowflake: DiscordSnowflake.generate({ timestamp: this.date.getTime() }) 
+      },
+      get id() { 
+        return `${this.parts.snowflake}:${this.parts.id}` as const; 
+      },
+      toString() {
+        return this.id;
+      }
+    };
+  }
+}
+
+/**
  * Checks if a command contains a subcommand group.
  * @template Cached The command interaction's cache type.
  * @param command The command interaction to check from.
@@ -47,8 +89,8 @@ export function isCommandInteractionExpired<Cached extends CacheType>(command: C
  * Checks if an option from a subcommand in a command interaction exists.
  * @template Cached The command interaction's cached type.
  * @param command The source command interaction.
- * @param subcommand The subcommand to check it from.
- * @param name The name of the option to check.
+ * @param subcommandGroup The subcommand group to check it from.
+ * @param subcommand The name of the subcommand to check.
  * @since 6.0.0
  */
 export function commandHasSubcommandOption<Cached extends CacheType>(
@@ -82,13 +124,7 @@ export function commandHasOption<Cached extends CacheType>(
  * @since 6.0.0
  */
 export function createComponentId<Id extends string = string>(id: Id, date = new Date()): CustomId<Id> {
-  return { 
-    id, 
-    snowflake: DiscordSnowflake.generate({ timestamp: date.getTime() }), 
-    toString() {
-      return `${this.snowflake}:${this.id}` as const;
-    } 
-  };
+  return new ComponentId(date).create(id);
 }
 
 /**
@@ -96,8 +132,11 @@ export function createComponentId<Id extends string = string>(id: Id, date = new
  * @since 6.0.0
  */
 export interface CustomId<out Id extends string> {
-  id: Id;
-  snowflake: bigint;
+  parts: {
+    id: Id;
+    snowflake: bigint;
+  };
+  readonly id: `${bigint}:${Id}`;
   toString(): `${bigint}:${Id}`;
 }
 

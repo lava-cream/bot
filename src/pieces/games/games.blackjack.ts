@@ -1,13 +1,13 @@
 import { Game } from '#lib/framework/index.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { getUserAvatarURL, createComponentId, join, MessageActionRowBuilder, seconds } from '#lib/utilities';
+import { getUserAvatarURL, join, seconds, InteractionMessageContentBuilder } from '#lib/utilities';
 import { Collector } from '#lib/utilities/discord/index.js';
 import * as Blackjack from '#lib/utilities/games/blackjack/index.js';
 import { bold, hyperlink, inlineCode } from '@discordjs/builders';
 import { isNullOrUndefined, toTitleCase } from '@sapphire/utilities';
-import type { ButtonInteraction, InteractionReplyOptions, MessageEditOptions, WebhookEditMessageOptions } from 'discord.js';
-import { Constants, MessageEmbed } from 'discord.js';
+import type { ButtonInteraction } from 'discord.js';
+import { Constants } from 'discord.js';
 
 enum Control {
   HIT = 'hit',
@@ -32,7 +32,7 @@ export default class BlackjackGame extends Game {
   public async play(context: Game.Context) {
     const game = new Blackjack.Logic(context.command.user, context.command.client!.user!);
     const collector = new Collector({
-      message: await context.respond(<InteractionReplyOptions>BlackjackGame.renderMainContent(context, game)),
+      message: await context.respond(BlackjackGame.renderMainContent(context, game)),
       time: seconds(10),
       idle: seconds(10),
       componentType: 'BUTTON',
@@ -41,6 +41,13 @@ export default class BlackjackGame extends Game {
         const contextual = button.user.id === context.command.user.id;
         await button.deferUpdate();
         return contextual;
+      },
+      end: async (ctx) => {
+        if (ctx.wasInternallyStopped()) {
+          game.setOutcome(Blackjack.Outcome.OTHER, "You didn't respond in time.");
+          await context.edit(BlackjackGame.renderMainContent(context, game));
+          await context.end(true);
+        }
       }
     });
 
@@ -86,18 +93,18 @@ export default class BlackjackGame extends Game {
         }
       }
 
-      await button.editReply(<WebhookEditMessageOptions>BlackjackGame.renderMainContent(context, game));
+      await button.editReply(BlackjackGame.renderMainContent(context, game));
       if (!isNullOrUndefined(game.outcome)) {
         collector.collector!.stop('outcome');
         await context.end();
       }
     };
 
-    for (const customId of Object.values(Control)) {
-      const componentId = createComponentId({ customId, date: new Date(context.command.createdTimestamp) });
+    for (const componentId of Object.values(Control)) {
+      const customId = context.customId.create(componentId);
 
-      collector.actions.add(componentId.customId, async (ctx) => {
-        switch (customId) {
+      collector.actions.add(customId.id, async (ctx) => {
+        switch (componentId) {
           case Control.HIT: {
             ctx.collector.resetTimer();
 
@@ -130,21 +137,13 @@ export default class BlackjackGame extends Game {
       });
     }
 
-    collector.setEndAction(async (ctx) => {
-      if (ctx.wasInternallyStopped()) {
-        game.setOutcome(Blackjack.Outcome.OTHER, "You didn't respond in time.");
-        await ctx.message.edit(<MessageEditOptions>BlackjackGame.renderMainContent(context, game));
-        await context.end(true);
-      }
-    });
-
     await collector.start();
   }
 
   private static renderMainContent(
     context: Game.Context,
     game: Blackjack.Logic
-  ): WebhookEditMessageOptions | InteractionReplyOptions | MessageEditOptions {
+  ) {
     const renderCard = (card: Blackjack.Card, index: number, hide: boolean): string => {
       return hyperlink(`${inlineCode(index > 0 && hide ? '?' : `${card.suit} ${card.face}`)}`, 'https://discord.gg/memer');
     };
@@ -155,43 +154,47 @@ export default class BlackjackGame extends Game {
       ]);
     };
 
-    const embeds = [
-      new MessageEmbed()
-        .setAuthor({
-          name: `${game.player.user.username}'s blackjack game`,
-          iconURL: getUserAvatarURL(game.player.user)
-        })
-        .setColor(!isNullOrUndefined(game.outcome) ? Blackjack.Outcomes[game.outcome.outcome].color() : Constants.Colors.BLURPLE)
-        .setDescription(
-          isNullOrUndefined(game.outcome)
-            ? ''
-            : join([bold(`${Blackjack.Outcomes[game.outcome.outcome].message} ${game.outcome.reason}`), game.outcome.extra ?? ''])
-        )
-        .addField(`${game.player.user.username} (Player)`, renderHand(game.player, false), true)
-        .addField(
-          `${game.dealer.user.username} (Dealer)`,
-          renderHand(game.dealer, !isNullOrUndefined(game.outcome) ? false : !game.player.stood),
-          true
-        )
-        .setFooter({
-          text: isNullOrUndefined(game.outcome) ? 'K, Q, J = 10  |  A = 1 OR 11' : ''
-        })
-    ];
-
-    const components = [
-      Object.values(Control).reduce(
-        (row, customId) =>
-          row.addButtonComponent((btn) =>
-            btn
-              .setCustomId(createComponentId({ customId, date: new Date(context.command.createdTimestamp) }).customId)
-              .setDisabled(!isNullOrUndefined(game.outcome))
-              .setStyle(isNullOrUndefined(game.outcome) ? Constants.MessageButtonStyles.PRIMARY : Constants.MessageButtonStyles.SECONDARY)
-              .setLabel(toTitleCase(customId))
-          ),
-        new MessageActionRowBuilder()
+    return new InteractionMessageContentBuilder()
+      .addEmbed(embed => 
+        embed  
+          .setAuthor({
+            name: `${game.player.user.username}'s blackjack game`,
+            iconURL: getUserAvatarURL(game.player.user)
+          })
+          .setColor(!isNullOrUndefined(game.outcome) ? Blackjack.Outcomes[game.outcome.outcome].color() : Constants.Colors.BLURPLE)
+          .setDescription(
+            isNullOrUndefined(game.outcome)
+              ? ''
+              : join([bold(`${Blackjack.Outcomes[game.outcome.outcome].message} ${game.outcome.reason}`), game.outcome.extra ?? ''])
+          )
+          .addFields(
+            {
+              name: `${game.player.user.username} (Player)`, 
+              value: renderHand(game.player, false), 
+              inline: true
+            },
+            {
+              name: `${game.dealer.user.username} (Dealer)`,
+              value: renderHand(game.dealer, !isNullOrUndefined(game.outcome) ? false : !game.player.stood),
+              inline: true
+            }
+          )
+          .setFooter({
+            text: isNullOrUndefined(game.outcome) ? 'K, Q, J = 10  |  A = 1 OR 11' : ''
+          })
       )
-    ];
-
-    return { embeds, components };
+      .addRow(row => 
+        Object.values(Control).reduce(
+          (row, customId) =>
+            row.addButtonComponent((btn) =>
+              btn
+                .setCustomId(context.customId.create(customId).id)
+                .setDisabled(!isNullOrUndefined(game.outcome))
+                .setStyle(isNullOrUndefined(game.outcome) ? Constants.MessageButtonStyles.PRIMARY : Constants.MessageButtonStyles.SECONDARY)
+                .setLabel(toTitleCase(customId))
+            ),
+            row
+        )  
+      )
   }
 }

@@ -1,7 +1,7 @@
 import { Game } from '#lib/framework/index.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { createComponentId, join, percent, seconds, getUserAvatarURL, randomNumber, Collector, MessageContentBuilder } from '#lib/utilities';
+import { join, percent, seconds, getUserAvatarURL, randomNumber, Collector, InteractionMessageContentBuilder, ButtonBuilder } from '#lib/utilities';
 import * as Highlow from '#lib/utilities/games/highlow/index.js';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
@@ -30,7 +30,7 @@ export default class HighlowGame extends Game {
     const logic = new Highlow.Logic(1, 100);
 
     try {
-      await context.command.editReply(this.renderMainContent(context, logic, { raw: 0, final: 0 }));
+      await context.edit(this.renderMainContent(context, logic, { raw: 0, final: 0 }));
       await this.awaitAction(context, logic);
       await context.end();
     } catch {
@@ -39,12 +39,12 @@ export default class HighlowGame extends Game {
   }
 
   public renderMainContent(context: Game.Context, logic: Highlow.Logic, winnings: Game.CalculatedWinnings) {
-    return new MessageContentBuilder()
+    return new InteractionMessageContentBuilder<ButtonBuilder>()
       .addEmbed((embed) =>
         embed
           .setAuthor({
             iconURL: getUserAvatarURL(context.command.user),
-            name: `${context.command.user.username}'s${
+            name: `${context.command.user.username}'s ${
               !logic.hasGuessed() ? '' : logic.isJackpot() ? 'jackpot' : logic.isWin() ? 'winning' : 'losing'
             } high-low game`
           })
@@ -72,12 +72,12 @@ export default class HighlowGame extends Game {
                 )
           )
       )
-      .addComponentRow((row) =>
+      .addRow((row) =>
         Object.values(Control).reduce(
           (row, customId) =>
             row.addButtonComponent((btn) =>
               btn
-                .setCustomId(customId)
+                .setCustomId(context.customId.create(customId).id)
                 .setLabel(customId === Control.JACKPOT ? 'JACKPOT!' : toTitleCase(customId))
                 .setDisabled(logic.hasGuessed())
                 .setStyle(
@@ -108,14 +108,15 @@ export default class HighlowGame extends Game {
           const contextual = button.user.id === context.command.user.id;
           await button.deferUpdate();
           return contextual;
-        }
+        },
+        end: ctx => ctx.wasInternallyStopped() ? resolve() : reject()
       });
 
-      for (const customId of Object.values(Control)) {
-        const componentId = createComponentId({ customId, date: new Date(context.command.createdTimestamp) });
+      for (const componentId of Object.values(Control)) {
+        const customId = context.customId.create(componentId);
 
-        collector.actions.add(componentId.customId, async (ctx) => {
-          switch (componentId.customId) {
+        collector.actions.add(customId.id, async (ctx) => {
+          switch (customId.id) {
             case Control.HIGHER: {
               const winnings = Game.calculateWinnings({
                 base: 0.5,
@@ -168,8 +169,6 @@ export default class HighlowGame extends Game {
           }
         });
       }
-
-      collector.setEndAction((ctx) => (ctx.wasInternallyStopped() ? resolve() : reject()));
 
       await collector.start();
     });

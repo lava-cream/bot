@@ -18,7 +18,7 @@ export class DonationDeskEntrySchema extends SubSchema {
   public readonly requests!: DonationDeskEntryRequestManagerSchema;
 
   public constructor(options: OmitFunctions<Pick<DonationDeskEntrySchema, 'id' | 'name' | 'description'>>) {
-    super();
+    super(options.id);
     this.name = options.name;
     this.description = options.description;
     this.questions = new DonationDeskEntryQuestionManagerSchema();

@@ -61,7 +61,7 @@ export class DonationTrackerCategoryDonatorSchema extends SubSchema {
   public readonly season!: DonationTrackerCategoryDonatorSeasonSchema;
 
   public constructor(options: OmitFunctions<Omit<DonationTrackerCategoryDonatorSchema, 'season'>>) {
-    super();
+    super(options.id);
     this.amount = options.amount;
     this.count = options.count;
     this.season = new DonationTrackerCategoryDonatorSeasonSchema({ streak: 0, value: 0 });

@@ -1,5 +1,4 @@
 import type { Mutable } from '@sapphire/utilities';
-import { ok } from '@sapphire/result';
 import type { HexColorString } from 'discord.js';
 import { toHex } from './common.strings.js';
 import { randomItem } from './index.js';

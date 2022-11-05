@@ -1,8 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Game } from '#lib/framework/index.js';
 
-import { Collector, createComponentId, seconds, getUserAvatarURL, join, MessageContentBuilder } from '#lib/utilities';
-import { Constants, MessageEmbed, MessageButton } from 'discord.js';
+import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, ButtonBuilder } from '#lib/utilities';
+import { Constants, MessageEmbed } from 'discord.js';
 import { bold, inlineCode } from '@discordjs/builders';
 
 import * as SlotMachine from '#lib/utilities/games/slot-machine/index.js';
@@ -42,13 +42,11 @@ export default class SlotMachineGame extends Game {
           const context = button.user.id === ctx.command.user.id;
           await button.deferUpdate();
           return context;
-        }
+        },
+        end: ctx => ctx.wasInternallyStopped() ? resolve() : reject()
       });
 
-      collector.actions.add(createComponentId({ date: new Date(ctx.command.createdTimestamp), customId: 'reveal' }).customId, (ctx) =>
-        ctx.collector.stop(ctx.interaction.customId)
-      );
-      collector.setEndAction((ctx) => (ctx.wasInternallyStopped() ? resolve() : reject()));
+      collector.actions.add(ctx.customId.create('reveal').id, (ctx) => ctx.collector.stop(ctx.interaction.customId));
 
       await collector.start();
     });
@@ -56,11 +54,11 @@ export default class SlotMachineGame extends Game {
 
   private static renderContent(machine: SlotMachine.Logic, ctx: Game.Context, ended: boolean) {
     const embed = new MessageEmbed();
-    const builder = new MessageContentBuilder().setEmbeds([embed]);
+    const builder = new InteractionMessageContentBuilder<ButtonBuilder>().addEmbed(() => embed);
     const description: string[] = [];
 
-    const revealButton = new MessageButton({
-      customId: createComponentId({ date: new Date(ctx.command.createdTimestamp), customId: 'reveal' }).customId,
+    const revealButton = new ButtonBuilder({
+      customId: ctx.customId.create('reveal').id,
       style: Constants.MessageButtonStyles.PRIMARY,
       disabled: ended,
       label: 'Reveal'
@@ -72,7 +70,7 @@ export default class SlotMachineGame extends Game {
     });
 
     description.push(`${bold('>')} ${machine.slots.map((s) => (ended ? s.emoji : ':question:')).join('    ')} ${bold('<')}\n`);
-    builder.addComponentRow((row) => row.addButtonComponent(() => revealButton));
+    builder.addRow((row) => row.addButtonComponent(() => revealButton));
 
     switch (true) {
       case !ended: {

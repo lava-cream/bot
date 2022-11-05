@@ -3,8 +3,8 @@ import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '
 import { ApplyOptions } from '@sapphire/decorators';
 
 import type { PlayerSchema } from '#lib/database';
-import { MessageEmbed, MessageSelectOptionData, WebhookEditMessageOptions, MessageActionRow, MessageSelectMenu } from 'discord.js';
-import { randomColor, join, createComponentId, Collector, seconds } from '#lib/utilities';
+import { MessageEmbed, MessageSelectOptionData } from 'discord.js';
+import { randomColor, join, createComponentId, Collector, seconds, InteractionMessageContentBuilder } from '#lib/utilities';
 import { inlineCode, bold } from '@discordjs/builders';
 import { toTitleCase, noop } from '@sapphire/utilities';
 
@@ -38,11 +38,15 @@ export default class TopCommand extends Command {
         const context = menu.user.id === command.user.id;
         await menu.deferUpdate();
         return context;
+      },
+      end: async () => {
+        await command.editReply(this.renderContent(command, activeType, dbs)).catch(noop);
+        return;
       }
     });
 
     collector.actions.add(
-      createComponentId({ date: new Date(command.createdTimestamp), customId: ComponentIdentifiers.Paginator }).customId,
+      createComponentId(ComponentIdentifiers.Paginator, new Date(command.createdTimestamp)).id,
       async (ctx) => {
         switch ((activeType = ctx.interaction.values.at(0) as PageType)) {
           case PageType.Wallet:
@@ -54,15 +58,10 @@ export default class TopCommand extends Command {
       }
     );
 
-    collector.setEndAction(async (ctx) => {
-      const content = this.renderContent(command, activeType, dbs);
-      return void (await ctx.message.edit(content).catch(noop));
-    });
-
     await collector.start();
   }
 
-  protected renderContent(command: CommandInteraction<'cached'>, page: PageType, dbs: PlayerSchema[]): WebhookEditMessageOptions {
+  protected renderContent(command: CommandInteraction<'cached'>, page: PageType, dbs: PlayerSchema[]) {
     const embed = new MessageEmbed().setColor(randomColor());
 
     switch (page) {
@@ -105,12 +104,13 @@ export default class TopCommand extends Command {
       }
     }
 
-    return {
-      embeds: [embed],
-      components: [
-        new MessageActionRow<MessageSelectMenu>().addComponents(
-          new MessageSelectMenu()
-            .setCustomId(createComponentId({ date: new Date(command.createdTimestamp), customId: ComponentIdentifiers.Paginator }).customId)
+    return new InteractionMessageContentBuilder()
+      .addEmbed(() => embed)
+      .addRow(row => 
+        row  
+          .addSelectMenuComponent(menu => 
+            menu  
+            .setCustomId(createComponentId(ComponentIdentifiers.Paginator, new Date(command.createdTimestamp)).id)
             .setPlaceholder(toTitleCase(page))
             .setMaxValues(1)
             .setOptions(
@@ -123,9 +123,8 @@ export default class TopCommand extends Command {
                   }
               )
             )
-        )
-      ]
-    };
+          )
+      )
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

@@ -1,5 +1,5 @@
 import type { PlayerSchema } from '#lib/database';
-import { InteractionMessageContentBuilder, isCommandInteractionExpired } from '#lib/utilities';
+import { ComponentId, InteractionMessageContentBuilder, isCommandInteractionExpired } from '#lib/utilities';
 import { CommandInteraction, Constants, InteractionReplyOptions, WebhookEditMessageOptions } from 'discord.js';
 import type { Game } from './game.piece.js';
 
@@ -16,9 +16,13 @@ export class GameContext {
    */
   public db: PlayerSchema.Document;
   /**
-   * The command interaction received from the gateway.
+   * The command interaction object.
    */
   public command: CommandInteraction<'cached'>;
+  /**
+   * The amount of user interactions this context has took.
+   */
+  public interactions = 0;
 
   /**
    * The constructor.
@@ -28,6 +32,14 @@ export class GameContext {
     this.game = options.game;
     this.db = options.db;
     this.command = options.command;
+  }
+
+  /**
+   * The custom id util based on this context's command interaction.
+   * @since 6.0.0
+   */
+  public get customId() {
+    return new ComponentId(new Date(this.command.createdTimestamp));
   }
 
   /**
@@ -49,20 +61,29 @@ export class GameContext {
   }
 
   /**
-   * Ends the current session. Calls {@link Game#play()} again if the energy is not gonna die.
+   * Ends the current session. Calls {@link Game#play()} again if the energy is still up.
    */
   public async end(failed = false): Promise<void> {
     if (isCommandInteractionExpired(this.command)) return;
+    
+    if (this.interactions === GameContext.MaximumInteractions) {
+      await this.respond(this.renderIdleMessage("You have reached the maximum interactions for the current session so the session has ended."));
+      return;
+    }
 
     if (failed) {
-      return void (await this.respond(this.renderIdleMessage("You've been idle for too long. The game session has ended.")));
+      await this.respond(this.renderIdleMessage("You have been idle for so long. The current session has ended."));
+      return;
     }
 
     if (this.db.energy.isExpired()) {
-      return void (await this.respond(this.renderIdleMessage('Your energy has expired! You have to run this command again to reactivate it.')));
+      await this.respond(this.renderIdleMessage("Your energy has expired! The current session has ended."))
+      return;
     }
 
-    return void (await this.game.play.call(this.game, this));
+    this.interactions++;
+    await this.game.play(this);
+    return;
   }
 
   /**
@@ -74,6 +95,11 @@ export class GameContext {
       .setContent(this.command.user.toString())
       .addEmbed((embed) => embed.setTitle('Exiting Game...').setColor(Constants.Colors.RED).setDescription(message));
   }
+
+  /**
+   * The maximum amount of interactions a game context could only take.
+   */
+  private static MaximumInteractions = 60;
 }
 
 /**
