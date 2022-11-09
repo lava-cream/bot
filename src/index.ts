@@ -2,6 +2,7 @@ import '@sapphire/plugin-editable-commands/register';
 import '#lib/utilities/root/root.setup.js';
 
 import { CLIENT_OPTIONS } from '#lib/framework/core/client-options.js';
+import '@sapphire/plugin-subcommands/register.js';
 import { AmariClient } from '#lib/apis/amari-bot/client/amari.client.js';
 import { Client } from '#lib/database/client/client.js';
 import { container, Result } from '@sapphire/framework';

@@ -23,7 +23,7 @@ export class DonationTrackerManager extends Manager<DonationTrackerSchema> {
     const donator = category.donators.resolve(donatorId);
     if (!isNullOrUndefined(donator)) return donator;
 
-    const newDonator = category.donators.create({ id: donatorId, amount: 0, count: 0 });
+    const newDonator = category.donators.create({ id: donatorId, amount: 0 });
     await db.save();
 
     return newDonator;
@@ -33,14 +33,21 @@ export class DonationTrackerManager extends Manager<DonationTrackerSchema> {
     const { amount, context, method } = options;
     const category = db.categories.resolve(context.donation.id);
     const donator =
-      category?.donators.resolve(context.donator.user.id) ?? category?.donators.create({ id: context.donator.user.id, amount: 0, count: 0 });
+      category?.donators.resolve(context.donator.user.id) ?? category?.donators.create({ id: context.donator.user.id, amount: 0 });
     if (isNullOrUndefined(category) || isNullOrUndefined(donator)) return false;
 
-    const addedAmount = Math.round(amount.amount * category.multiplier);
-    const addedSeason = Math.round(amount.season * category.multiplier);
+    switch(method) {
+      case DonationUpdateMethod.Increment: {
+        const addedAmount = Math.round(amount.amount * category.multiplier);
+        donator.setAmount(donator.amount + addedAmount).season.setValue(donator.season.value + addedAmount).setTotal(donator.season.value);
+        break;
+      };
 
-    donator.season.setValue(donator.season.value + addedSeason);
-    donator.setAmount(donator.amount + addedAmount).setCount(donator.count + (method === DonationUpdateMethod.Increment ? 1 : 0));
+      case DonationUpdateMethod.Decrement: {
+        const removedAmount = amount.amount;
+        donator.setAmount(donator.amount - removedAmount).season.setValue(donator.season.value - removedAmount).setTotal(donator.season.value);
+      }
+    }
 
     await db.save();
     await this.syncDonatorAutorole(db, category, context.donator);

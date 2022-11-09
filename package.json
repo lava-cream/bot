@@ -30,6 +30,7 @@
 		"@discordjs/builders": "^0.12.0",
 		"@discordjs/rest": "^0.3.0",
 		"@sapphire/async-queue": "^1.2.0",
+		"@sapphire/cron": "^1.0.0",
 		"@sapphire/decorators": "^2.2.0",
 		"@sapphire/discord-utilities": "^2.8.0",
 		"@sapphire/discord.js-utilities": "^4.8.1",

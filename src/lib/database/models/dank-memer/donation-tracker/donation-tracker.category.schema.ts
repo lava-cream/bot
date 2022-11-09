@@ -1,5 +1,6 @@
 import { prop, SchemaTypes, CreateSubSchemaManager, SubSchema } from '#lib/database/structures/schema.js';
 import type { OmitFunctions } from '#lib/utilities/common/index.js';
+import { isNullOrUndefined } from '@sapphire/utilities';
 
 export class DonationTrackerCategorySchema extends SubSchema {
   @prop({ type: String })
@@ -11,19 +12,23 @@ export class DonationTrackerCategorySchema extends SubSchema {
   @prop({ type: Number })
   public status!: DonationTrackerCategoryStatus;
 
+  @prop({ type: Boolean })
+  public default!: boolean;
+
   @prop({ type: () => DonationTrackerCategoryDonatorManagerSchema, immutable: true })
   public readonly donators!: DonationTrackerCategoryDonatorManagerSchema;
 
   @prop({ type: () => DonationTrackerCategoryLogsSchema, immutable: true })
   public readonly logs!: DonationTrackerCategoryLogsSchema;
 
-  public constructor(options: OmitFunctions<Omit<DonationTrackerCategorySchema, 'logs'>>) {
+  public constructor(options: OmitFunctions<Omit<DonationTrackerCategorySchema, 'donators' | 'logs'>> & { logs?: string }) {
     super(options.id);
     this.name = options.name;
     this.multiplier = options.multiplier;
     this.status = options.status;
+    this.default = options.default;
     this.donators = new DonationTrackerCategoryDonatorManagerSchema();
-    this.logs = new DonationTrackerCategoryLogsSchema({ id: null, enabled: false });
+    this.logs = new DonationTrackerCategoryLogsSchema({ id: options.logs ?? null });
   }
 
   public setName(name: string): this {
@@ -40,6 +45,11 @@ export class DonationTrackerCategorySchema extends SubSchema {
     this.status = status;
     return this;
   }
+
+  public setDefault(value: boolean): this {
+    this.default = value;
+    return this;
+  }
 }
 
 export const enum DonationTrackerCategoryStatus {
@@ -48,14 +58,14 @@ export const enum DonationTrackerCategoryStatus {
 }
 
 export class DonationTrackerCategoryManagerSchema extends CreateSubSchemaManager(DonationTrackerCategorySchema) {
+  public get default() {
+    return this.find(category => category.default) ?? null;
+  }
 }
 
 export class DonationTrackerCategoryDonatorSchema extends SubSchema {
   @prop({ type: Number })
   public amount!: number;
-
-  @prop({ type: Number })
-  public count!: number;
 
   @prop({ type: () => DonationTrackerCategoryDonatorSeasonSchema, immutable: true })
   public readonly season!: DonationTrackerCategoryDonatorSeasonSchema;
@@ -63,17 +73,11 @@ export class DonationTrackerCategoryDonatorSchema extends SubSchema {
   public constructor(options: OmitFunctions<Omit<DonationTrackerCategoryDonatorSchema, 'season'>>) {
     super(options.id);
     this.amount = options.amount;
-    this.count = options.count;
-    this.season = new DonationTrackerCategoryDonatorSeasonSchema({ streak: 0, value: 0 });
+    this.season = new DonationTrackerCategoryDonatorSeasonSchema({ streak: 0, value: 0, total: 0 });
   }
 
   public setAmount(amount: number): this {
     this.amount = amount;
-    return this;
-  }
-
-  public setCount(count: number): this {
-    this.count = count;
     return this;
   }
 }
@@ -87,6 +91,9 @@ export class DonationTrackerCategoryDonatorSeasonSchema {
 
   @prop({ type: Number })
   public streak!: number;
+
+  @prop({ type: Number })
+  public total!: number;
 
   public constructor(options: OmitFunctions<DonationTrackerCategoryDonatorSeasonSchema>) {
     this.value = options.value;
@@ -102,27 +109,27 @@ export class DonationTrackerCategoryDonatorSeasonSchema {
     this.streak = streak;
     return this;
   }
+
+  public setTotal(total: number): this {
+    this.total = total;
+    return this;
+  }
 }
 
 export class DonationTrackerCategoryLogsSchema {
   @prop({ type: SchemaTypes.Mixed })
   public id!: string | null;
 
-  @prop({ type: Boolean })
-  public enabled!: boolean;
-
-  public constructor(options: OmitFunctions<DonationTrackerCategoryLogsSchema>) {
+  public constructor(options: OmitFunctions<Omit<DonationTrackerCategoryLogsSchema, 'enabled'>>) {
     this.id = options.id;
-    this.enabled = options.enabled;
+  }
+
+  public get enabled() {
+    return !isNullOrUndefined(this.id);
   }
 
   public setId(id: string | null): this {
     this.id = id;
-    return this;
-  }
-
-  public setEnabled(enabled: boolean): this {
-    this.enabled = enabled;
     return this;
   }
 }

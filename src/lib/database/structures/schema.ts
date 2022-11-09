@@ -1,6 +1,6 @@
 import { type OmitFunctions, pushElement, resolveElement, removeElement } from '#lib/utilities';
 import typegoose, { types } from '@typegoose/typegoose';
-import type { Ctor } from '@sapphire/utilities';
+import type { Ctor, FirstArgument } from '@sapphire/utilities';
 
 export const {
   prop,
@@ -107,6 +107,15 @@ export function CreateSubSchemaManager<TSchema extends SubSchema, Args extends u
      */
     public resolve(id: string): TSchema | null {
       return resolveElement(this.entries, (entry) => entry.id === id);
+    }
+
+    /**
+     * Applies {@link Array#find} against the entries of this subschema manager.
+     * @param fn A function that must return a boolean based on the predicate. 
+     * @returns The found element.
+     */
+    public find(fn: FirstArgument<TSchema[]['find']>) {
+      return resolveElement(this.entries, fn);
     }
 
     /**
