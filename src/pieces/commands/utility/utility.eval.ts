@@ -43,6 +43,7 @@ export default class EvalCommand extends Command {
   @DeferCommandInteraction()
   public override async chatInputRun(command: CommandInteraction<'cached'>) {
     const code = command.options.getString('code', true);
+    const dm = command.options.getBoolean('dm') ?? false;
     const componentCustomId = new ComponentId(new Date(command.createdTimestamp));
     const session = {
       watch: new Stopwatch(),
@@ -114,7 +115,7 @@ export default class EvalCommand extends Command {
       },
       end: async () => {
         await edit(command, renderContent(true)).catch(noop);
-        await command.user.send(renderEvaluatedCodeMessage()).catch(noop);
+        if (dm) await command.user.send(renderEvaluatedCodeMessage()).catch(noop);
       }
     });
 
@@ -139,6 +140,7 @@ export default class EvalCommand extends Command {
         .setName(this.name)
         .setDescription(this.description)
         .addStringOption((string) => string.setName('code').setDescription('The code to evaluate.').setRequired(true))
+        .addBooleanOption((boolean) => boolean.setName('dm').setDescription('If the bot will DM you the code you ran.'))
     );
   }
 }
