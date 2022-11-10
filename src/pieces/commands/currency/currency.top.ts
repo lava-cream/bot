@@ -4,7 +4,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 
 import type { PlayerSchema } from '#lib/database';
 import { MessageEmbed, MessageSelectOptionData } from 'discord.js';
-import { randomColor, join, createComponentId, Collector, seconds, InteractionMessageContentBuilder } from '#lib/utilities';
+import { randomColor, join, createComponentId, Collector, seconds, InteractionMessageContentBuilder, DeferCommandInteraction } from '#lib/utilities';
 import { inlineCode, bold } from '@discordjs/builders';
 import { toTitleCase, noop } from '@sapphire/utilities';
 
@@ -23,9 +23,8 @@ enum PageType {
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class TopCommand extends Command {
+  @DeferCommandInteraction()
   public override async chatInputRun(command: CommandInteraction<'cached'>) {
-    await command.deferReply();
-
     let activeType: PageType = PageType.Wallet;
 
     const dbs = await this.container.db.players.fetchAll(true);

@@ -3,7 +3,7 @@ import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '
 import { ApplyOptions } from '@sapphire/decorators';
 
 import { bold, time, TimestampStyles } from '@discordjs/builders';
-import { join, edit } from '#lib/utilities';
+import { join, edit, DeferCommandInteraction } from '#lib/utilities';
 import { Constants } from 'discord.js';
 
 @ApplyOptions<Command.Options>({
@@ -12,9 +12,8 @@ import { Constants } from 'discord.js';
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class EnergyCommand extends Command {
+  @DeferCommandInteraction()
   public override async chatInputRun(command: CommandInteraction<'cached'>) {
-    await command.deferReply();
-
     const db = await this.container.db.players.fetch(command.user.id);
 
     await edit(command, (content) =>
@@ -24,8 +23,8 @@ export default class EnergyCommand extends Command {
           .setColor(Constants.Colors.GOLD)
           .setDescription(
             join(
-              `${bold(':star: Stars:')} ${db.energy.stars.toLocaleString()}`,
-              `${bold(':zap: Energy:')} ${db.energy.value.toLocaleString()}\n`,
+              `${bold('⭐ Stars:')} ${db.energy.stars.toLocaleString()}`,
+              `${bold('⚡ Energy:')} ${db.energy.value.toLocaleString()}\n`,
               `${bold(`Expires ${time(new Date(db.energy.expire), TimestampStyles.RelativeTime)}`)}`
             )
           )

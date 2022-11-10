@@ -2,8 +2,9 @@ import type { CommandInteraction } from 'discord.js';
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { hasDecimal, edit } from '#lib/utilities';
+import { hasDecimal, edit, DeferCommandInteraction, parseNumber } from '#lib/utilities';
 import { bold } from '@discordjs/builders';
+import { isNullOrUndefined } from '@sapphire/utilities';
 
 @ApplyOptions<Command.Options>({
   name: 'bet',
@@ -11,12 +12,15 @@ import { bold } from '@discordjs/builders';
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class BetCommand extends Command {
+  @DeferCommandInteraction()
   public override async chatInputRun(command: CommandInteraction<'cached'>) {
-    await command.deferReply();
-
     const db = await this.container.db.players.fetch(command.user.id);
-    const amount = command.options.getNumber('amount', true);
+    const amount = parseNumber(command.options.getString('amount', true), { amount: db.bet.value, minimum: db.minBet, maximum: db.maxBet });
     const oldAmount = db.bet.value;
+
+    if (isNullOrUndefined(amount)) {
+      return await edit(command, 'You actually need to input a REAL number smh.');
+    }
 
     switch(true) {
       case hasDecimal(amount): {

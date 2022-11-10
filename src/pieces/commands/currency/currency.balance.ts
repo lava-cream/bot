@@ -25,11 +25,11 @@ export default class BalanceCommand extends Command {
           .setTimestamp(Date.now())
           .setDescription(
             join(
-              `${bold(':coin: Wallet:')} ${db.wallet.value.toLocaleString()}`,
-              `${bold(':bank: Bank:')} ${db.bank.value.toLocaleString()}/${db.bank.space.toLocaleString()} ${inlineCode(
+              `${bold('👛 Wallet:')} ${db.wallet.value.toLocaleString()}`,
+              `${bold('💳 Bank:')} ${db.bank.value.toLocaleString()}/${db.bank.space.toLocaleString()} ${inlineCode(
                 percent(db.bank.value, db.bank.space, 0)
               )}`,
-              `${bold(':moneybag: Net Worth:')} ${db.netWorth.toLocaleString()}`
+              `${bold('💰 Net Worth:')} ${db.netWorth.toLocaleString()}`
             )
           )
       )

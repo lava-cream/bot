@@ -48,9 +48,9 @@ export function parseNumber(parameter: string | number, options: ParseNumberOpti
  * @since 6.0.0
  */
 export interface ParseNumberOptions {
+  amount: number;
   maximum: number;
   minimum: number;
-  amount: number;
 }
 
 /**

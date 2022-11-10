@@ -3,7 +3,7 @@ import type { CommandInteraction } from 'discord.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
 import { Stopwatch } from '@sapphire/stopwatch';
-import { randomColor, join } from '#lib/utilities';
+import { randomColor, join, edit, send } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
 
 @ApplyOptions<Command.Options>({
@@ -14,19 +14,19 @@ export default class PingCommand extends Command {
   public override async chatInputRun(command: CommandInteraction) {
     const watch = new Stopwatch().start();
 
-    await command.reply('Pinging...');
-    await command.editReply({
-      content: null,
-      embeds: [
-        {
-          color: randomColor(),
-          description: join(
-            `${bold('Editing Messages:')} ${inlineCode(watch.stop().toString())}`,
-            `${bold('Websocket Ping:')} ${inlineCode(`${command.inCachedGuild() ? command.guild.shard.ping : command.client.ws.ping}ms`)}`
-          )
-        }
-      ]
-    });
+    await send(command, 'Pinging...');
+    await edit(command, builder => 
+      builder  
+        .setContent(null)
+        .addEmbed(embed => 
+          embed  
+            .setColor(randomColor())
+            .setDescription(join(
+              `${bold('✏ Editing Messages:')} ${inlineCode(watch.stop().toString())}`,
+              `${bold('🤖 Websocket Ping:')} ${inlineCode(`${command.inCachedGuild() ? command.guild.shard.ping : command.client.ws.ping}ms`)}`
+            ))
+        )
+    );
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

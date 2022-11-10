@@ -3,7 +3,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import type { CommandInteraction } from 'discord.js';
 
 import { Constants } from 'discord.js';
-import { Collector, MessageContentBuilder, InteractionMessageContentBuilder, ComponentId } from '#lib/utilities';
+import { Collector, MessageContentBuilder, InteractionMessageContentBuilder, ComponentId, DeferCommandInteraction, edit, unsend } from '#lib/utilities';
 import { Result } from '@sapphire/result';
 import { Stopwatch } from '@sapphire/stopwatch';
 import { codeBlock } from '@discordjs/builders';
@@ -40,6 +40,7 @@ export default class EvalCommand extends Command {
     return evaled;
   }
 
+  @DeferCommandInteraction()
   public override async chatInputRun(command: CommandInteraction<'cached'>) {
     const code = command.options.getString('code', true);
     const componentCustomId = new ComponentId(new Date(command.createdTimestamp));
@@ -49,7 +50,7 @@ export default class EvalCommand extends Command {
       evalTime: 0
     };
 
-    await command.reply('Evaluating...');
+    await edit(command, 'Evaluating...');
     session.watch.start();
 
     const evaluate = async () => {
@@ -59,7 +60,7 @@ export default class EvalCommand extends Command {
         const inspected = inspect(await eval(this.getCode(code)), {
           breakLength: 1900,
           depth: 0,
-          compact: false
+          compact: false,
         });
 
         return this.sanitise(inspected);
@@ -76,7 +77,7 @@ export default class EvalCommand extends Command {
           embed
             .setColor(done ? Constants.Colors.NOT_QUITE_BLACK : Constants.Colors.BLURPLE)
             .setDescription(codeBlock('js', session.evaled))
-            .setFooter(`Duration: ${session.watch.duration.toFixed(2)}ms`)
+            .setFooter({ text: `Duration: ${session.watch.duration.toFixed(2)}ms` })
         )
         .addRow((row) =>
           Object.values(EvalControls).reduce(
@@ -104,7 +105,7 @@ export default class EvalCommand extends Command {
     const collector = new Collector({
       message: await command.editReply(renderContent(false)),
       componentType: 'BUTTON',
-      time: seconds(30),
+      time: seconds(60),
       max: Infinity,
       filter: async (button) => {
         const context = button.user.id === command.user.id;
@@ -112,7 +113,7 @@ export default class EvalCommand extends Command {
         return context;
       },
       end: async () => {
-        await command.editReply(renderContent(true)).catch(noop);
+        await edit(command, renderContent(true)).catch(noop);
         await command.user.send(renderEvaluatedCodeMessage()).catch(noop);
       }
     });
@@ -120,12 +121,12 @@ export default class EvalCommand extends Command {
     collector.actions.add(componentCustomId.create(EvalControls.Repeat).id, async (ctx) => {
       ctx.collector.resetTimer();
       await evaluate();
-      await ctx.interaction.editReply(renderContent(false));
+      await edit(ctx.interaction, renderContent(false));
     });
 
     collector.actions.add(componentCustomId.create(EvalControls.Delete).id, async (ctx) => {
-      await command.deleteReply().catch(noop);
-      await ctx.interaction.deleteReply().catch(noop);
+      await unsend(command).catch(noop);
+      await unsend(ctx.interaction).catch(noop);
       ctx.collector.stop(ctx.interaction.customId);
     });
 

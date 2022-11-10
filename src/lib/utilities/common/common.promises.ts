@@ -35,7 +35,7 @@ export function isPromiseFulfilled<T>(value: PromiseSettledResult<T>): value is 
 
 /**
  * Waits for a/all pending promise(s) to resolve before the timeout runs out.
- * Rejects if the timeout resolves first than the pending promise(s).
+ * Rejects if the timeout resolves first than any of the pending promise(s).
  * @param timeout The waiting period in milliseconds.
  * @param promises The pending promises to resolve.
  * @version 5.1.0

@@ -1,11 +1,10 @@
 import type { Message, CommandInteraction, ContextMenuInteraction } from 'discord.js';
-import type { PieceContext } from '@sapphire/framework';
-import { Precondition } from '@sapphire/framework';
+import { AllFlowsPrecondition, PieceContext } from '@sapphire/framework';
 
 import { PreconditionNames } from '#lib/framework/preconditions/index.js';
 import { GuildSchemaStatus } from '#lib/database/models/primary/guild/index.js';
 
-export default class GuildBlockListener extends Precondition {
+export default class GuildBlockListener extends AllFlowsPrecondition {
   public constructor(context: PieceContext) {
     super(context, { name: PreconditionNames.GuildStatus, position: 2 });
   }

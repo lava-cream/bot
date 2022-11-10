@@ -159,12 +159,12 @@ export default class SpamCommand extends Command {
                 : 'The event has started! Spam as much as you can.'
               : 'Click the join button to join! Will start in a minute.'
           )
-          .addField(
-            `Players (${players.size} Players)`,
-            !players.size
+          .setFields({
+            name: `Players (${players.size} Players)`,
+            value: !players.size
               ? 'No players yet.'
               : players.map(({ button: { member, user } }) => (member.nickname ? memberNicknameMention(member.id) : userMention(user.id))).join(', ')
-          )
+          })
           .setFooter({ text: `Hosted by ${host.tag}` })
       )
       .addRow((row) =>
@@ -258,7 +258,7 @@ export default class SpamCommand extends Command {
               return;
             }
 
-            await edit(button, (content) => content.setContent('You started the event!'));
+            await edit(button, 'You started the event!');
             collector.stop('start');
             break;
           }
@@ -269,8 +269,8 @@ export default class SpamCommand extends Command {
               return;
             }
 
-            await command.editReply(this.renderIntroEmbed(button.user, players, prize, true, true));
-            await button.editReply('You stopped the event.');
+            await edit(command, this.renderIntroEmbed(button.user, players, prize, true, true));
+            await edit(button, 'You stopped the event.');
             collector.stop(button.customId);
             break;
           }
@@ -280,13 +280,13 @@ export default class SpamCommand extends Command {
       collector.on('end', async (_, reason) => {
         if (reason === SpamControls.Stop) return;
         if (players.size < 1) {
-          await command.followUp({ ephemeral: true, content: 'No one joined the event :(' });
-          await command.editReply(this.renderIntroEmbed(command.user, players, prize, true, true));
+          await send(command, content => content.setEphemeral(true).setContent('No one joined.'));
+          await edit(command, this.renderIntroEmbed(command.user, players, prize, true, true));
           return reject(players);
         }
 
-        await command.editReply(this.renderIntroEmbed(command.user, players, prize, true, false));
-        await command.followUp(SpamCommand.renderSpamMessage(word));
+        await edit(command, this.renderIntroEmbed(command.user, players, prize, true, false));
+        await send(command, SpamCommand.renderSpamMessage(word));
         return resolve(players);
       });
     });

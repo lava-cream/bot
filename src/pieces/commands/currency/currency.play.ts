@@ -148,9 +148,10 @@ export default class PlayCommand extends Command {
         row
           .addButtonComponent((btn) =>
             btn
-              .setLabel('1 Energy')
+              .setLabel('Consume')
               .setDisabled(!isNullish(energized))
               .setCustomId(EnergyControl.Energize)
+              .setEmoji('⚡')
               .setStyle(
                 isNullish(energized)
                   ? Constants.MessageButtonStyles.PRIMARY
