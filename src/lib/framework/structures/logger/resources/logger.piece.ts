@@ -2,7 +2,7 @@ import type { Message, MessagePayload, TextChannel, Awaitable, ClientEvents as _
 import type { Loggers } from './logger.entries';
 import { Piece, Resolvers } from '@sapphire/framework';
 import { isNullOrUndefined } from '@sapphire/utilities';
-import { resolveElement } from '#lib/utilities';
+import { MessageContentBuilder, resolveElement } from '#lib/utilities';
 
 /**
  * Represents a logger handler. A logger handler is an own instance of a guild that has it's own logger channel linked allowing us to:
@@ -20,8 +20,8 @@ export class LoggerHandler {
    * Fetches the text channel logger from the guild.
    * @returns The text channel.
    */
-  public async fetchChannel(): Promise<TextChannel | null> {
-    const channel = await Resolvers.resolveGuildTextChannel(this.channelId, this.guild);
+  public fetchChannel(): TextChannel | null {
+    const channel = Resolvers.resolveGuildTextChannel(this.channelId, this.guild);
     return channel.isOk() ? channel.unwrap() : null;
   }
 
@@ -30,7 +30,7 @@ export class LoggerHandler {
    * @param content The message content.
    */
   public async postMessage(content: MessageOptions | MessagePayload): Promise<Message<true> | null> {
-    const message = await (await this.fetchChannel())?.send(content);
+    const message = await this.fetchChannel()?.send(content);
     if (isNullOrUndefined(message) || !message.inGuild()) return null;
 
     return message;
@@ -111,7 +111,7 @@ export abstract class Logger<K extends Loggers.Keys> extends Piece<LoggerOptions
    * Renders the logger's message content.
    * @param options Options to log the message.
    */
-  public abstract renderContent(options: Loggers[K]): Awaitable<MessageOptions | MessagePayload>;
+  public abstract renderContent(options: Loggers[K], builder: MessageContentBuilder): Awaitable<void>;
 
   /**
    * Syncs the log channel for a specific guild.
@@ -127,8 +127,9 @@ export abstract class Logger<K extends Loggers.Keys> extends Piece<LoggerOptions
     const handler = this.resolveHandler(options.guild.id);
 
     if (handler) {
-      const content = await this.renderContent(options);
-      await handler.postMessage(content);
+      const contentBuilder = new MessageContentBuilder();
+      await this.renderContent(options, contentBuilder);
+      await handler.postMessage(contentBuilder);
     }
 
     return;

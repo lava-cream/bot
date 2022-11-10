@@ -1,6 +1,6 @@
 import { type OmitFunctions, pushElement, resolveElement, removeElement } from '#lib/utilities';
 import typegoose, { types } from '@typegoose/typegoose';
-import type { Ctor, FirstArgument } from '@sapphire/utilities';
+import type { Ctor, FirstArgument, Primitive } from '@sapphire/utilities';
 
 export const {
   prop,
@@ -19,8 +19,9 @@ export type CastDocument<T extends Schema> = typegoose.DocumentType<T>;
 /**
  * Creates a JSON type of the model.
  * @template T The {@link Schema schema} to cast.
+ * @version 6.0.0
  */
-export type CastJSON<T extends Schema> = Readonly<OmitFunctions<T>>;
+export type CastJSON<T> = { readonly [P in keyof OmitFunctions<T>]: T[P] extends Primitive ? T[P] : CastJSON<T[P]> };
 
 /**
  * Represents a union type of a document's id field type and the document type itself.

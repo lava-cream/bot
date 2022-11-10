@@ -44,7 +44,7 @@ export class DonationUpdateLogger extends Logger<LoggerType.DonationUpdate> {
 
         const channel = Resolvers.resolveGuildTextChannel(c.logs.id, guild);
         if (channel.isErr()) {
-          await tracker.run(() => c.logs.setId(null).setEnabled(false)).save();
+          await tracker.run(() => c.logs.setId(null)).save();
           return null;
         }
 
@@ -58,8 +58,8 @@ export class DonationUpdateLogger extends Logger<LoggerType.DonationUpdate> {
     }
   }
 
-  public renderContent({ context, amount, method }: DonationUpdateLoggerPayload) {
-    return new MessageContentBuilder().addEmbed((embed) => {
+  public renderContent({ context, amount, method }: DonationUpdateLoggerPayload, builder: MessageContentBuilder) {
+    builder.addEmbed((embed) => {
       embed
         .setTitle(`${context.donation.name} Donation`)
         .setURL(context.referencedMessage.url)

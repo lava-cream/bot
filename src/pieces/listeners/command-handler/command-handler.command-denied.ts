@@ -7,7 +7,7 @@ import { Constants, MessageEmbed } from 'discord.js';
 
 export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatInputCommandDenied> {
   public constructor(context: Listener.Context) {
-    super(context, { name: Events.ChatInputCommandDenied });
+    super(context, { name: Events.ChatInputCommandDenied, event: Events.ChatInputCommandDenied });
   }
 
   public async run(error: UserError, payload: ChatInputCommandDeniedPayload) {

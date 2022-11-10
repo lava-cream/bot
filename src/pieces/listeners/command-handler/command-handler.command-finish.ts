@@ -4,7 +4,7 @@ import { Listener, Events } from '@sapphire/framework';
 
 export class ChatInputCommandFinishListener extends Listener<typeof Events.ChatInputCommandFinish> {
   public constructor(context: Listener.Context) {
-    super(context, { name: Events.ChatInputCommandFinish });
+    super(context, { name: Events.ChatInputCommandFinish, event: Events.ChatInputCommandFinish });
   }
 
   public async run(interaction: CommandInteraction, command: ChatInputCommand) {

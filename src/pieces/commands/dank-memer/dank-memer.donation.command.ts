@@ -100,7 +100,6 @@ export default class DonationCommand extends Subcommand {
     const name = command.options.getString('name', true);
     const multiplier = command.options.getNumber('multiplier') ?? 1;
     const logs = command.options.getChannel('logs') as TextChannel | null;
-
     const db = await this.container.db.trackers.fetch(command.guildId);
 
     const resolvedCategory = db.categories.resolve(id);
@@ -497,10 +496,7 @@ export default class DonationCommand extends Subcommand {
     const componentId = new ComponentId(new Date(command.createdTimestamp));
 
     const resolvedCategory = DonationCommand.resolveCategory(category, db);
-    if (isNullOrUndefined(resolvedCategory)) {
-      await edit(command, builder => builder.addEmbed(embed => embed.setTitle('Category Not Found').setColor(Constants.Colors.RED).setDescription('Cannot find what you were looking for.')));
-      return;
-    }
+    if (isNullOrUndefined(resolvedCategory)) throw new CommandOptionError({ message: 'The input did not resolve into an existing category.', option: 'category' });
 
     const renderContent = (category: DonationTrackerCategorySchema, ended: boolean) => {
       const donator = DonationCommand.resolveCategoryDonator(member.user.id, category);
