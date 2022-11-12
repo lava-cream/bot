@@ -5,8 +5,11 @@ import { UserError } from '@sapphire/framework';
  * @since 6.0.0
  */
 export class CommandError extends UserError {
-  public constructor({ message }: CommandError.Options) {
-    super({ identifier: CommandError.name, message });
+  public constructor(optionsOrString: string | CommandError.Options) {
+    super({ 
+      identifier: CommandError.name, 
+      message: typeof optionsOrString === 'string' ? optionsOrString : optionsOrString.message 
+    });
   }
 }
 

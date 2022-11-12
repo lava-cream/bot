@@ -2,7 +2,7 @@ import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '
 import { CommandInteraction, Constants } from 'discord.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { createComponentId, Collector, join, MessageContentBuilder, randomColor, seconds, minutes, SelectMenuBuilder, InteractionMessageContentBuilder, ButtonBuilder } from '#lib/utilities';
+import { createComponentId, Collector, join, randomColor, seconds, minutes, SelectMenuBuilder, InteractionMessageContentBuilder, ButtonBuilder, edit, send } from '#lib/utilities';
 import { type Game, GameContext } from '#lib/framework';
 import { isNullish, isNullOrUndefined } from '@sapphire/utilities';
 
@@ -31,11 +31,12 @@ export default class PlayCommand extends Command {
     await command.deferReply();
 
     const db = await this.container.db.players.fetch(command.user.id);
-    if (db.wallet.isMaximumValue(db.upgrades.mastery.value)) {
-      return void (await command.editReply(
+    if (db.wallet.isMaximumValue(db.upgrades.mastery)) {
+      return void (await edit(
+        command,
         join(
           "You can't play games right now since you're already rich.",
-          `Your limit is ${db.wallet.getMaximumValue(db.upgrades.mastery.value).toLocaleString()} coins.`
+          `Your limit is ${db.wallet.getMaximumValue(db.upgrades.mastery).toLocaleString()} coins.`
         )
       ));
     }
@@ -44,12 +45,9 @@ export default class PlayCommand extends Command {
     if (isNullOrUndefined(game)) return;
 
     const energized = await this.checkEnergy(command);
-    if (!energized) return;
+    const play = energized ? await this.promptPlay(command, game) : false;
 
-    const play = await this.promptPlay(command, game);
-    if (!play) return;
-
-    return await game.play(new GameContext({ command, db, game }));
+    return play ? await game.play(new GameContext({ command, db, game })) : void 0;
   }
 
   private renderGamePickerContent(command: CommandInteraction<'cached'>, ended = false) {
@@ -93,7 +91,7 @@ export default class PlayCommand extends Command {
     return new Promise(async (resolve) => {
       const gamesStore = this.container.stores.get('games');
       const collector = new Collector({
-        message: await command.editReply(this.renderGamePickerContent(command)),
+        message: await edit(command, this.renderGamePickerContent(command)),
         componentType: 'ACTION_ROW',
         max: Infinity,
         time: seconds(60),
@@ -119,7 +117,7 @@ export default class PlayCommand extends Command {
           }
 
           if (ctx.interaction.isButton()) {
-            await ctx.interaction.editReply(this.renderGamePickerContent(command, true));
+            await edit(ctx.interaction, this.renderGamePickerContent(command, true));
             ctx.collector.stop(ctx.interaction.customId);
             return resolve(null);
           }
@@ -131,7 +129,7 @@ export default class PlayCommand extends Command {
   }
 
   private renderEnergyPrompterMessage(energized: null | boolean) {
-    return new MessageContentBuilder()
+    return new InteractionMessageContentBuilder()
       .addEmbed((embed) =>
         embed
           .setTitle(isNullish(energized) || !energized ? 'Energy Dead' : 'Energy Restored')
@@ -177,7 +175,7 @@ export default class PlayCommand extends Command {
   }
 
   private renderNoEnergyMessage() {
-    return new MessageContentBuilder().addEmbed((embed) =>
+    return new InteractionMessageContentBuilder().addEmbed((embed) =>
       embed.setTitle('Out of Energy').setColor(Constants.Colors.RED).setDescription('You no longer have energy to spend for playing games.')
     );
   }
@@ -188,12 +186,12 @@ export default class PlayCommand extends Command {
 
       if (!db.energy.isExpired()) return resolve(true);
       if (db.energy.value < 1) {
-        await command.editReply(this.renderNoEnergyMessage());
+        await edit(command, this.renderNoEnergyMessage());
         return resolve(false);
       }
 
       const collector = new Collector({
-        message: await command.editReply(this.renderEnergyPrompterMessage(null)),
+        message: await edit(command, this.renderEnergyPrompterMessage(null)),
         componentType: 'BUTTON',
         max: Infinity,
         time: seconds(60),
@@ -204,7 +202,7 @@ export default class PlayCommand extends Command {
         },
         end: async (ctx) => {
           if (ctx.wasInternallyStopped()) {
-            await command.editReply(this.renderEnergyPrompterMessage(false));
+            await edit(command, this.renderEnergyPrompterMessage(false));
             return resolve(false);
           }
         }
@@ -213,16 +211,16 @@ export default class PlayCommand extends Command {
       collector.actions.add(EnergyControl.Energize, async (ctx) => {
         await db
           .run((db) =>
-            db.energy.update({ value: db.energy.value - 1, expire: Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier.value)) })
+            db.energy.update({ value: db.energy.value - 1, expire: Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)) })
           )
           .save();
-        await ctx.interaction.editReply(this.renderEnergyPrompterMessage(true));
+        await edit(ctx.interaction, this.renderEnergyPrompterMessage(true));
         ctx.collector.stop(ctx.interaction.customId);
         resolve(true);
       });
 
       collector.actions.add(EnergyControl.Cancel, async (ctx) => {
-        await ctx.interaction.editReply(this.renderEnergyPrompterMessage(false));
+        await edit(ctx.interaction, this.renderEnergyPrompterMessage(false));
         ctx.collector.stop(ctx.interaction.customId);
         resolve(false);
       });
@@ -275,7 +273,7 @@ export default class PlayCommand extends Command {
   private async promptPlay(command: CommandInteraction<'cached'>, game: Game): Promise<boolean> {
     return new Promise(async (resolve) => {
       const collector = new Collector({
-        message: await command.followUp(this.renderPrompterMessage(game, command, null)),
+        message: await send(command, this.renderPrompterMessage(game, command, null)),
         componentType: 'BUTTON',
         max: Infinity,
         time: seconds(60),
@@ -287,14 +285,14 @@ export default class PlayCommand extends Command {
       });
 
       collector.actions.add(Control.Proceed, async (ctx) => {
-        await ctx.interaction.editReply(this.renderPrompterMessage(game, command, true));
+        await edit(ctx.interaction, this.renderPrompterMessage(game, command, true));
         ctx.collector.stop(ctx.interaction.customId);
         return resolve(true);
       });
 
       collector.actions.add(Control.Cancel, async (ctx) => {
-        await ctx.interaction.editReply(this.renderPrompterMessage(game, command, false));
-        await ctx.interaction.followUp('Ok, weirdo.');
+        await edit(ctx.interaction, this.renderPrompterMessage(game, command, false));
+        await send(ctx.interaction, 'Ok then.');
 
         ctx.collector.stop(ctx.interaction.customId);
         return resolve(false);
