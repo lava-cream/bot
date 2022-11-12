@@ -64,7 +64,7 @@ export default class BlackjackGame extends Game {
 
           await context.db
             .run((db) => {
-              db.wallet.update({ value: db.wallet.value + final });
+              db.wallet.addValue(final);
               if (!db.energy.isMaximumStars()) db.energy.update({ stars: db.energy.stars + 1 });
             })
             .save();
@@ -74,13 +74,13 @@ export default class BlackjackGame extends Game {
         }
 
         case Blackjack.Outcome.OTHER: {
-          await context.db.run((db) => db.wallet.update({ value: db.wallet.value - db.bet.value })).save();
+          await context.db.run((db) => db.wallet.subValue(db.bet.value)).save();
           game.outcome.extra = 'The dealer is keeping your money to deal with your bullcrap.';
           break;
         }
 
         case Blackjack.Outcome.LOSS: {
-          await context.db.run((db) => db.wallet.update({ value: db.wallet.value - db.bet.value })).save();
+          await context.db.run((db) => db.wallet.subValue(db.bet.value)).save();
           game.outcome.extra = `You lost ${bold(context.db.bet.value.toLocaleString())} coins. You now have ${bold(
             context.db.wallet.value.toLocaleString()
           )} coins.`;

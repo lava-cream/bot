@@ -59,7 +59,7 @@ export default class CoinFlipGame extends Game {
 
             await context.db
               .run((db) => {
-                db.wallet.update({ value: db.wallet.value + won.final });
+                db.wallet.addValue(won.final);
                 if (!db.energy.isMaximumStars()) db.energy.update({ stars: db.energy.stars + 1 });
               })
               .save();
@@ -69,7 +69,7 @@ export default class CoinFlipGame extends Game {
           }
 
           case game.isLose(): {
-            await context.db.run((db) => db.wallet.update({ value: db.wallet.value + db.bet.value })).save();
+            await context.db.run((db) => db.wallet.addValue(db.bet.value)).save();
             await ctx.interaction.editReply(this.renderMainContent(context, game, true));
             break;
           }

@@ -65,7 +65,7 @@ export class DiceRollGame extends Game {
         });
 
         ctx.db.run((db) => {
-          db.wallet.update({ value: db.wallet.value + final });
+          db.wallet.addValue(final);
           if (!db.energy.isMaximumStars()) db.energy.update({ stars: db.energy.stars + 1 });
         });
 
@@ -91,7 +91,7 @@ export class DiceRollGame extends Game {
       }
 
       case game.isLose(): {
-        ctx.db.run((db) => db.wallet.update({ value: db.wallet.value - db.bet.value }));
+        ctx.db.run((db) => db.wallet.subValue(db.bet.value));
 
         button.setLabel('Sucks to Suck').setStyle(Constants.MessageButtonStyles.DANGER);
         embed

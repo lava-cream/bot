@@ -1,11 +1,8 @@
 import type { OmitFunctions } from '#lib/utilities/common/index.js';
 import { PlayerDefaults, PlayerLimits, PlayerEnergy } from '#lib/utilities/constants/index.js';
-import { prop } from '#lib/database/structures/schema.js';
+import { CreateValueSchema, prop } from '#lib/database/structures/schema.js';
 
-export class PlayerEnergySchema {
-  @prop({ type: Number, default: PlayerDefaults.Energy })
-  public value!: number;
-
+export class PlayerEnergySchema extends CreateValueSchema<number>(PlayerDefaults.Energy) {
   @prop({ type: Number, default: PlayerDefaults.Star })
   public stars!: number;
 
@@ -30,5 +27,15 @@ export class PlayerEnergySchema {
 
   public getDefaultDuration(tier: number) {
     return Math.round(PlayerEnergy.DefaultDuration + PlayerEnergy.TierAddedDefaultDuration * tier);
+  }
+
+  public setStars(stars: number) {
+    this.stars = stars;
+    return this;
+  }
+
+  public setExpire(expire: Date | number) {
+    this.expire = expire instanceof Date ? expire.getTime() : expire;
+    return this;
   }
 }

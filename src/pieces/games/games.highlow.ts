@@ -126,7 +126,7 @@ export default class HighlowGame extends Game {
               });
 
               logic.setGuess(Highlow.Guess.HIGHER);
-              await context.db.run((db) => db.wallet.update({ value: db.wallet.value + (logic.isWin() ? winnings.final : -db.bet.value) })).save();
+              await context.db.run((db) => db.wallet.addValue(logic.isWin() ? winnings.final : -db.bet.value)).save();
               await ctx.interaction.editReply(this.renderMainContent(context, logic, winnings));
 
               ctx.collector.stop(ctx.interaction.customId);
@@ -143,7 +143,7 @@ export default class HighlowGame extends Game {
 
               logic.setGuess(Highlow.Guess.JACKPOT);
               await context.db
-                .run((db) => db.wallet.update({ value: db.wallet.value + (logic.isJackpot() ? winnings.final : -db.bet.value) }))
+                .run((db) => db.wallet.addValue(logic.isJackpot() ? winnings.final : -db.bet.value))
                 .save();
               await ctx.interaction.editReply(this.renderMainContent(context, logic, winnings));
 
@@ -160,7 +160,7 @@ export default class HighlowGame extends Game {
               });
 
               logic.setGuess(Highlow.Guess.LOWER);
-              await context.db.run((db) => db.wallet.update({ value: db.wallet.value + (logic.isWin() ? winnings.final : -db.bet.value) })).save();
+              await context.db.run((db) => db.wallet.addValue(logic.isWin() ? winnings.final : -db.bet.value)).save();
               await ctx.interaction.editReply(this.renderMainContent(context, logic, winnings));
 
               ctx.collector.stop(ctx.interaction.customId);

@@ -36,7 +36,7 @@ export default class BetCommand extends Command {
       };
     }
 
-    await db.run((db) => db.bet.update({ value: amount })).save();
+    await db.run((db) => db.bet.setValue(amount)).save();
     return await edit(command, `Successfully changed your bet from ${bold(oldAmount.toLocaleString())} to ${bold(amount.toLocaleString())} coins.`);
   }
 

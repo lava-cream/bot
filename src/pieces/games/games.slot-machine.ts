@@ -88,7 +88,7 @@ export default class SlotMachineGame extends Game {
             random: 0
           });
 
-          db.wallet.update({ value: db.wallet.value + final });
+          db.wallet.addValue(final);
           if (!db.energy.isMaximumStars()) db.energy.update({ stars: db.energy.stars + 1 });
           description.push(
             `${bold('JACKPOT!')} You won ${bold(final.toLocaleString())} coins.`,
@@ -104,7 +104,7 @@ export default class SlotMachineGame extends Game {
 
       default: {
         ctx.db.run((db) => {
-          db.wallet.update({ value: db.wallet.value - db.bet.value });
+          db.wallet.subValue(db.bet.value);
           description.push(`You lost ${bold(db.bet.value.toLocaleString())} coins.`, `You now have ${bold(db.wallet.value.toLocaleString())} coins.`);
         });
 

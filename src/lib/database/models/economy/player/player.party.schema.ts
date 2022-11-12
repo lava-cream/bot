@@ -1,5 +1,7 @@
-import type { OmitFunctions } from '#lib/utilities/common/index.js';
+import { isPromiseFulfilled, OmitFunctions } from '#lib/utilities/common/index.js';
 import { CreateSubSchemaManager, prop, SubSchema } from '#lib/database/structures/schema.js';
+import { container } from '@sapphire/framework';
+import { isNullOrUndefined } from '@sapphire/utilities';
 
 export class PlayerPartySchema extends SubSchema {
   @prop({ type: Number })
@@ -29,4 +31,15 @@ export const enum PlayerPartyTypes {
   Invited = 3
 }
 
-export class PlayerPartyManagerSchema extends CreateSubSchemaManager(PlayerPartySchema) {}
+export class PlayerPartyManagerSchema extends CreateSubSchemaManager(PlayerPartySchema) {
+  public async fetch() {
+    return (
+      await Promise.allSettled(
+        this.entries.map(entry => container.db.parties.fetch(entry.id))
+      )
+    )
+      .filter(isPromiseFulfilled)
+      .map(fulfilled => fulfilled.value)
+      .filter(isNullOrUndefined);
+  }
+}

@@ -13,4 +13,17 @@ export class PlayerLevelsSchema {
   public get level() {
     return Math.trunc(this.xp / PlayerLevel.ExperienceRatio);
   }
+
+  public setXP(xp: number) {
+    this.xp = xp;
+    return this;
+  }
+
+  public addXP(xp: number) {
+    return this.setXP(this.xp + xp);
+  }
+
+  public subXP(xp: number) {
+    return this.setXP(this.xp - xp);
+  }
 }

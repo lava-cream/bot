@@ -1,6 +1,6 @@
 import { type OmitFunctions, pushElement, resolveElement, removeElement } from '#lib/utilities';
 import typegoose, { types } from '@typegoose/typegoose';
-import type { Ctor, FirstArgument, Primitive } from '@sapphire/utilities';
+import { Ctor, FirstArgument, isNullOrUndefined, Primitive } from '@sapphire/utilities';
 
 export const {
   prop,
@@ -80,7 +80,7 @@ export class SubSchema {
  * @since 6.0.0
  */
 export function CreateSubSchemaManager<TSchema extends SubSchema, Args extends unknown[]>(SubSchema: Ctor<Args, TSchema>) {
-  class SubSchemaManager {
+  abstract class SubSchemaManager {
     /**
      * The entries of this manager.
      */
@@ -129,4 +129,37 @@ export function CreateSubSchemaManager<TSchema extends SubSchema, Args extends u
   }
 
   return SubSchemaManager;
+}
+
+/**
+ * The allowed types of a value schema.
+ */
+export type ValueSchemaTypes = string | number | null;
+
+/**
+ * Creates a schema but only containing a `value` property.
+ * @param defaultValue The default value.
+ * @returns The {@link ValueSchema} class.
+ * @since 6.0.0
+ */
+export function CreateValueSchema<T extends ValueSchemaTypes = ValueSchemaTypes>(defaultValue?: T) {
+  abstract class ValueSchema {
+    /**
+     * The value of this schema.
+     */
+    @prop({ type: isNullOrUndefined(defaultValue) ? SchemaTypes.Mixed : typeof defaultValue === 'number' ? Number : String, default: defaultValue })
+    public value!: T;
+
+    /**
+     * Sets the new value of this schema.
+     * @param value The new value of this schema.
+     * @returns This schema.
+     */
+    public setValue(value: T): this {
+      this.value = value;
+      return this;
+    }
+  }
+
+  return ValueSchema;
 }
