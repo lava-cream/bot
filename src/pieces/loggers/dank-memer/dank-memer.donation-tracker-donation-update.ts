@@ -80,7 +80,7 @@ export class DonationUpdateLogger extends Logger<LoggerType.DonationUpdate> {
         }
 
         case DonationUpdateMethod.Decrement: {
-          embed.addFields({ name: 'Deducted Amount', value: inlineCode(amount.amount.toLocaleString()) });
+          embed.addFields({ name: 'Deducted Amount', value: inlineCode(`⏣ ${amount.amount.toLocaleString()}`) });
           break;
         }
       }
