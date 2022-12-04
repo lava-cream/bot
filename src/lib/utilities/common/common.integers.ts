@@ -128,7 +128,7 @@ export function parsePercent(parameter: string, number: number): number | null {
  * @since 6.0.0
  */
 export function isNumber<T>(x: T | unknown): x is number {
-  return typeof x === 'number' && x !== NaN;
+  return typeof x === 'number' && !Number.isNaN(x);
 }
 
 /**
