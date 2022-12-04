@@ -7,16 +7,17 @@ import { isNullOrUndefined } from '@sapphire/utilities';
  * The original {@link toReadable} util will be depreciated after the next minor release.
  * This makes use of the internal {@link Intl} global namespace. Credits to Fireship.
  * @param x The number to transform.
+ * @param maximumFractionDigits The possible amount of decimals to show.
  * @returns A shorthand number string.
  * @since 6.0.0
  */
-export function toNearestReadable(x: number): string {
-  const formatter = Intl.NumberFormat('en-US', { notation: 'compact' });
+export function toNearestReadable(x: number, maximumFractionDigits = 2): string {
+  const formatter = Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits });
   return formatter.format(x);
 }
 
 /**
- * Creates a "Now" identification string based on a specific date.
+ * Creates a "Now" ID string.
  * A "Now" id string has the following characteristics:
  * * It's only 6 characters long.
  * * All characters are alphanumeric.

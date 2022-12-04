@@ -126,7 +126,12 @@ export default class HighlowGame extends Game {
               });
 
               logic.setGuess(Highlow.Guess.HIGHER);
-              await context.db.run((db) => db.wallet.addValue(logic.isWin() ? winnings.final : -db.bet.value)).save();
+              await context.db
+                .run((db) => {
+                  db.wallet.addValue(logic.isWin() ? winnings.final : -db.bet.value);
+                  db.energy.addValue(+!db.energy.isMaxStars());
+                })
+                .save();
               await ctx.interaction.editReply(this.renderMainContent(context, logic, winnings));
 
               ctx.collector.stop(ctx.interaction.customId);

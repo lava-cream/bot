@@ -31,12 +31,12 @@ export default class PlayCommand extends Command {
     await command.deferReply();
 
     const db = await this.container.db.players.fetch(command.user.id);
-    if (db.wallet.isMaximumValue(db.upgrades.mastery)) {
+    if (db.wallet.isMaxValue(db.upgrades.mastery)) {
       return void (await edit(
         command,
         join(
-          "You can't play games right now since you're already rich.",
-          `Your limit is ${db.wallet.getMaximumValue(db.upgrades.mastery).toLocaleString()} coins.`
+          "You can't play games right now since your wallet is full.",
+          `Your limit is ${db.wallet.getMaxValue(db.upgrades.mastery).toLocaleString()} coins.`
         )
       ));
     }
@@ -211,7 +211,7 @@ export default class PlayCommand extends Command {
       collector.actions.add(EnergyControl.Energize, async (ctx) => {
         await db
           .run((db) =>
-            db.energy.update({ value: db.energy.value - 1, expire: Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)) })
+            db.energy.subValue(1).setExpire(Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)))
           )
           .save();
         await edit(ctx.interaction, this.renderEnergyPrompterMessage(true));

@@ -1,41 +1,22 @@
-import type { OmitFunctions } from '#lib/utilities/common/index.js';
 import { PlayerDefaults, PlayerLimits, PlayerMasteryAddedLimits } from '#lib/utilities/constants/index.js';
-import { prop, CreateValueSchema } from '#lib/database/structures/schema.js';
+import { prop, CreateNumberValueSchema } from '#lib/database/structures/schema.js';
 
-export class PlayerBankSchema extends CreateValueSchema<number>(PlayerDefaults.Bank) {
-  @prop({ type: Number, default: PlayerDefaults.Bank })
-  public space!: number;
-
-  public update(options: Partial<OmitFunctions<PlayerBankSchema>>): this {
-    return Object.assign(this, options);
-  }
-
-  public isMaximumValue() {
-    return this.value >= this.space;
-  }
-
-  public isMaximumSpace(mastery: number) {
+export class PlayerBankSpaceSchema extends CreateNumberValueSchema(0) {
+  public isMaxValue(mastery: number) {
     return this.value >= Math.round(PlayerLimits.Bank + PlayerMasteryAddedLimits.Bank * mastery);
   }
+}
 
-  public addValue(value: number): this {
-    return this.setValue(this.value + value);
+export class PlayerBankSchema extends CreateNumberValueSchema(PlayerDefaults.Bank) {
+  @prop({ type: Number, immutable: true })
+  public readonly space!: PlayerBankSpaceSchema;
+
+  public constructor() {
+    super();
+    this.space = new PlayerBankSpaceSchema();
   }
 
-  public subValue(value: number): this {
-    return this.setValue(this.value - value);
-  }
-
-  public setSpace(space: number): this {
-    this.space = space;
-    return this;
-  }
-
-  public addSpace(space: number): this {
-    return this.setSpace(this.space + space);
-  }
-
-  public subSpace(space: number): this {
-    return this.setSpace(this.space - space);
+  public isMaxValue() {
+    return this.value >= this.space.value;
   }
 }

@@ -41,7 +41,7 @@ export function pushElement<T>(array: T[], item: T): T {
 }
 
 /**
- * Retrieves the amount of items within the array that has a specific common item.
+ * Retrieves the amount of duplicating items within the array.
  * @param array The array to check the length from.
  * @param item The item to check.
  * @returns The amount of items in common.
@@ -93,7 +93,7 @@ export function randomItems<T>(array: T[], amount = array.length, filterCommon =
 /**
  * Shuffles the items of an array.
  * @template T The array's type.
- * @param array The array to shuffle.
+ * @param arr The array to shuffle.
  * @since 3.0.0
  */
 export function shuffle<T>(arr: T[]): T[] {

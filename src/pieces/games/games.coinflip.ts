@@ -60,7 +60,7 @@ export default class CoinFlipGame extends Game {
             await context.db
               .run((db) => {
                 db.wallet.addValue(won.final);
-                if (!db.energy.isMaximumStars()) db.energy.update({ stars: db.energy.stars + 1 });
+                db.energy.addValue(+!+db.energy.isMaxStars());
               })
               .save();
 

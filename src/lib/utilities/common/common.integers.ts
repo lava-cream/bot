@@ -90,8 +90,10 @@ export function parseReadables(parameter: string | number): number | null {
   for (const { regex, value } of readables.values()) {
     if (parameter.match(regex)) {
       const given = Number(parameter.replace(regex, ''));
-      if (!Number.isInteger(given * value) || isNaN(given * value)) continue;
-      return Math.round(given * value);
+      const calculated = given * value;
+
+      if (!Number.isInteger(calculated) || isNaN(calculated)) continue;
+      return Math.round(calculated);
     }
   }
 
@@ -140,7 +142,7 @@ export function hasDecimal(number: number): boolean {
 }
 
 /**
- * Rounds a number based from the location of the digit from the right. Scanned digits (from the right) will be transformed to concluding zeros.
+ * Rounds a number based from the location of the digit from the right. Scanned digits (from the right) will be transformed to zeros.
  * @param n The number to round.
  * @param zeros The amount of zeros.
  * @returns The rounded number.
@@ -157,87 +159,35 @@ export function roundZero(n: number, zeros = 1): number {
  * @see {@link scatter} for more details.
  * @since 5.1.0
  */
-export type Scattered = Mutable<{ value: number }>;
+export type Scattered = Mutable<{ value: number }>[];
 
 /**
- * Scatters a certain amount into randomized amounts. Probably the best and COMPLICATED code I wrote, EVER.
+ * Scatters a certain amount into randomized amounts.
  * @param amount The amount to scatter into lengths of {@link Scattered scattered} elements. Consumed by the internal randomizer from this function.
- * @param min The minimum number to randomize from. Should be at least 1 lower than the length or else you'll fuck things up.
- * @param max The maximum number to randomize from. Doesn't matter if it's lower than the length, as long as it's not a negative or else you'll break the laws of physics.
  * @param length The length of {@link Scattered scattered} elements. When reduced, it should 100% be the {@link amount amount} too.
  * @returns An array of {@link Scattered scattered} elements.
+ * @version 6.0.0 - Reduce code. 
  * @since 5.1.0
  */
-export function scatter(amount: number, min: number, max: number, length: number): Scattered[] {
-  const scattered: Scattered[] = [];
-  const initialAmount = amount;
-  const initialLength = length;
+export function scatter(amount: number, length: number): Scattered {
+  const mutate = (value: number): Scattered[number] => ({ value }); 
+  const num = 100;
 
-  while (length > 0) {
-    const random = randomNumber(min, max);
-    scattered.push({ value: random });
-    amount -= random;
-    length--;
+  const base = Math.floor(num / length);
+  const scattered: Scattered = Array(length).fill(null).map(() => mutate(base));
+  const baseTotal = base * length;
+  const diff = num - baseTotal;
+
+  for (let i = diff; i > 0; i--) {
+    // Add 2 since we're deducting 1 from a random.
+    randomItem(scattered).value += 2;
+    // Deduct 1 to balance those who are higher (>=base) and lower (<base).
+    randomItem(scattered).value--;
   }
 
-  const getTotal = () => scattered.reduce((p, c) => p + c.value, 0);
-
-  switch (true) {
-    case getTotal() === initialAmount:
-      return scattered;
-
-    case getTotal() <= initialAmount: {
-      const total = getTotal();
-      for (let i = initialAmount - total; i > 0; i--) {
-        const underMaxed = scattered.filter((s) => s.value < max);
-        const random = randomItem(underMaxed);
-        if (random) random.value++;
-      }
-
-      for (let i = initialLength; i > 0; i--) {
-        const allowed = scattered.filter((s) => s.value > min || s.value < max);
-        const from = randomItem(allowed.filter((a) => a.value - 1 >= min));
-        const to = randomItem(allowed.filter((a) => a.value + 1 <= max));
-        if (to) {
-          to.value++;
-          from.value--;
-        }
-      }
-
-      break;
-    }
-
-    default: {
-      // Remove excess from all elements going above the length amount.
-      const aboveLength = scattered.filter((s) => s.value > initialLength);
-      for (const al of aboveLength) al.value -= al.value - initialLength;
-
-      // Add the numbers to elements with missing numbers.
-      if (getTotal() < initialAmount) {
-        const underMaxed = scattered.filter((s) => s.value < initialLength);
-        for (const um of underMaxed) {
-          const difference = initialLength - um.value;
-          const candidates = scattered.filter((s) => !underMaxed.includes(s)).filter((s) => s.value + difference <= max);
-          const volunteer = randomItem(candidates);
-          if (volunteer) volunteer.value += difference;
-        }
-      }
-
-      // Borrow item decrement, random (except the borrowed item) increment.
-      for (let i = initialLength; i > 0; i--) {
-        const from = randomItem(scattered.filter((a) => a.value - 1 >= min));
-        const to = randomItem(scattered.filter((a) => a.value + 1 <= max));
-        if (to) {
-          to.value++;
-          from.value--;
-        }
-      }
-
-      break;
-    }
-  }
-
-  return scattered;
+  return scattered
+    .map(s => mutate(amount * (s.value / 100)))
+    .sort((a, b) => b.value - a.value);
 }
 
 /**

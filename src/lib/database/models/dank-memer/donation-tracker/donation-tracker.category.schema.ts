@@ -2,6 +2,78 @@ import { prop, SchemaTypes, CreateSubSchemaManager, SubSchema } from '#lib/datab
 import type { OmitFunctions } from '#lib/utilities/common/index.js';
 import { isNullOrUndefined } from '@sapphire/utilities';
 
+export class DonationTrackerCategoryDonatorSeasonSchema {
+  @prop({ type: Number })
+  public value!: number;
+
+  @prop({ type: Number })
+  public streak!: number;
+
+  @prop({ type: Number })
+  public total!: number;
+
+  public constructor(options: OmitFunctions<DonationTrackerCategoryDonatorSeasonSchema>) {
+    this.value = options.value;
+    this.streak = options.streak;
+  }
+
+  public setValue(value: number): this {
+    this.value = value;
+    return this;
+  }
+
+  public setStreak(streak: number): this {
+    this.streak = streak;
+    return this;
+  }
+
+  public setTotal(total: number): this {
+    this.total = total;
+    return this;
+  }
+}
+
+export class DonationTrackerCategoryDonatorSchema extends SubSchema {
+  @prop({ type: Number })
+  public amount!: number;
+
+  @prop({ type: () => DonationTrackerCategoryDonatorSeasonSchema, immutable: true })
+  public readonly season!: DonationTrackerCategoryDonatorSeasonSchema;
+
+  public constructor(options: OmitFunctions<Omit<DonationTrackerCategoryDonatorSchema, 'season'>>) {
+    super(options.id);
+    this.amount = options.amount;
+    this.season = new DonationTrackerCategoryDonatorSeasonSchema({ streak: 0, value: 0, total: 0 });
+  }
+
+  public setAmount(amount: number): this {
+    this.amount = amount;
+    return this;
+  }
+}
+
+export class DonationTrackerCategoryDonatorManagerSchema extends CreateSubSchemaManager(DonationTrackerCategoryDonatorSchema) {
+}
+
+
+export class DonationTrackerCategoryLogsSchema {
+  @prop({ type: SchemaTypes.Mixed })
+  public id!: string | null;
+
+  public constructor(options: OmitFunctions<Omit<DonationTrackerCategoryLogsSchema, 'enabled'>>) {
+    this.id = options.id;
+  }
+
+  public get enabled() {
+    return !isNullOrUndefined(this.id);
+  }
+
+  public setId(id: string | null): this {
+    this.id = id;
+    return this;
+  }
+}
+
 export class DonationTrackerCategorySchema extends SubSchema {
   @prop({ type: String })
   public name!: string;
@@ -60,76 +132,5 @@ export const enum DonationTrackerCategoryStatus {
 export class DonationTrackerCategoryManagerSchema extends CreateSubSchemaManager(DonationTrackerCategorySchema) {
   public get default() {
     return this.find(category => category.default) ?? null;
-  }
-}
-
-export class DonationTrackerCategoryDonatorSchema extends SubSchema {
-  @prop({ type: Number })
-  public amount!: number;
-
-  @prop({ type: () => DonationTrackerCategoryDonatorSeasonSchema, immutable: true })
-  public readonly season!: DonationTrackerCategoryDonatorSeasonSchema;
-
-  public constructor(options: OmitFunctions<Omit<DonationTrackerCategoryDonatorSchema, 'season'>>) {
-    super(options.id);
-    this.amount = options.amount;
-    this.season = new DonationTrackerCategoryDonatorSeasonSchema({ streak: 0, value: 0, total: 0 });
-  }
-
-  public setAmount(amount: number): this {
-    this.amount = amount;
-    return this;
-  }
-}
-
-export class DonationTrackerCategoryDonatorManagerSchema extends CreateSubSchemaManager(DonationTrackerCategoryDonatorSchema) {
-}
-
-export class DonationTrackerCategoryDonatorSeasonSchema {
-  @prop({ type: Number })
-  public value!: number;
-
-  @prop({ type: Number })
-  public streak!: number;
-
-  @prop({ type: Number })
-  public total!: number;
-
-  public constructor(options: OmitFunctions<DonationTrackerCategoryDonatorSeasonSchema>) {
-    this.value = options.value;
-    this.streak = options.streak;
-  }
-
-  public setValue(value: number): this {
-    this.value = value;
-    return this;
-  }
-
-  public setStreak(streak: number): this {
-    this.streak = streak;
-    return this;
-  }
-
-  public setTotal(total: number): this {
-    this.total = total;
-    return this;
-  }
-}
-
-export class DonationTrackerCategoryLogsSchema {
-  @prop({ type: SchemaTypes.Mixed })
-  public id!: string | null;
-
-  public constructor(options: OmitFunctions<Omit<DonationTrackerCategoryLogsSchema, 'enabled'>>) {
-    this.id = options.id;
-  }
-
-  public get enabled() {
-    return !isNullOrUndefined(this.id);
-  }
-
-  public setId(id: string | null): this {
-    this.id = id;
-    return this;
   }
 }

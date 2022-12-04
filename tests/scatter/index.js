@@ -1,12 +1,38 @@
-import { scatter, parseProcessArgs, roundZero } from '../utilities.js';
+import { randomInArray, parseProcessArgs } from '../utilities.js';
 
-const args = parseProcessArgs('amount', 'min', 'max', 'length');
+/**
+ * Creates an array of 10-based percentages.
+ * @param {number} length The length of the percentage array.
+ */
+const createPercentages = (length) => {
+  const num = 100;
 
-const amount = args.amount.toNumber();
-const min = args.min.toNumber();
-const max = args.max.toNumber();
+  const base = Math.floor(num / length);
+  /** @type {Array<{ value: number }>} */
+  const ns = Array(length).fill(null).map(() => ({ value: base }));
+  const baseTotal = base * length;
+  const diff = num - baseTotal;
+
+  for (let i = diff; i > 0; i--) {
+    // Add 2 since we're deducting 1 from a random.
+    randomInArray(ns).value += 2;
+    // Deduct 1 to balance those who are higher (>=base) and lower (<base).
+    randomInArray(ns).value--;
+  }
+
+  return { num, base, baseTotal, diff, ns, nsTotal: ns.reduce((n, c) => n + c.value, 0) };
+};
+
+const args = parseProcessArgs('number', 'length');
+
+const number = args.number.toNumber();
 const length = args.length.toNumber();
 
-const scattered = scatter(100, min, max, length).map(n => ({ ...n, percent: Math.round(amount * (n.value / 100)).toLocaleString() }));
+const formatter = Intl.NumberFormat('en-us', { notation: 'compact', maximumFractionDigits: 2 });
 
-console.log({ total: scattered.reduce((n, c) => n + c.value, 0), scattered });
+console.log(
+  createPercentages(length).ns
+    .map((n => number * (n.value / 100)))
+    .sort((a, b) => b - a)
+    .map(formatter.format)
+);

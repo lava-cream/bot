@@ -28,7 +28,7 @@ export default class BetCommand extends Command {
       };
 
       case amount === oldAmount: {
-        return await edit(command, 'Okay changed, as if you would notice.');
+        return await edit(command, 'Stop making me stupid. You entered the same amount.');
       };
 
       case amount < db.minBet || amount > db.maxBet: {

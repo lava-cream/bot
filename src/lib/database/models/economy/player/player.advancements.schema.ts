@@ -1,12 +1,24 @@
-import { prop, CreateSubSchemaManager, SubSchema, CreateValueSchema } from '#lib/database/structures/schema.js';
-import { Mixin } from 'ts-mixer';
+import { prop, CreateSubSchemaManager, SubSchema, SchemaTypes, ValueSchemaTypes } from '#lib/database/structures/schema.js';
 
-export class PlayerAdvancementsSchema extends Mixin(SubSchema, CreateValueSchema()) {
+/**
+ * Augmentable interface to insert valid {@link PlayerAdvancementsSchema} ID entries
+ */
+export interface IPlayerAdvancements {}
+
+export class PlayerAdvancementsSchema extends SubSchema {
+  @prop({ type: SchemaTypes.Mixed })
+  public value!: ValueSchemaTypes;
+
   @prop({ type: Boolean })
   public unlocked!: boolean;
 
   public setUnlocked(unlocked: this['unlocked']): this {
     this.unlocked = unlocked;
+    return this;
+  }
+
+  public setValue(value: number): this {
+    this.value = value;
     return this;
   }
 }

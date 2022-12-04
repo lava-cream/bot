@@ -1,24 +1,20 @@
-import type { OmitFunctions } from '#lib/utilities/common/index.js';
-import { PlayerDefaults, PlayerLimits, PlayerEnergy } from '#lib/utilities/constants/index.js';
-import { CreateValueSchema, prop } from '#lib/database/structures/schema.js';
+import { PlayerDefaults, PlayerLimits, PlayerEnergy, PlayerTierAddedLimits } from '#lib/utilities/constants/index.js';
+import { CreateNumberValueSchema, prop } from '#lib/database/structures/schema.js';
 
-export class PlayerEnergySchema extends CreateValueSchema<number>(PlayerDefaults.Energy) {
-  @prop({ type: Number, default: PlayerDefaults.Star })
-  public stars!: number;
-
+export class PlayerEnergySchema extends CreateNumberValueSchema(PlayerDefaults.Star) {
   @prop({ type: Number, default: 0 })
   public expire!: number;
 
-  public update(options: Partial<OmitFunctions<PlayerEnergySchema>>): this {
-    return Object.assign(this, options);
+  public get energy() {
+    return Math.floor(this.value / PlayerEnergy.StarRatio);
   }
 
-  public isMaximumValue() {
-    return this.stars >= PlayerLimits.Energy;
+  public isMaxStars() {
+    return this.value >= PlayerLimits.Star;
   }
 
-  public isMaximumStars() {
-    return this.stars >= PlayerLimits.Star;
+  public isMaxEnergy(tier: number) {
+    return this.energy >= (PlayerLimits.Energy + (PlayerTierAddedLimits.Energy * tier));
   }
 
   public isExpired() {
@@ -27,11 +23,6 @@ export class PlayerEnergySchema extends CreateValueSchema<number>(PlayerDefaults
 
   public getDefaultDuration(tier: number) {
     return Math.round(PlayerEnergy.DefaultDuration + PlayerEnergy.TierAddedDefaultDuration * tier);
-  }
-
-  public setStars(stars: number) {
-    this.stars = stars;
-    return this;
   }
 
   public setExpire(expire: Date | number) {

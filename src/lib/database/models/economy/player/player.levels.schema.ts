@@ -1,29 +1,12 @@
-import type { OmitFunctions } from '#lib/utilities/common/index.js';
-import { PlayerLevel } from '#lib/utilities/constants/index.js';
-import { prop } from '#lib/database/structures/schema.js';
+import { PlayerDefaults, PlayerLevel, PlayerLimits, PlayerMasteryAddedLimits } from '#lib/utilities/constants/index.js';
+import { CreateNumberValueSchema } from '#lib/database/structures/schema.js';
 
-export class PlayerLevelsSchema {
-  @prop({ type: Number, default: 0 })
-  public xp!: number;
-
-  public update(options: Partial<OmitFunctions<Omit<PlayerLevelsSchema, 'level'>>>): this {
-    return Object.assign(this, options);
-  }
-
+export class PlayerLevelsSchema extends CreateNumberValueSchema(PlayerDefaults.Level * PlayerLevel.ExperienceRatio) {
   public get level() {
-    return Math.trunc(this.xp / PlayerLevel.ExperienceRatio);
+    return Math.trunc(this.value / PlayerLevel.ExperienceRatio);
   }
 
-  public setXP(xp: number) {
-    this.xp = xp;
-    return this;
-  }
-
-  public addXP(xp: number) {
-    return this.setXP(this.xp + xp);
-  }
-
-  public subXP(xp: number) {
-    return this.setXP(this.xp - xp);
+  public isMaxLevel(mastery: number) {
+    return this.level >= (PlayerLimits.Level + (PlayerMasteryAddedLimits.Level * mastery));
   }
 }

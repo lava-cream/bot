@@ -12,7 +12,9 @@ import {
   toReadable,
   InteractionMessageContentBuilder,
   send,
-  edit
+  edit,
+  toNearestReadable,
+  getGuildIconURL
 } from '#lib/utilities';
 import { bold, inlineCode, memberNicknameMention, userMention } from '@discordjs/builders';
 import { ApplyOptions } from '@sapphire/decorators';
@@ -34,22 +36,8 @@ enum SpamControls {
 }
 
 enum SpamConfig {
-  /**
-   * The # of required spams to win.
-   */
-  ELIGIBLE_SPAMS = 15,
-  /**
-   * The max # of people who can join the event.
-   */
-  MAXIMUM_SPAMMERS = 30,
-  /**
-   * The minimum % of the payout prize.
-   */
-  MINIMUM_PAYOUT = 10,
-  /**
-   * The maximum % of the payout prize.
-   */
-  MAXIMUM_PAYOUT = 30
+  MinimumSpamAmount = 15,
+  MaximumSpamPlayers = 30,
 }
 
 type SpamPlayers = Collection<Snowflake, Spammer>;
@@ -99,9 +87,28 @@ export default class SpamCommand extends Command {
       await send(command, bold('This channel has been locked.'));
     }
 
+    await send(command, content => content.addEmbed(embed => embed.setColor(Constants.Colors.DARK_GOLD).setDescription('Awaiting results...')));
+
     const results = await Promise.allSettled(
       SpamCommand.getResults(prize, winners).map(async (result) => {
-        await send(result.button, (content) => content.setEphemeral(true).setContent(`You won ${inlineCode(result.won.toLocaleString())} coins!`));
+        await send(result.button, (content) => 
+          content
+            .setEphemeral(true)
+            .addEmbed(embed => 
+              embed  
+                .setColor(Constants.Colors.GREEN)
+                .setDescription(join(
+                  `You won ${inlineCode(result.won.toLocaleString())} coins.`,
+                  `That's ${inlineCode(toNearestReadable(result.won))} for each message!\n`,
+                  'The host will distribute yours shortly.'
+                ))
+                .setFooter({
+                  text: command.guild.name,
+                  iconURL: getGuildIconURL(command.guild) ?? undefined
+                })
+            )
+        );
+
         return result;
       })
     );
@@ -115,7 +122,7 @@ export default class SpamCommand extends Command {
         })
     );
 
-    await send(command, (content) =>
+    await edit(command, (content) =>
       content.addEmbed((embed) =>
         embed
           .setColor(getHighestRoleColor(command.member))
@@ -123,10 +130,10 @@ export default class SpamCommand extends Command {
           .setDescription(
             join(
               ...results.filter<PromiseFulfilledResult<Spammer>>(isPromiseFulfilled).map(({ value: { spams, button, won } }, idx) => {
-                const emojis = ['🥇', '🥈', '🥉', ...Array.from<'👏', '👏'>({ length: results.length - 3 }, () => '👏')] as const;
-                return `${bold(`${emojis.at(idx)} ${spams.toLocaleString()}`)} - ${bold(button.user.username)} got ${bold(won.toLocaleString())}`;
+                const emojis = ['🥇', '🥈', '🥉'] as const;
+                return `${bold(`${emojis.at(idx) ?? '👏'} ${spams.toLocaleString()}`)} - ${bold(button.user.username)} got ${bold(won.toLocaleString())}`;
               }),
-              ...losers.map(({ button, spams }) => `${bold(`💀 ${spams.toLocaleString()} - ${button.user.username} fell off LMAO`)}`)
+              ...losers.map(({ button, spams }) => `${bold(`💀 ${spams.toLocaleString()} - ${button.user.username} didn't make it`)}`)
             )
           )
       )
@@ -218,7 +225,7 @@ export default class SpamCommand extends Command {
       embed
         .setTitle(word)
         .setColor(Constants.Colors.GREEN)
-        .setDescription(`Spam ${bold(word)} right now!`)
+        .setDescription(`Spam ${bold(word)}`)
     );
   }
 
@@ -248,7 +255,7 @@ export default class SpamCommand extends Command {
 
             players.set(button.user.id, this.createSpammer(button));
             await edit(button, this.renderJoinedEvent(players));
-            if (players.size === SpamConfig.MAXIMUM_SPAMMERS) collector.stop('max_capacity');
+            if (players.size === SpamConfig.MaximumSpamPlayers) collector.stop('max_capacity');
             break;
           }
 
@@ -308,7 +315,7 @@ export default class SpamCommand extends Command {
       collector.once('end', () =>
         resolve([
           ...players
-            .filter((p) => p.spams >= SpamConfig.ELIGIBLE_SPAMS)
+            .filter((p) => p.spams >= SpamConfig.MinimumSpamAmount)
             .sort((a, b) => b.spams - a.spams)
             .values()
         ])
@@ -317,10 +324,11 @@ export default class SpamCommand extends Command {
   }
 
   private static getResults(prize: number, winners: Spammer[]): Spammer[] {
-    const maximumPayout = Math.trunc(100 / Math.min(winners.length, SpamConfig.MAXIMUM_PAYOUT));
-    const percentages = scatter(100, SpamConfig.MINIMUM_PAYOUT, maximumPayout, winners.length);
-    const payouts = percentages.map((p) => Math.round(prize * (p.value / 100))).sort((a, b) => b - a);
-    for (const [index, winner] of winners.entries()) winner.won = payouts.at(index) ?? 0;
+    const payouts = scatter(prize, winners.length);
+
+    for (const [index, winner] of winners.entries()) {
+      winner.won = payouts.at(index)?.value ?? 0;
+    }
 
     return winners;
   }
@@ -335,7 +343,6 @@ export default class SpamCommand extends Command {
             .setName('prize')
             .setDescription('The amount to be split by the players.')
             .setRequired(true)
-            .setMaxValue(100_000_000)
             .setMinValue(5_000_000)
         )
         .addBooleanOption((builder) => builder.setName('lock_channel').setDescription('Whether or not to unlock this channel when the event starts.'))

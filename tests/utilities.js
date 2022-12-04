@@ -160,7 +160,7 @@ export const parseProcessArgs = (...names) => {
 	for (const [index, value] of process.argv.slice(2).entries()) {
 		const name = names.at(index);
 
-		Reflect.set(obj, name, new Argument(name, value));
+		if (name) Reflect.set(obj, name, new Argument(name, value));
 	}
 
 	return obj;

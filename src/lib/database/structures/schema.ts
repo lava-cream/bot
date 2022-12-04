@@ -63,13 +63,9 @@ export class SubSchema {
   @prop({ type: String, immutable: true })
   public readonly id!: string;
 
-  /**
-   * The subschema's constructor
-   * @param id The id of this subschema.
-   */
   public constructor(id: string) {
     this.id = id;
-  } 
+  }
 }
 
 /**
@@ -162,4 +158,28 @@ export function CreateValueSchema<T extends ValueSchemaTypes = ValueSchemaTypes>
   }
 
   return ValueSchema;
+}
+
+export function CreateStringValueSchema(defaultValue?: string) {
+  abstract class StringValueSchema extends CreateValueSchema(defaultValue) {
+    public get cleanValue() {
+      return this.value.trim();
+    }
+  }
+
+  return StringValueSchema;
+}
+
+export function CreateNumberValueSchema(defaultValue?: number) {
+  abstract class NumberValueSchema extends CreateValueSchema(defaultValue) {
+    public addValue(value: number): this {
+      return this.setValue(this.value + value);
+    }
+
+    public subValue(value: number): this {
+      return this.setValue(this.value - value);
+    }
+  }
+
+  return NumberValueSchema;
 }

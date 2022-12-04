@@ -1,28 +1,6 @@
 import { prop, SchemaTypes, CreateSubSchemaManager, SubSchema } from '#lib/database/structures/schema.js';
 import type { OmitFunctions } from '#lib/utilities/common/index.js';
 
-export class ItemGuideCategorySchema extends SubSchema {
-  @prop({ type: String })
-  public name!: string;
-
-  @prop({ type: () => ItemGuideCategoryItemManagerSchema, immutable: true })
-  public readonly items!: ItemGuideCategoryItemManagerSchema;
-
-  public constructor(options: OmitFunctions<Omit<ItemGuideCategorySchema, 'items'>>) {
-    super(options.id);
-    this.name = options.name;
-    this.items = new ItemGuideCategoryItemManagerSchema();
-  }
-
-  public setName(name: string): this {
-    this.name = name;
-    return this;
-  }
-}
-
-export class ItemGuideCategoryManagerSchema extends CreateSubSchemaManager(ItemGuideCategorySchema) {
-}
-
 export class ItemGuideCategoryItemSchema extends SubSchema {
   @prop({ type: String })
   public name!: string;
@@ -75,4 +53,26 @@ export class ItemGuideCategoryItemSchema extends SubSchema {
 }
 
 export class ItemGuideCategoryItemManagerSchema extends CreateSubSchemaManager(ItemGuideCategoryItemSchema) {
+}
+
+export class ItemGuideCategorySchema extends SubSchema {
+  @prop({ type: String })
+  public name!: string;
+
+  @prop({ type: () => ItemGuideCategoryItemManagerSchema, immutable: true })
+  public readonly items!: ItemGuideCategoryItemManagerSchema;
+
+  public constructor(options: OmitFunctions<Omit<ItemGuideCategorySchema, 'items'>>) {
+    super(options.id);
+    this.name = options.name;
+    this.items = new ItemGuideCategoryItemManagerSchema();
+  }
+
+  public setName(name: string): this {
+    this.name = name;
+    return this;
+  }
+}
+
+export class ItemGuideCategoryManagerSchema extends CreateSubSchemaManager(ItemGuideCategorySchema) {
 }

@@ -21,6 +21,7 @@ export type ExtractPieceType<S> = S extends Store<infer P> | AliasStore<infer P>
 
 /**
  * Represents the stricter type of a discord snowflake which is, a stringified bigint.
+ * Once upon a time discord.js used to have this type for {@link import('discord.js').Snowflake} but a lot of TS developers don't understand so it was reverted back.
  * @since 5.1.0
  */
 export type StrictSnowflake = `${bigint}`;
@@ -38,10 +39,10 @@ export type { If } from 'discord.js';
 /**
  * Extracts the value from a promise.
  * @template V A resolvable promise.
- * @version 6.0.0 - Add support for `PromiseLike` and `Awaitable` types.
+ * @version 6.0.0 - Add support for `Awaitable` types.
  * @since 4.3.0
  */
-export type ExtractPromiseType<V> = V extends Promise<infer P> | PromiseLike<infer P> | Awaitable<infer P> ? P : never;
+export type ExtractPromiseType<V> = V extends Promise<infer P> | Awaitable<infer P> ? P : never;
 
 /**
  * Creates a function type.

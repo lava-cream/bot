@@ -65,7 +65,7 @@ export default class BlackjackGame extends Game {
           await context.db
             .run((db) => {
               db.wallet.addValue(final);
-              if (!db.energy.isMaximumStars()) db.energy.update({ stars: db.energy.stars + 1 });
+              db.energy.addValue(+!+db.energy.isMaxStars());
             })
             .save();
           game.outcome.extra = `You won ${bold(final.toLocaleString())} coins. You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`;

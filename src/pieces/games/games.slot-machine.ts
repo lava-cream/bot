@@ -89,7 +89,8 @@ export default class SlotMachineGame extends Game {
           });
 
           db.wallet.addValue(final);
-          if (!db.energy.isMaximumStars()) db.energy.update({ stars: db.energy.stars + 1 });
+          db.energy.addValue(+!db.energy.isMaxStars());
+
           description.push(
             `${bold('JACKPOT!')} You won ${bold(final.toLocaleString())} coins.`,
             `${bold('Multiplier')} ${inlineCode(`${machine.multiplier.toLocaleString()}x`)}`,

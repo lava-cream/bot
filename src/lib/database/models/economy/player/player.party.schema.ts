@@ -35,7 +35,7 @@ export class PlayerPartyManagerSchema extends CreateSubSchemaManager(PlayerParty
   public async fetch() {
     return (
       await Promise.allSettled(
-        this.entries.map(entry => container.db.parties.fetch(entry.id))
+        this.entries.map(entry => container.db.parties.get(entry.id))
       )
     )
       .filter(isPromiseFulfilled)

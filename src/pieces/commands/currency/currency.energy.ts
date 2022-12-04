@@ -23,8 +23,8 @@ export default class EnergyCommand extends Command {
           .setColor(Constants.Colors.GOLD)
           .setDescription(
             join(
-              `${bold('⭐ Stars:')} ${db.energy.stars.toLocaleString()}`,
-              `${bold('⚡ Energy:')} ${db.energy.value.toLocaleString()}\n`,
+              `${bold('⭐ Stars ')} ${db.energy.value.toLocaleString()}`,
+              `${bold('⚡ Energy:')} ${db.energy.energy.toLocaleString()}\n`,
               `${bold(`Expires ${time(new Date(db.energy.expire), TimestampStyles.RelativeTime)}`)}`
             )
           )

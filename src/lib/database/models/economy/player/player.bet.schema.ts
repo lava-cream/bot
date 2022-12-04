@@ -1,8 +1,8 @@
-import { PlayerDefaults, PlayerLimits, PlayerMasteryAddedLimits } from '#lib/utilities/constants/index.js';
-import { CreateValueSchema } from '#lib/database/structures/schema.js';
+import { PlayerDefaults, PlayerLimits, PlayerTierAddedLimits } from '#lib/utilities/constants/index.js';
+import { CreateNumberValueSchema } from '#lib/database/structures/schema.js';
 
-export class PlayerBetSchema extends CreateValueSchema<number>(PlayerDefaults.Bet) {
-  public isMaximumValue(mastery: number) {
-    return this.value >= Math.round(PlayerLimits.Multiplier + PlayerMasteryAddedLimits.Multiplier * mastery);
+export class PlayerBetSchema extends CreateNumberValueSchema(PlayerDefaults.Bet) {
+  public isMaxValue(mastery: number) {
+    return this.value >= Math.round(PlayerLimits.Multiplier + PlayerTierAddedLimits.Multiplier * mastery);
   }
 }

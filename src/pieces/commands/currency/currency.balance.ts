@@ -26,8 +26,8 @@ export default class BalanceCommand extends Command {
           .setDescription(
             join(
               `${bold('👛 Wallet:')} ${db.wallet.value.toLocaleString()}`,
-              `${bold('💳 Bank:')} ${db.bank.value.toLocaleString()}/${db.bank.space.toLocaleString()} ${inlineCode(
-                percent(db.bank.value, db.bank.space, 0)
+              `${bold('💳 Bank:')} ${db.bank.value.toLocaleString()}/${db.bank.space.value.toLocaleString()} ${inlineCode(
+                percent(db.bank.value, db.bank.space.value, 0)
               )}`,
               `${bold('💰 Net Worth:')} ${db.netWorth.toLocaleString()}`
             )
