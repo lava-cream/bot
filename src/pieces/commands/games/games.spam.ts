@@ -61,7 +61,7 @@ export default class SpamCommand extends Command {
       SpamCommand.collectSpammers(command, prize, message, players, command.guild.name),
       createResponsiveTimer(60, async (seconds) => {
         if ([30, 15, 3, 2, 1].includes(seconds)) {
-          await send(command, bold(`Starting in ${pluralise('second', seconds)}...`)).catch(noop);
+          await send(command, bold(`Starting in ${seconds} ${pluralise('second', seconds)}...`)).catch(noop);
         }
       })
     ]);
@@ -100,7 +100,7 @@ export default class SpamCommand extends Command {
                 .setDescription(join(
                   `You won ${inlineCode(result.won.toLocaleString())} coins.`,
                   `That's ${inlineCode(toNearestReadable(result.won))} for each message!\n`,
-                  'The host will distribute yours shortly.'
+                  'The host will distribute your share shortly.'
                 ))
                 .setFooter({
                   text: command.guild.name,
@@ -255,6 +255,7 @@ export default class SpamCommand extends Command {
 
             players.set(button.user.id, this.createSpammer(button));
             await edit(button, this.renderJoinedEvent(players));
+            await edit(command, this.renderIntroEmbed(command.user, players, prize, false, false));
             if (players.size === SpamConfig.MaximumSpamPlayers) collector.stop('max_capacity');
             break;
           }
