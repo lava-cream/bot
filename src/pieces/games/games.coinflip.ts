@@ -7,7 +7,7 @@ import * as Coinflip from '#lib/utilities/games/coinflip/index.js';
 import { bold } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
-import { InteractionMessageContentBuilder } from '#lib/utilities';
+import { edit, InteractionMessageContentBuilder } from '#lib/utilities';
 
 declare module '#lib/framework/structures/game/game.types' {
   interface Games {
@@ -28,7 +28,7 @@ export default class CoinFlipGame extends Game {
       message: await context.respond(this.renderMainContent(context, game, false)),
       componentType: 'BUTTON',
       max: Infinity,
-      time: Common.seconds(10),
+      time: Common.seconds(60),
       filter: async (button) => {
         const contextual = button.user.id === context.command.user.id;
         await button.deferUpdate();
@@ -38,7 +38,10 @@ export default class CoinFlipGame extends Game {
         if (ctx.wasInternallyStopped()) {
           await context.edit(this.renderMainContent(context, game, true));
           await context.end(true);
+          return;
         }
+
+        await context.end();
       }
     });
 
@@ -51,7 +54,7 @@ export default class CoinFlipGame extends Game {
         switch (true) {
           case game.isWin(): {
             const won = Game.calculateWinnings({
-              base: 0.1,
+              base: 0.25,
               multiplier: context.db.multiplier.value,
               bet: context.db.bet.value,
               random: Common.randomNumber(0, 10) / 10
@@ -60,17 +63,17 @@ export default class CoinFlipGame extends Game {
             await context.db
               .run((db) => {
                 db.wallet.addValue(won.final);
-                db.energy.addValue(+!+db.energy.isMaxStars());
+                db.energy.addValue(+!db.energy.isMaxStars());
               })
               .save();
 
-            await ctx.interaction.editReply(this.renderMainContent(context, game, true, won.final));
+            await edit(ctx.interaction, this.renderMainContent(context, game, true, won.final));
             break;
           }
 
           case game.isLose(): {
             await context.db.run((db) => db.wallet.addValue(db.bet.value)).save();
-            await ctx.interaction.editReply(this.renderMainContent(context, game, true));
+            await edit(ctx.interaction, this.renderMainContent(context, game, true));
             break;
           }
         }

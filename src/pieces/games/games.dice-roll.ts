@@ -59,7 +59,7 @@ export class DiceRollGame extends Game {
 
       case game.isWin(): {
         const { final } = Game.calculateWinnings({
-          base: 0.2,
+          base: 0.5,
           multiplier: ctx.db.multiplier.value,
           bet: ctx.db.bet.value
         });
@@ -85,7 +85,7 @@ export class DiceRollGame extends Game {
 
       case game.isTie(): {
         button.setLabel('LMAO').setStyle(Constants.MessageButtonStyles.SECONDARY);
-        embed.setColor(Constants.Colors.NOT_QUITE_BLACK).setDescription(`Tie! You have ${bold(ctx.db.wallet.value.toLocaleString())} coins stil.`);
+        embed.setColor(Constants.Colors.NOT_QUITE_BLACK).setDescription(`Tie! You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`);
 
         break;
       }

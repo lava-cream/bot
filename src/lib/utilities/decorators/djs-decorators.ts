@@ -10,9 +10,11 @@ import type { CommandInteraction } from "discord.js";
  */
 export const DeferCommandInteraction = (ephemeral = false): MethodDecorator => {
   return createMethodDecorator((_target, _key, descriptor) => {
-    Reflect.set(descriptor, 'value', async function (command: CommandInteraction, context: ChatInputCommandContext) {
+    const method = descriptor.value as ChatInputCommand['chatInputRun'];
+
+    descriptor.value = <any> async function (this: ChatInputCommand, command: CommandInteraction, context: ChatInputCommandContext) {
       await command.deferReply({ ephemeral });
-      await (descriptor.value as ChatInputCommand['chatInputRun'])(command, context);
-    });
+      return method.call(this, command, context);
+    };
   });
 };

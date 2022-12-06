@@ -26,15 +26,17 @@ export async function send<Cached extends CacheType>(
   const { deferred, replied } = target;
 
   switch (true) {
-    case replied:
-    case deferred: {
-      return target.followUp(content);
+    case deferred && !replied: {
+      return target.editReply(content);
     }
 
-    case !replied:
+    case replied: {
+      return target.followUp(content);
+    };
+
     default: {
       return target.reply({ ...content, fetchReply: true });
-    }
+    };
   }
 }
 

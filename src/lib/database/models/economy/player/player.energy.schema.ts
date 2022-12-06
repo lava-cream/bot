@@ -25,6 +25,14 @@ export class PlayerEnergySchema extends CreateNumberValueSchema(PlayerDefaults.S
     return Math.round(PlayerEnergy.DefaultDuration + PlayerEnergy.TierAddedDefaultDuration * tier);
   }
 
+  public addEnergy(value: number) {
+    return super.addValue(value * PlayerEnergy.StarRatio);
+  }
+
+  public subEnergy(value: number) {
+    return super.subValue(value * PlayerEnergy.StarRatio);
+  }
+
   public setExpire(expire: Date | number) {
     this.expire = expire instanceof Date ? expire.getTime() : expire;
     return this;

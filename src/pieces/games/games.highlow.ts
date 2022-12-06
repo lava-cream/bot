@@ -1,7 +1,7 @@
-import { Game } from '#lib/framework/index.js';
+import { Game, GameCalculatedWinnings } from '#lib/framework/index.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { join, percent, seconds, getUserAvatarURL, randomNumber, Collector, InteractionMessageContentBuilder, ButtonBuilder } from '#lib/utilities';
+import { join, percent, seconds, getUserAvatarURL, randomNumber, Collector, InteractionMessageContentBuilder, ButtonBuilder, edit } from '#lib/utilities';
 import * as Highlow from '#lib/utilities/games/highlow/index.js';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
@@ -30,7 +30,6 @@ export default class HighlowGame extends Game {
     const logic = new Highlow.Logic(1, 100);
 
     try {
-      await context.edit(this.renderMainContent(context, logic, { raw: 0, final: 0 }));
       await this.awaitAction(context, logic);
       await context.end();
     } catch {
@@ -44,9 +43,8 @@ export default class HighlowGame extends Game {
         embed
           .setAuthor({
             iconURL: getUserAvatarURL(context.command.user),
-            name: `${context.command.user.username}'s ${
-              !logic.hasGuessed() ? '' : logic.isJackpot() ? 'jackpot' : logic.isWin() ? 'winning' : 'losing'
-            } high-low game`
+            name: `${context.command.user.username}'s ${!logic.hasGuessed() ? '' : logic.isJackpot() ? 'jackpot' : logic.isWin() ? 'winning' : 'losing'
+              } high-low game`
           })
           .setColor(
             logic.isJackpot() || logic.isWin() ? Constants.Colors.GREEN : logic.isLose() ? Constants.Colors.RED : Constants.Colors.NOT_QUITE_BLACK
@@ -59,17 +57,17 @@ export default class HighlowGame extends Game {
           .setDescription(
             !logic.hasGuessed()
               ? join(
-                  `You placed ${bold(context.db.bet.value.toLocaleString())} coins.\n`,
-                  `I just chose a secret number between ${logic.min} and ${logic.max}.`,
-                  `Is the secret number ${italic('higher')} or ${italic('lower')} than ${bold(logic.hint.toLocaleString())}.`
-                )
+                `You placed ${bold(context.db.bet.value.toLocaleString())} coins.\n`,
+                `I just chose a secret number between ${logic.min} and ${logic.max}.`,
+                `Is the secret number ${italic('higher')} or ${italic('lower')} than ${bold(logic.hint.toLocaleString())}.`
+              )
               : join(
-                  `${logic.isJackpot() ? bold('JACKPOT! ') : ''}You ${logic.isLose() ? 'lost' : 'won'} ${bold(
-                    (logic.isLose() ? context.db.bet.value : winnings.final).toLocaleString()
-                  )} coins.`,
-                  `Your hint was ${bold(logic.hint.toLocaleString())}. The hidden number was ${bold(logic.value.toLocaleString())}.`,
-                  `You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`
-                )
+                `${logic.isJackpot() ? bold('JACKPOT! ') : ''}You ${logic.isLose() ? 'lost' : 'won'} ${bold(
+                  (logic.isLose() ? context.db.bet.value : winnings.final).toLocaleString()
+                )} coins.\n`,
+                `Your hint was ${bold(logic.hint.toLocaleString())}. The hidden number was ${bold(logic.value.toLocaleString())}.`,
+                `You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`
+              )
           )
       )
       .addRow((row) =>
@@ -86,10 +84,10 @@ export default class HighlowGame extends Game {
                     : (logic.guess === Highlow.Guess.HIGHER && customId === Control.HIGHER) ||
                       (logic.guess === Highlow.Guess.JACKPOT && customId === Control.JACKPOT) ||
                       (logic.guess === Highlow.Guess.LOWER && customId === Control.LOWER)
-                    ? logic.isWin() || logic.isJackpot()
-                      ? Constants.MessageButtonStyles.SUCCESS
-                      : Constants.MessageButtonStyles.DANGER
-                    : Constants.MessageButtonStyles.SECONDARY
+                      ? logic.isWin() || logic.isJackpot()
+                        ? Constants.MessageButtonStyles.SUCCESS
+                        : Constants.MessageButtonStyles.DANGER
+                      : Constants.MessageButtonStyles.SECONDARY
                 )
             ),
           row
@@ -100,78 +98,80 @@ export default class HighlowGame extends Game {
   public async awaitAction(context: Game.Context, logic: Highlow.Logic) {
     return new Promise<void>(async (resolve, reject) => {
       const collector = new Collector({
-        message: await context.command.fetchReply(),
+        message: await context.respond(this.renderMainContent(context, logic, { raw: 0, final: 0 })),
         componentType: 'BUTTON',
         max: Infinity,
-        time: seconds(10),
+        time: seconds(60),
         filter: async (button) => {
           const contextual = button.user.id === context.command.user.id;
           await button.deferUpdate();
           return contextual;
         },
-        end: ctx => ctx.wasInternallyStopped() ? resolve() : reject()
+        end: ctx => !ctx.wasInternallyStopped() ? resolve() : reject()
       });
 
       for (const componentId of Object.values(Control)) {
         const customId = context.customId.create(componentId);
 
         collector.actions.add(customId.id, async (ctx) => {
-          switch (customId.id) {
-            case Control.HIGHER: {
-              const winnings = Game.calculateWinnings({
-                base: 0.5,
-                bet: context.db.bet.value,
-                multiplier: context.db.multiplier.value,
-                random: randomNumber(1, 10) / 10
-              });
+          const update = async (): Promise<GameCalculatedWinnings> => {
+            switch (ctx.interaction.customId) {
+              case context.customId.create(Control.HIGHER).id: {
+                const winnings = Game.calculateWinnings({
+                  base: 0.5,
+                  bet: context.db.bet.value,
+                  multiplier: context.db.multiplier.value,
+                  random: randomNumber(1, 10) / 10 // 10%-100%/0.1x-1x
+                });
 
-              logic.setGuess(Highlow.Guess.HIGHER);
-              await context.db
-                .run((db) => {
-                  db.wallet.addValue(logic.isWin() ? winnings.final : -db.bet.value);
-                  db.energy.addValue(+!db.energy.isMaxStars());
-                })
-                .save();
-              await ctx.interaction.editReply(this.renderMainContent(context, logic, winnings));
+                logic.setGuess(Highlow.Guess.HIGHER);
+                await context.db
+                  .run((db) => {
+                    db.wallet.addValue(logic.isWin() ? winnings.final : -db.bet.value);
+                    db.energy.addValue(+!db.energy.isMaxStars());
+                  })
+                  .save();
+                
+                return winnings;
+              }
 
-              ctx.collector.stop(ctx.interaction.customId);
-              break;
+              case context.customId.create(Control.JACKPOT).id: {
+                const winnings = Game.calculateWinnings({
+                  base: 100, // 100x or 10,000%
+                  bet: context.db.bet.value,
+                  multiplier: context.db.multiplier.value,
+                  random: 0
+                });
+
+                logic.setGuess(Highlow.Guess.JACKPOT);
+                await context.db
+                  .run((db) => db.wallet.addValue(logic.isJackpot() ? winnings.final : -db.bet.value))
+                  .save();
+
+                return winnings;
+              }
+
+              case context.customId.create(Control.LOWER).id: {
+                const winnings = Game.calculateWinnings({
+                  base: 0.5,
+                  bet: context.db.bet.value,
+                  multiplier: context.db.multiplier.value,
+                  random: randomNumber(1, 10) / 10 // 10%-100%/0.1x-1x
+                });
+
+                logic.setGuess(Highlow.Guess.LOWER);
+                await context.db.run((db) => db.wallet.addValue(logic.isWin() ? winnings.final : -db.bet.value)).save();
+                return winnings;
+              }
+
+              default: {
+                return { final: 0, raw: 0 };
+              }
             }
+          };
 
-            case Control.JACKPOT: {
-              const winnings = Game.calculateWinnings({
-                base: 100,
-                bet: context.db.bet.value,
-                multiplier: context.db.multiplier.value,
-                random: 0
-              });
-
-              logic.setGuess(Highlow.Guess.JACKPOT);
-              await context.db
-                .run((db) => db.wallet.addValue(logic.isJackpot() ? winnings.final : -db.bet.value))
-                .save();
-              await ctx.interaction.editReply(this.renderMainContent(context, logic, winnings));
-
-              ctx.collector.stop(ctx.interaction.customId);
-              break;
-            }
-
-            case Control.LOWER: {
-              const winnings = Game.calculateWinnings({
-                base: 0.5,
-                bet: context.db.bet.value,
-                multiplier: context.db.multiplier.value,
-                random: randomNumber(1, 10) / 10
-              });
-
-              logic.setGuess(Highlow.Guess.LOWER);
-              await context.db.run((db) => db.wallet.addValue(logic.isWin() ? winnings.final : -db.bet.value)).save();
-              await ctx.interaction.editReply(this.renderMainContent(context, logic, winnings));
-
-              ctx.collector.stop(ctx.interaction.customId);
-              break;
-            }
-          }
+          await edit(ctx.interaction, this.renderMainContent(context, logic, await update()));
+          ctx.collector.stop(ctx.interaction.customId);
         });
       }
 

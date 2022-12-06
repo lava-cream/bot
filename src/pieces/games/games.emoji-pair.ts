@@ -31,7 +31,7 @@ export class EmojiPairGame extends Game {
       const collector = new Collector({
         componentType: 'BUTTON',
         message: await ctx.respond(EmojiPairGame.renderContent(logic, ctx, false)),
-        time: seconds(10),
+        time: seconds(60),
         max: Infinity,
         filter: async (button) => {
           const context = button.user.id === ctx.command.user.id;

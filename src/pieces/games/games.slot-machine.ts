@@ -36,7 +36,7 @@ export default class SlotMachineGame extends Game {
       const collector = new Collector({
         message: await ctx.respond(SlotMachineGame.renderContent(machine, ctx, false)),
         componentType: 'BUTTON',
-        time: seconds(10),
+        time: seconds(60),
         max: Infinity,
         filter: async (button) => {
           const context = button.user.id === ctx.command.user.id;

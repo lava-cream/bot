@@ -8,7 +8,7 @@ export class PlayerBankSpaceSchema extends CreateNumberValueSchema(0) {
 }
 
 export class PlayerBankSchema extends CreateNumberValueSchema(PlayerDefaults.Bank) {
-  @prop({ type: Number, immutable: true })
+  @prop({ type: () => PlayerBankSpaceSchema, immutable: true })
   public readonly space!: PlayerBankSpaceSchema;
 
   public constructor() {

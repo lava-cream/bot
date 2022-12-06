@@ -104,7 +104,7 @@ export default class EvalCommand extends Command {
     await evaluate();
 
     const collector = new Collector({
-      message: await command.editReply(renderContent(false)),
+      message: await edit(command, renderContent(false)),
       componentType: 'BUTTON',
       time: seconds(60),
       max: Infinity,

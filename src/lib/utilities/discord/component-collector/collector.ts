@@ -23,7 +23,7 @@ export interface CollectorOptions<in out T extends MessageComponentTypeResolvabl
   /**
    * The type of the message component to collect.
    */
-  componentType: T;
+  componentType?: T;
   /**
    * Called when the InteractionCollector attached emits the `end` event.
    */
@@ -85,7 +85,6 @@ export class Collector<in out T extends MessageComponentTypeResolvable, Cached e
 
   /**
    * Starts collecting for interactions.
-   * @param options The options for the collector.
    * @returns None.
    */
   public start(): Promise<void> {

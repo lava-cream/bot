@@ -25,6 +25,12 @@ export class GameContext {
   public interactions = 0;
 
   /**
+   * The custom id util based on this context's command interaction.
+   * @since 6.0.0
+   */
+  public customId: ComponentId;
+
+  /**
    * The constructor.
    * @param options Options to construct.
    */
@@ -32,14 +38,7 @@ export class GameContext {
     this.game = options.game;
     this.db = options.db;
     this.command = options.command;
-  }
-
-  /**
-   * The custom id util based on this context's command interaction.
-   * @since 6.0.0
-   */
-  public get customId() {
-    return new ComponentId(new Date(this.command.createdTimestamp));
+    this.customId = new ComponentId(new Date(options.command.createdTimestamp));
   }
 
   /**
@@ -67,7 +66,7 @@ export class GameContext {
     if (isCommandInteractionExpired(this.command)) return;
     
     if (this.interactions === GameContext.MaximumInteractions) {
-      await this.respond(this.renderIdleMessage("You have reached the maximum interactions for the current session so the session has ended."));
+      await this.respond(this.renderIdleMessage("You have reached the maximum interactions for the current session so it ended."));
       return;
     }
 
@@ -78,6 +77,16 @@ export class GameContext {
 
     if (this.db.energy.isExpired()) {
       await this.respond(this.renderIdleMessage("Your energy has expired! The current session has ended."))
+      return;
+    }
+
+    if (this.db.bet.value > this.db.wallet.value) {
+      await this.respond(this.renderIdleMessage("You don't have enough coins to play."));
+      return;
+    }
+
+    if (this.db.wallet.isMaxValue(this.db.upgrades.mastery)) {
+      await this.respond(this.renderIdleMessage("You're rich. The session has ended."));
       return;
     }
 

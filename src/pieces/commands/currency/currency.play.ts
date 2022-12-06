@@ -2,7 +2,7 @@ import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '
 import { CommandInteraction, Constants } from 'discord.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { createComponentId, Collector, join, randomColor, seconds, minutes, SelectMenuBuilder, InteractionMessageContentBuilder, ButtonBuilder, edit, send } from '#lib/utilities';
+import { Collector, join, randomColor, seconds, minutes, SelectMenuBuilder, InteractionMessageContentBuilder, ButtonBuilder, edit, send, ComponentId, getUserAvatarURL } from '#lib/utilities';
 import { type Game, GameContext } from '#lib/framework';
 import { isNullish, isNullOrUndefined } from '@sapphire/utilities';
 
@@ -41,7 +41,8 @@ export default class PlayCommand extends Command {
       ));
     }
 
-    const game = await this.chooseGame(command);
+    const componentId = new ComponentId(new Date(command.createdTimestamp));
+    const game = await this.chooseGame(command, componentId);
     if (isNullOrUndefined(game)) return;
 
     const energized = await this.checkEnergy(command);
@@ -50,14 +51,12 @@ export default class PlayCommand extends Command {
     return play ? await game.play(new GameContext({ command, db, game })) : void 0;
   }
 
-  private renderGamePickerContent(command: CommandInteraction<'cached'>, ended = false) {
-    const date = new Date(command.createdTimestamp);
-
+  private renderGamePickerContent(command: CommandInteraction<'cached'>, componentId: ComponentId, ended = false) {
     return new InteractionMessageContentBuilder<ButtonBuilder | SelectMenuBuilder>()
       .addRow((row) =>
         row.addSelectMenuComponent((menu) =>
           menu
-            .setCustomId(createComponentId(PickerControl.Dropdown, date).id)
+            .setCustomId(componentId.create(PickerControl.Dropdown).id)
             .setPlaceholder('Select Game')
             .setDisabled(ended)
             .setMaxValues(1)
@@ -73,7 +72,7 @@ export default class PlayCommand extends Command {
       .addRow((row) =>
         row.addButtonComponent((btn) =>
           btn
-            .setCustomId(createComponentId(PickerControl.Cancel, date).id)
+            .setCustomId(componentId.create(PickerControl.Cancel).id)
             .setStyle(Constants.MessageButtonStyles.SECONDARY)
             .setLabel('End Interaction')
             .setDisabled(ended)
@@ -82,42 +81,43 @@ export default class PlayCommand extends Command {
       .addEmbed((embed) =>
         embed
           .setTitle('Game Picker')
-          .setColor(randomColor(true))
+          .setColor(ended ? Constants.Colors.NOT_QUITE_BLACK : randomColor(true))
           .setDescription(join('Choose a game to play! Use the dropdown below to proceed.', 'Will choose a random one if you refuse to pick.'))
+          .setFooter({ text: command.user.tag, iconURL: getUserAvatarURL(command.user) })
       );
   }
 
-  private async chooseGame(command: CommandInteraction<'cached'>): Promise<Game | null> {
+  private async chooseGame(command: CommandInteraction<'cached'>, componentId: ComponentId): Promise<Game | null> {
     return new Promise(async (resolve) => {
       const gamesStore = this.container.stores.get('games');
       const collector = new Collector({
-        message: await edit(command, this.renderGamePickerContent(command)),
-        componentType: 'ACTION_ROW',
+        message: await edit(command, this.renderGamePickerContent(command, componentId)),
+        // componentType: 'ACTION_ROW',
         max: Infinity,
         time: seconds(60),
-        filter: async (menu) => {
-          const context = menu.user.id === command.user.id;
-          await menu.deferUpdate();
+        filter: async (component) => {
+          const context = component.user.id === command.user.id;
+          await component.deferUpdate();
           return context;
         },
         end: ctx => ctx.wasInternallyStopped() ? resolve(null) : void 0
       });
 
-      for (const customId of Object.values(Control)) {
-        const componentId = createComponentId(customId, new Date(command.createdTimestamp));
-
-        collector.actions.add(componentId.id, async (ctx) => {
+      for (const customId of Object.values(PickerControl)) {
+        collector.actions.add(componentId.create(customId).id, async (ctx) => {
           if (ctx.interaction.isSelectMenu()) {
-            for (const game of gamesStore.values()) {
-              if (ctx.interaction.values.at(0) === game.id) {
-                ctx.collector.stop(game.id);
-                return resolve(game);
-              }
+            const gameId = ctx.interaction.values.at(0) ?? null;
+            const game = !isNullOrUndefined(gameId) ? gamesStore.find(g => g.id === gameId) : null;
+
+            if (!isNullOrUndefined(game)) {
+              await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, true));
+              ctx.collector.stop(game.id);
+              return resolve(game);
             }
           }
 
           if (ctx.interaction.isButton()) {
-            await edit(ctx.interaction, this.renderGamePickerContent(command, true));
+            await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, true));
             ctx.collector.stop(ctx.interaction.customId);
             return resolve(null);
           }
@@ -146,7 +146,7 @@ export default class PlayCommand extends Command {
         row
           .addButtonComponent((btn) =>
             btn
-              .setLabel('Consume')
+              .setLabel('Use')
               .setDisabled(!isNullish(energized))
               .setCustomId(EnergyControl.Energize)
               .setEmoji('⚡')
@@ -211,7 +211,7 @@ export default class PlayCommand extends Command {
       collector.actions.add(EnergyControl.Energize, async (ctx) => {
         await db
           .run((db) =>
-            db.energy.subValue(1).setExpire(Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)))
+            db.energy.subEnergy(1).setExpire(Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)))
           )
           .save();
         await edit(ctx.interaction, this.renderEnergyPrompterMessage(true));

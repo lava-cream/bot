@@ -28,10 +28,17 @@ import { DiscordSnowflake } from '@sapphire/snowflake';
  */
 export class ComponentId {
   /**
+   * The constant ID.
+   */
+  public snowflake: bigint;
+
+  /**
    * The util's constructor.
    * @param date The date to base on.
    */
-  public constructor(public date = new Date()) {}
+  public constructor(public date = new Date()) {
+    this.snowflake = DiscordSnowflake.generate({ timestamp: date.getTime() });
+  }
 
   /**
    * Sets the new date context.
@@ -52,7 +59,7 @@ export class ComponentId {
     return {
       parts: { 
         id, 
-        snowflake: DiscordSnowflake.generate({ timestamp: this.date.getTime() }) 
+        snowflake: this.snowflake
       },
       get id() { 
         return `${this.parts.snowflake}:${this.parts.id}` as const; 

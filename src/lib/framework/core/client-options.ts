@@ -8,7 +8,7 @@ export const CLIENT_OPTIONS = new ClientOptionsBuilder()
   .setPartials({ partials: [Constants.PartialTypes.REACTION] })
   .setPresence({ presence: { status: 'dnd', afk: false } })
   .setMakeCache({ makeCache: Options.cacheEverything() })
-  .setListenerOptions({ loadMessageCommandListeners: false })
+  .setListenerOptions({ loadMessageCommandListeners: false, loadDefaultErrorListeners: false })
   .setSupportGuild({ supportGuild: process.env.SUPPORT_ID })
   .setBaseUserDirectory({ baseUserDirectory: join(srcDir, 'pieces') })
   .setIntents({
