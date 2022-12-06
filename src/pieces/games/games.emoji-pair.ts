@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder } from '#lib/utilities';
+import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit } from '#lib/utilities';
 import { Game } from '#lib/framework/index.js';
 import { Constants, MessageEmbed } from 'discord.js';
 import { bold } from '@discordjs/builders';
@@ -18,7 +18,6 @@ export class EmojiPairGame extends Game {
 
     try {
       await EmojiPairGame.runCollector(logic, ctx);
-      await ctx.edit(EmojiPairGame.renderContent(logic, ctx, true));
       await ctx.db.save();
       await ctx.end();
     } catch {
@@ -26,24 +25,25 @@ export class EmojiPairGame extends Game {
     }
   }
 
-  private static runCollector(logic: EmojiPair.Logic, ctx: Game.Context): Promise<void> {
+  private static runCollector(logic: EmojiPair.Logic, context: Game.Context): Promise<void> {
     return new Promise(async (resolve, reject) => {
       const collector = new Collector({
         componentType: 'BUTTON',
-        message: await ctx.respond(EmojiPairGame.renderContent(logic, ctx, false)),
+        message: await context.respond(EmojiPairGame.renderContent(logic, context, false)),
         time: seconds(60),
         max: Infinity,
         filter: async (button) => {
-          const context = button.user.id === ctx.command.user.id;
+          const contextual = button.user.id === context.command.user.id;
           await button.deferUpdate();
-          return context;
+          return contextual;
         },
         end: ctx => !ctx.wasInternallyStopped() ? resolve() : reject()
       });
 
-      collector.actions.add(ctx.customId.create('reveal').id, (ctx) =>
-        ctx.collector.stop(ctx.interaction.customId)
-      );
+      collector.actions.add(context.customId.create('reveal').id, async (ctx) => {
+        await edit(ctx.interaction, EmojiPairGame.renderContent(logic, context, true));
+        ctx.collector.stop(ctx.interaction.customId);
+      });
 
       await collector.start();
     });

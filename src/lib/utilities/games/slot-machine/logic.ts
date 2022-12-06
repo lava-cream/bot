@@ -13,19 +13,23 @@ export class Logic {
   }
 
   public get common(): Emoji[] {
-    return this.slots.filter((slot, _, array) => getCommonItemsLength(array, slot) === 3);
+    return this.slots.filter((slot, _, array) => getCommonItemsLength(array, slot) >= 2);
   }
 
   public get multiplier() {
     return this.common.reduce((n, emoji) => n + emoji.multiplier, 0);
   }
 
-  public isWin() {
+  public isJackpot() {
     return this.common.length === 3;
   }
 
+  public isWin() {
+    return this.common.length === 2;
+  }
+
   public isLose() {
-    return this.common.length <= 2;
+    return !this.isJackpot() || !this.isWin();
   }
 
   public reroll() {
