@@ -38,7 +38,7 @@ export class EmojiPairGame extends Game {
           await button.deferUpdate();
           return context;
         },
-        end: ctx => ctx.wasInternallyStopped() ? resolve() : reject()
+        end: ctx => !ctx.wasInternallyStopped() ? resolve() : reject()
       });
 
       collector.actions.add(ctx.customId.create('reveal').id, (ctx) =>

@@ -43,7 +43,7 @@ export default class SlotMachineGame extends Game {
           await button.deferUpdate();
           return context;
         },
-        end: ctx => ctx.wasInternallyStopped() ? resolve() : reject()
+        end: ctx => !ctx.wasInternallyStopped() ? resolve() : reject()
       });
 
       collector.actions.add(ctx.customId.create('reveal').id, (ctx) => ctx.collector.stop(ctx.interaction.customId));
@@ -80,37 +80,34 @@ export default class SlotMachineGame extends Game {
       }
 
       case machine.isWin(): {
-        ctx.db.run((db) => {
-          const { final } = Game.calculateWinnings({
-            bet: db.bet.value,
-            base: machine.multiplier,
-            multiplier: db.multiplier.value,
-            random: 0
-          });
-
-          db.wallet.addValue(final);
-          db.energy.addValue(+!db.energy.isMaxStars());
-
-          description.push(
-            `${bold('JACKPOT!')} You won ${bold(final.toLocaleString())} coins.`,
-            `${bold('Multiplier')} ${inlineCode(`${machine.multiplier.toLocaleString()}x`)}`,
-            `You now have ${bold(db.wallet.value.toLocaleString())} coins.`
-          );
+        const { final } = Game.calculateWinnings({
+          bet: ctx.db.bet.value,
+          base: machine.multiplier,
+          multiplier: ctx.db.multiplier.value,
+          random: 0
         });
 
+        ctx.db.run((db) => {
+          db.wallet.addValue(final);
+          db.energy.addValue(+!db.energy.isMaxStars());
+        });
+
+        description.push(
+          `${bold('JACKPOT!')} You won ${bold(final.toLocaleString())} coins.`,
+          `${bold('Multiplier')} ${inlineCode(`${machine.multiplier.toLocaleString()}x`)}`,
+          `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`
+        );
+
         embed.setColor(Constants.Colors.GREEN);
-        revealButton.setStyle(Constants.MessageButtonStyles.SUCCESS);
+        revealButton.setLabel('Winner Winner').setStyle(Constants.MessageButtonStyles.SUCCESS);
         break;
       }
 
       default: {
-        ctx.db.run((db) => {
-          db.wallet.subValue(db.bet.value);
-          description.push(`You lost ${bold(db.bet.value.toLocaleString())} coins.`, `You now have ${bold(db.wallet.value.toLocaleString())} coins.`);
-        });
-
+        ctx.db.run((db) => db.wallet.subValue(db.bet.value));
+        description.push(`You lost ${bold(ctx.db.bet.value.toLocaleString())} coins.`, `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
         embed.setColor(Constants.Colors.RED);
-        revealButton.setStyle(Constants.MessageButtonStyles.DANGER);
+        revealButton.setLabel('Loser Loser').setStyle(Constants.MessageButtonStyles.DANGER);
         break;
       }
     }
@@ -121,14 +118,14 @@ export default class SlotMachineGame extends Game {
 
   private static get emojis(): SlotMachine.Emoji[] {
     return [
-      { emoji: ':credit_card:', multiplier: 100 },
-      { emoji: ':moneybag:', multiplier: 50 },
-      { emoji: ':dollar:', multiplier: 50 },
-      { emoji: ':coin:', multiplier: 50 },
-      { emoji: ':crown:', multiplier: 20 },
-      { emoji: ':trophy:', multiplier: 20 },
-      { emoji: ':medal:', multiplier: 20 },
-      { emoji: ':trident:', multiplier: 20 }
+      { emoji: ':credit_card:', multiplier: 10 },
+      { emoji: ':moneybag:', multiplier: 5 },
+      { emoji: ':dollar:', multiplier: 5 },
+      { emoji: ':coin:', multiplier: 5 },
+      { emoji: ':crown:', multiplier: 2.5 },
+      { emoji: ':trophy:', multiplier: 2.5 },
+      { emoji: ':medal:', multiplier: 2.5 },
+      { emoji: ':trident:', multiplier: 2.5 }
     ];
   }
 }
