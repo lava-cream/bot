@@ -16,11 +16,22 @@ import {
 } from 'discord.js';
 import { isNullOrUndefined } from '@sapphire/utilities';
 import type { APIInteraction, APIMessage } from 'discord.js/node_modules/discord-api-types/v9.js';
-import { Args, Result } from '@sapphire/framework';
+import { Args, Result, SapphireClient } from '@sapphire/framework';
 import { minutes, regexHasGroup, StrictSnowflake } from '#lib/utilities/common/index.js';
 import { SnowflakeRegex } from '@sapphire/discord-utilities';
 import { fetch, FetchResultTypes } from '@sapphire/fetch';
 import { DiscordSnowflake } from '@sapphire/snowflake';
+
+/**
+ * Asserts the working client as ready.
+ * @param client The discord client to check for.
+ * @since 6.0.0
+ */
+export function checkClientReadyStatus<T extends SapphireClient>(client: T): asserts client is typeof client & SapphireClient<true> {
+  if (!client.isReady()) {
+    throw new Error('The active client is not ready.');
+  }
+}
 
 /**
  * Represents the util for creating custom message component IDs. 

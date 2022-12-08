@@ -55,7 +55,7 @@ export class EmojiPairGame extends Game {
       row.addButtonComponent((btn) =>
         btn
           .setCustomId(ctx.customId.create('reveal').id)
-          .setLabel('Reveal')
+          .setLabel(!ended ? 'Reveal' : logic.isWin() ? 'Winner Winner' : 'Loser Loser')
           .setDisabled(ended)
           .setStyle(
             ended
@@ -110,11 +110,11 @@ export class EmojiPairGame extends Game {
    */
   private static get pairs(): EmojiPair.Emoji[] {
     return [
-      { emoji: ':pineapple:', multiplier: 1.5 },
-      { emoji: ':apple:', multiplier: 1.2 },
-      { emoji: ':carrot:', multiplier: 1 },
-      { emoji: ':peach:', multiplier: 0.8 },
-      { emoji: ':eggplant:', multiplier: 0.5 }
+      { emoji: ':pineapple:', multiplier: 2 },
+      { emoji: ':apple:', multiplier: 1 },
+      { emoji: ':carrot:', multiplier: 0.75 },
+      { emoji: ':peach:', multiplier: 0.5 },
+      { emoji: ':eggplant:', multiplier: 0.25 }
     ];
   }
 }

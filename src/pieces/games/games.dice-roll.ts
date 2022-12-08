@@ -66,7 +66,7 @@ export class DiceRollGame extends Game {
 
         ctx.db.run((db) => {
           db.wallet.addValue(final);
-          db.energy.addValue(+!+db.energy.isMaxStars());
+          db.energy.addValue(+!db.energy.isMaxStars());
         });
 
         button.setLabel('Winner Winner').setStyle(Constants.MessageButtonStyles.SUCCESS);

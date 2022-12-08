@@ -15,7 +15,9 @@ declare module '#lib/framework/structures/game/game.types' {
 
 @ApplyOptions<Game.Options>({
   id: 'slotmachine',
-  name: 'Slot Machine'
+  name: 'Slot Machine',
+  description: 'Spin for win!',
+  detailedDescription: 'Test your chances at spinning the slot machine.'
 })
 export default class SlotMachineGame extends Game {
   public async play(ctx: Game.Context) {
@@ -72,7 +74,6 @@ export default class SlotMachineGame extends Game {
     });
 
     description.push(`${bold('>')} ${machine.slots.map((s) => (ended ? s.emoji : ':question:')).join('    ')} ${bold('<')}\n`);
-    builder.addRow((row) => row.addButtonComponent(() => revealButton));
 
     switch (true) {
       case !ended: {
@@ -115,19 +116,20 @@ export default class SlotMachineGame extends Game {
     }
 
     embed.setDescription(join(description));
-    return builder;
+    return builder.addRow(row => row.addButtonComponent(() => revealButton));
   }
 
   private static get emojis(): SlotMachine.Emoji[] {
     return [
-      { emoji: ':credit_card:', multiplier: 10 },
-      { emoji: ':moneybag:', multiplier: 5 },
-      { emoji: ':dollar:', multiplier: 5 },
-      { emoji: ':coin:', multiplier: 5 },
-      { emoji: ':crown:', multiplier: 2.5 },
-      { emoji: ':trophy:', multiplier: 2.5 },
-      { emoji: ':medal:', multiplier: 2.5 },
-      { emoji: ':trident:', multiplier: 2.5 }
+      { emoji: '9️⃣', multiplier: 2 },
+      { emoji: '8️⃣', multiplier: 1 },
+      { emoji: '7️⃣', multiplier: 0.5 },
+      { emoji: '6️⃣', multiplier: 0.5 },
+      { emoji: '5️⃣', multiplier: 0.5 },
+      { emoji: '4️⃣', multiplier: 0.25 },
+      { emoji: '3️⃣', multiplier: 0.25 },
+      { emoji: '2️⃣', multiplier: 0.25 },
+      { emoji: '1️⃣', multiplier: 0.25 }
     ];
   }
 }

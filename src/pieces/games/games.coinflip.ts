@@ -7,7 +7,7 @@ import * as Coinflip from '#lib/utilities/games/coinflip/index.js';
 import { bold } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
-import { edit, InteractionMessageContentBuilder } from '#lib/utilities';
+import { checkClientReadyStatus, edit, InteractionMessageContentBuilder } from '#lib/utilities';
 
 declare module '#lib/framework/structures/game/game.types' {
   interface Games {
@@ -23,7 +23,9 @@ declare module '#lib/framework/structures/game/game.types' {
 })
 export default class CoinFlipGame extends Game {
   public async play(context: Game.Context) {
-    const game = new Coinflip.Logic(context.command.user, context.command.client.user!);
+    checkClientReadyStatus(context.command.client);
+
+    const game = new Coinflip.Logic(context.command.user, context.command.client.user);
     const collector = new Discord.Collector({
       message: await context.respond(this.renderMainContent(context, game, false)),
       componentType: 'BUTTON',
@@ -54,7 +56,7 @@ export default class CoinFlipGame extends Game {
         switch (true) {
           case game.isWin(): {
             const won = Game.calculateWinnings({
-              base: 0.25,
+              base: 0.5,
               multiplier: context.db.multiplier.value,
               bet: context.db.bet.value,
               random: Common.randomNumber(0, 10) / 10

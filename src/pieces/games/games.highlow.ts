@@ -1,7 +1,7 @@
 import { Game, GameCalculatedWinnings } from '#lib/framework/index.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { join, percent, seconds, getUserAvatarURL, randomNumber, Collector, InteractionMessageContentBuilder, ButtonBuilder, edit } from '#lib/utilities';
+import { join, percent, seconds, getUserAvatarURL, Collector, InteractionMessageContentBuilder, ButtonBuilder, edit } from '#lib/utilities';
 import * as Highlow from '#lib/utilities/games/highlow/index.js';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
@@ -121,7 +121,7 @@ export default class HighlowGame extends Game {
                   base: 0.5,
                   bet: context.db.bet.value,
                   multiplier: context.db.multiplier.value,
-                  random: randomNumber(1, 10) / 10 // 10%-100%/0.1x-1x
+                  random: 0
                 });
 
                 logic.setGuess(Highlow.Guess.HIGHER);
@@ -137,7 +137,7 @@ export default class HighlowGame extends Game {
 
               case context.customId.create(Control.JACKPOT).id: {
                 const winnings = Game.calculateWinnings({
-                  base: 100, // 100x or 10,000%
+                  base: 10, // 10x or 1,000%
                   bet: context.db.bet.value,
                   multiplier: context.db.multiplier.value,
                   random: 0
@@ -156,7 +156,7 @@ export default class HighlowGame extends Game {
                   base: 0.5,
                   bet: context.db.bet.value,
                   multiplier: context.db.multiplier.value,
-                  random: randomNumber(1, 10) / 10 // 10%-100%/0.1x-1x
+                  random: 0
                 });
 
                 logic.setGuess(Highlow.Guess.LOWER);
