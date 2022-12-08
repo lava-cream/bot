@@ -7,7 +7,7 @@ import * as Coinflip from '#lib/utilities/games/coinflip/index.js';
 import { bold } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
-import { checkClientReadyStatus, edit, InteractionMessageContentBuilder } from '#lib/utilities';
+import { checkClientReadyStatus, edit, InteractionMessageContentBuilder, percent } from '#lib/utilities';
 
 declare module '#lib/framework/structures/game/game.types' {
   interface Games {
@@ -47,11 +47,9 @@ export default class CoinFlipGame extends Game {
       }
     });
 
-    for (const componentId of Object.values(Coinflip.Side)) {
-      const customId = context.customId.create(componentId);
-
-      collector.actions.add(customId.id, async (ctx) => {
-        game.pick.call(game, componentId);
+    for (const side of Object.values(Coinflip.Side)) {
+      collector.actions.add(context.customId.create(side).id, async (ctx) => {
+        game.pick.call(game, side);
 
         switch (true) {
           case game.isWin(): {
@@ -74,12 +72,13 @@ export default class CoinFlipGame extends Game {
           }
 
           case game.isLose(): {
-            await context.db.run((db) => db.wallet.addValue(db.bet.value)).save();
+            await context.db.run((db) => db.wallet.subValue(db.bet.value)).save();
             await edit(ctx.interaction, this.renderMainContent(context, game, true));
             break;
           }
         }
 
+        console.log({ game }, { picked: game.hasPicked() });
         ctx.collector.stop('called');
       });
     }
@@ -97,15 +96,17 @@ export default class CoinFlipGame extends Game {
           })
           .setDescription(
             Common.join(
-              !game.isWin() && !game.isLose()
+              !game.hasPicked()
                 ? 'Guess what side of the coin it would flip upon.'
                 : Common.join(
+                    `${game.isWin() ? 'Nice' : 'Sad'}. It was ${bold(game.opponent.value)}.`,
                     `You ${game.isWin() ? 'won' : 'lost'} ${bold((game.isWin() ? won : context.db.bet.value).toLocaleString())} coins.\n`,
                     `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}.`
                   )
             )
           )
-          .setColor(!ended ? Constants.Colors.BLURPLE : game.isWin() ? Constants.Colors.GREEN : Constants.Colors.RED)
+          .setColor(!game.hasPicked() ? Constants.Colors.BLURPLE : game.isWin() ? Constants.Colors.GREEN : Constants.Colors.RED)
+          .setFooter(!game.hasPicked() || game.isLose() ? null : { text: `Percent Won: ${percent(won, context.db.wallet.value)}` })
       )
       .addRow((row) =>
         Object.values(Coinflip.Side).reduce(
@@ -116,13 +117,14 @@ export default class CoinFlipGame extends Game {
                 .setLabel(toTitleCase(customId))
                 .setDisabled(ended)
                 .setStyle(
-                  !ended
+                  !game.hasPicked()
                     ? Constants.MessageButtonStyles.PRIMARY
-                    : game.isWin()
-                    ? game.opponent.value === customId
-                      ? Constants.MessageButtonStyles.SUCCESS
-                      : Constants.MessageButtonStyles.DANGER
-                    : Constants.MessageButtonStyles.DANGER
+                    : (game.player.value === Coinflip.Side.HEADS && customId === Coinflip.Side.HEADS) || 
+                      (game.player.value === Coinflip.Side.TAILS && customId === Coinflip.Side.TAILS)
+                      ? game.isWin()
+                        ? Constants.MessageButtonStyles.SUCCESS
+                        : Constants.MessageButtonStyles.DANGER
+                    : Constants.MessageButtonStyles.SECONDARY
                 )
             ),
           row

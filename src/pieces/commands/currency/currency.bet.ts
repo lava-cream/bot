@@ -1,9 +1,9 @@
-import type { CommandInteraction } from 'discord.js';
+import { CommandInteraction, Constants } from 'discord.js';
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
 import { hasDecimal, edit, DeferCommandInteraction, parseNumber } from '#lib/utilities';
-import { bold } from '@discordjs/builders';
+import { bold, inlineCode } from '@discordjs/builders';
 import { isNullOrUndefined } from '@sapphire/utilities';
 
 @ApplyOptions<Command.Options>({
@@ -37,7 +37,20 @@ export default class BetCommand extends Command {
     }
 
     await db.run((db) => db.bet.setValue(amount)).save();
-    return await edit(command, `Successfully changed your bet from ${bold(oldAmount.toLocaleString())} to ${bold(amount.toLocaleString())} coins.`);
+    await edit(command, builder => 
+      builder  
+        .addEmbed(embed => 
+          embed  
+            .setTitle('Bet Changed')
+            .setColor(Constants.Colors.GREEN)
+            .addFields(
+              { name: 'Previous', value: inlineCode(oldAmount.toLocaleString()), inline: true },
+              { name: 'New', value: inlineCode(amount.toLocaleString()), inline: true }
+            )
+        )
+    );
+
+    return;
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

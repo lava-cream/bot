@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit } from '#lib/utilities';
+import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, percent } from '#lib/utilities';
 import { Game } from '#lib/framework/index.js';
 import { Constants, MessageEmbed } from 'discord.js';
 import { bold } from '@discordjs/builders';
@@ -90,7 +90,7 @@ export class EmojiPairGame extends Game {
           db.energy.addValue(+!db.energy.isMaxStars());
         });
         description.push(`${bold('PAIRED!')} You won ${bold(final.toLocaleString())} coins.`);
-        embed.setColor(Constants.Colors.GREEN);
+        embed.setColor(Constants.Colors.GREEN).setFooter({ text: `Percent Won: ${percent(final, ctx.db.bet.value)}` });
         break;
       }
 

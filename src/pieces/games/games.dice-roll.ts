@@ -53,7 +53,6 @@ export class DiceRollGame extends Game {
       case !game.hasBothRolled() && game.outcome === DiceRoll.Outcome.NONE: {
         button.setLabel('Reveal').setStyle(Constants.MessageButtonStyles.PRIMARY);
         embed.setColor(Constants.Colors.BLURPLE).setDescription(`Your bet is ${bold(ctx.db.bet.value.toLocaleString())} coins.`);
-
         break;
       }
 
@@ -119,18 +118,15 @@ export class DiceRollGame extends Game {
           await button.deferUpdate();
           return contextual;
         },
-        end: ctx => ctx.wasInternallyStopped() ? reject() : void 0
+        end: ctx => !ctx.wasInternallyStopped() ? resolve() : reject()
       });
 
       collector.actions.add(context.customId.create('reveal').id, async (ctx) => {
         game.roll();
 
         await ctx.interaction.editReply(this.updateAndRenderMainContent(context, game));
-        ctx.collector.stop(ctx.interaction.customId);
-
-        return resolve();
+        return ctx.collector.stop(ctx.interaction.customId);
       });
-
 
       await collector.start();
     });
