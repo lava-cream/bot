@@ -7,7 +7,7 @@ import { chunk, isNullOrUndefined } from '@sapphire/utilities';
 import { DonationTrackerCategorySchema, DonationTrackerCategoryStatus, DonationTrackerSchema } from '#lib/database';
 import { DeferCommandInteraction, ButtonBuilder, Collector, ComponentId, edit, getUserAvatarURL, InteractionMessageContentBuilder, seconds, send, paginate, MessageContentBuilder, randomColor, join, randomItem } from '#lib/utilities';
 import { bold, channelMention, inlineCode } from '@discordjs/builders';
-import { DonationUpdateMethod } from '#pieces/loggers/dank-memer/dank-memer.donation-tracker-donation-update';
+import { DonationUpdateMethod } from '#pieces/loggers/dank-memer/dank-memer.donation-tracker-donation-update.js';
 import { CommandError, CommandOptionError } from '#lib/framework';
 
 @ApplyOptions<Subcommand.Options>({
