@@ -78,7 +78,6 @@ export default class CoinFlipGame extends Game {
           }
         }
 
-        console.log({ game }, { picked: game.hasPicked() });
         ctx.collector.stop('called');
       });
     }
@@ -106,7 +105,7 @@ export default class CoinFlipGame extends Game {
             )
           )
           .setColor(!game.hasPicked() ? Constants.Colors.BLURPLE : game.isWin() ? Constants.Colors.GREEN : Constants.Colors.RED)
-          .setFooter(!game.hasPicked() || game.isLose() ? null : { text: `Percent Won: ${percent(won, context.db.wallet.value)}` })
+          .setFooter(!game.hasPicked() || game.isLose() ? null : { text: `Percent Won: ${percent(won, context.db.bet.value)}` })
       )
       .addRow((row) =>
         Object.values(Coinflip.Side).reduce(
