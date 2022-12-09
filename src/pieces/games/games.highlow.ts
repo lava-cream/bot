@@ -27,7 +27,7 @@ declare module '#lib/framework/structures/game/game.types' {
 })
 export default class HighlowGame extends Game {
   public async play(context: Game.Context) {
-    const logic = new Highlow.Logic(1, 100);
+    const logic = new Highlow.Logic(1, 10);
 
     try {
       await this.awaitAction(context, logic);
@@ -37,7 +37,7 @@ export default class HighlowGame extends Game {
     }
   }
 
-  public renderMainContent(context: Game.Context, logic: Highlow.Logic, winnings: Game.CalculatedWinnings) {
+  public renderMainContent(context: Game.Context, logic: Highlow.Logic, winnings: Game.CalculatedWinnings, ended = false) {
     return new InteractionMessageContentBuilder<ButtonBuilder>()
       .addEmbed((embed) =>
         embed
@@ -50,17 +50,22 @@ export default class HighlowGame extends Game {
             logic.isJackpot() || logic.isWin() ? Constants.Colors.GREEN : logic.isLose() ? Constants.Colors.RED : Constants.Colors.NOT_QUITE_BLACK
           )
           .setFooter(
-            !logic.hasGuessed()
+            !logic.hasGuessed() || !ended
               ? null
               : { text: logic.isWin() || logic.isJackpot() ? `Percent Won: ${percent(winnings.final, context.db.bet.value)}` : 'loser loser' }
           )
           .setDescription(
             !logic.hasGuessed()
-              ? join(
-                `You placed ${bold(context.db.bet.value.toLocaleString())} coins.\n`,
-                `I just chose a secret number between ${logic.min} and ${logic.max}.`,
-                `Is the secret number ${italic('higher')} or ${italic('lower')} than ${bold(logic.hint.toLocaleString())}.`
-              )
+              ? !ended
+                ? join(
+                  `You placed ${bold(context.db.bet.value.toLocaleString())} coins.\n`,
+                  `I just chose a secret number between ${logic.min} and ${logic.max}.`,
+                  `Is the secret number ${italic('higher')} or ${italic('lower')} than ${bold(logic.hint.toLocaleString())}.`
+                )
+                : join(
+                  "You didn't respond in time. You lost your bet.",
+                  `You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`
+                )
               : join(
                 `${logic.isJackpot() ? bold('JACKPOT! ') : ''}You ${logic.isLose() ? 'lost' : 'won'} ${bold(
                   (logic.isLose() ? context.db.bet.value : winnings.final).toLocaleString()
@@ -77,9 +82,9 @@ export default class HighlowGame extends Game {
               btn
                 .setCustomId(context.customId.create(customId).id)
                 .setLabel(customId === Control.JACKPOT ? 'JACKPOT!' : toTitleCase(customId))
-                .setDisabled(logic.hasGuessed())
+                .setDisabled(ended)
                 .setStyle(
-                  !logic.hasGuessed()
+                  !logic.hasGuessed() && !ended
                     ? Constants.MessageButtonStyles.PRIMARY
                     : (logic.guess === Highlow.Guess.HIGHER && customId === Control.HIGHER) ||
                       (logic.guess === Highlow.Guess.JACKPOT && customId === Control.JACKPOT) ||
@@ -107,7 +112,15 @@ export default class HighlowGame extends Game {
           await button.deferUpdate();
           return contextual;
         },
-        end: ctx => !ctx.wasInternallyStopped() ? resolve() : reject()
+        end: async ctx => {
+          if (ctx.wasInternallyStopped()) {
+            await context.db.run(db => db.wallet.subValue(db.bet.value)).save();
+            await context.edit(this.renderMainContent(context, logic, { final: 0, raw: 0 }, true));
+            return reject();
+          } 
+
+          return resolve();
+        }
       });
 
       for (const componentId of Object.values(Control)) {
@@ -131,7 +144,7 @@ export default class HighlowGame extends Game {
                     db.energy.addValue(+!db.energy.isMaxStars());
                   })
                   .save();
-                
+
                 return winnings;
               }
 

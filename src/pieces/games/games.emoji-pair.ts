@@ -37,11 +37,19 @@ export class EmojiPairGame extends Game {
           await button.deferUpdate();
           return contextual;
         },
-        end: ctx => !ctx.wasInternallyStopped() ? resolve() : reject()
+        end: async ctx => {
+          if (ctx.wasInternallyStopped()) {
+            await context.db.run(db => db.wallet.subValue(db.bet.value)).save();
+            await context.edit(EmojiPairGame.renderContent(logic, context, true));
+            return reject();
+          } 
+
+          return resolve();
+        }
       });
 
       collector.actions.add(context.customId.create('reveal').id, async (ctx) => {
-        await edit(ctx.interaction, EmojiPairGame.renderContent(logic, context, true));
+        await edit(ctx.interaction, EmojiPairGame.renderContent(logic.reveal(), context, true));
         ctx.collector.stop(ctx.interaction.customId);
       });
 
@@ -55,20 +63,22 @@ export class EmojiPairGame extends Game {
       row.addButtonComponent((btn) =>
         btn
           .setCustomId(ctx.customId.create('reveal').id)
-          .setLabel(!ended ? 'Reveal' : logic.isWin() ? 'Winner Winner' : 'Loser Loser')
+          .setLabel(!logic.revealed ? !ended ? 'Reveal' : 'Timed Out' : logic.isWin() ? 'Winner Winner' : 'Loser Loser')
           .setDisabled(ended)
           .setStyle(
-            ended
-              ? logic.isWin()
-                ? Constants.MessageButtonStyles.SUCCESS
-                : Constants.MessageButtonStyles.DANGER
-              : Constants.MessageButtonStyles.PRIMARY
+            !logic.revealed && !ended
+              ? Constants.MessageButtonStyles.PRIMARY
+              : logic.revealed
+                ? logic.isWin()
+                  ? Constants.MessageButtonStyles.SUCCESS
+                  : Constants.MessageButtonStyles.DANGER
+                : Constants.MessageButtonStyles.SECONDARY
           )
       )
     );
 
     const description: string[] = [];
-    description.push(logic.pair.map((p, idx) => (ended ? p.emoji : idx === 1 ? ':question:' : p.emoji)).join(' '));
+    description.push(logic.pair.map((p, idx) => (ended && logic.revealed ? p.emoji : idx === 1 ? ':question:' : p.emoji)).join(' '));
 
     switch (true) {
       case !ended: {
@@ -94,10 +104,17 @@ export class EmojiPairGame extends Game {
         break;
       }
 
-      default: {
+      case logic.isLose(): {
         ctx.db.run((db) => db.wallet.subValue(db.bet.value));
-        description.push("You didn't get an outstanding pair sad.");
+        description.push("You didn't get an outstanding pair sad. You lost your bet.");
         embed.setColor(Constants.Colors.RED);
+        break;
+      }
+
+      default: {
+        ctx.db.run(db => db.wallet.subValue(db.bet.value));
+        description.push("You didn't respond in time. You lost your bet.");
+        embed.setColor(Constants.Colors.NOT_QUITE_BLACK);
         break;
       }
     }

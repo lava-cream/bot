@@ -7,6 +7,7 @@ export interface Emoji {
 
 export class Logic {
   public slots: Emoji[];
+  public revealed = false;
 
   public constructor(public readonly emojis: Emoji[]) {
     this.slots = randomItems(emojis, 3, false);
@@ -34,6 +35,11 @@ export class Logic {
 
   public reroll() {
     this.slots = randomItems(this.emojis, 3, false);
+    return this;
+  }
+
+  public reveal(): this {
+    this.revealed = true;
     return this;
   }
 }

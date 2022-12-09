@@ -48,7 +48,7 @@ export default class SlotMachineGame extends Game {
       });
 
       collector.actions.add(context.customId.create('reveal').id, async (ctx) => {
-        await edit(ctx.interaction, SlotMachineGame.renderContent(machine, context, true));
+        await edit(ctx.interaction, SlotMachineGame.renderContent(machine.reveal(), context, true));
         ctx.collector.stop(ctx.interaction.customId);
       });
 

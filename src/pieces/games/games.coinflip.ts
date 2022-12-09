@@ -38,6 +38,7 @@ export default class CoinFlipGame extends Game {
       },
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
+          await context.db.run(db => db.wallet.subValue(context.db.bet.value)).save();
           await context.edit(this.renderMainContent(context, game, true));
           await context.end(true);
           return;
@@ -96,15 +97,23 @@ export default class CoinFlipGame extends Game {
           .setDescription(
             Common.join(
               !game.hasPicked()
-                ? 'Guess what side of the coin it would flip upon.'
+                ? !ended
+                  ? Common.join(
+                      'Guess what side of the coin it would flip up to.',
+                      `You bet for ${bold(context.db.bet.value.toLocaleString())} coins.`
+                    )
+                  : Common.join(
+                      "You didn't respond in time. You lost your bet.",
+                      `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}`
+                    )
                 : Common.join(
-                    `${game.isWin() ? 'Nice' : 'Sad'}. It was ${bold(game.opponent.value)}.`,
+                    `${game.isWin() ? 'Nice' : 'Sad'}. It was ${bold(game.opponent.value)}!`,
                     `You ${game.isWin() ? 'won' : 'lost'} ${bold((game.isWin() ? won : context.db.bet.value).toLocaleString())} coins.\n`,
                     `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}.`
                   )
             )
           )
-          .setColor(!game.hasPicked() ? Constants.Colors.BLURPLE : game.isWin() ? Constants.Colors.GREEN : Constants.Colors.RED)
+          .setColor(!game.hasPicked() ? !ended ? Constants.Colors.BLURPLE : Constants.Colors.NOT_QUITE_BLACK : game.isWin() ? Constants.Colors.GREEN : Constants.Colors.RED)
           .setFooter(!game.hasPicked() || game.isLose() ? null : { text: `Percent Won: ${percent(won, context.db.bet.value)}` })
       )
       .addRow((row) =>
@@ -116,7 +125,7 @@ export default class CoinFlipGame extends Game {
                 .setLabel(toTitleCase(customId))
                 .setDisabled(ended)
                 .setStyle(
-                  !game.hasPicked()
+                  !game.hasPicked() && !ended
                     ? Constants.MessageButtonStyles.PRIMARY
                     : (game.player.value === Coinflip.Side.HEADS && customId === Coinflip.Side.HEADS) || 
                       (game.player.value === Coinflip.Side.TAILS && customId === Coinflip.Side.TAILS)

@@ -84,7 +84,7 @@ export class DiceRollGame extends Game {
 
       case game.isTie(): {
         button.setLabel('LMAO').setStyle(Constants.MessageButtonStyles.SECONDARY);
-        embed.setColor(Constants.Colors.NOT_QUITE_BLACK).setDescription(`Tie! You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`);
+        embed.setColor(Constants.Colors.YELLOW).setDescription(`Tie! You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`);
 
         break;
       }
@@ -99,6 +99,21 @@ export class DiceRollGame extends Game {
             join(`You lost ${bold(ctx.db.bet.value.toLocaleString())} coins.\n`, `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`)
           );
 
+        break;
+      }
+
+      default: {
+        ctx.db.run((db) => db.wallet.subValue(db.bet.value));
+        button.setLabel('Timed Out').setStyle(Constants.MessageButtonStyles.SECONDARY).setDisabled(true);
+        embed
+          .setColor(Constants.Colors.NOT_QUITE_BLACK)
+          .setDescription(
+            join(
+              `You didn't respond in time. You lost your bet.`,
+              `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`
+            )
+          );
+        
         break;
       }
     }
@@ -118,7 +133,14 @@ export class DiceRollGame extends Game {
           await button.deferUpdate();
           return contextual;
         },
-        end: ctx => !ctx.wasInternallyStopped() ? resolve() : reject()
+        end: async ctx => {
+          if (ctx.wasInternallyStopped()) {
+            await context.edit(this.updateAndRenderMainContent(context, game));
+            return reject();
+          } 
+
+          return resolve();
+        }
       });
 
       collector.actions.add(context.customId.create('reveal').id, async (ctx) => {
