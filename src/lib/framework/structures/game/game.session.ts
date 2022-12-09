@@ -60,33 +60,33 @@ export class GameContext {
   }
 
   /**
-   * Ends the current session. Calls {@link Game#play()} again if the energy is still up.
+   * Ends the current session. Calls {@link Game#play()} again if necessary.
    */
   public async end(failed = false): Promise<void> {
     if (isCommandInteractionExpired(this.command)) return;
     
-    if (this.interactions === GameContext.MaximumInteractions) {
-      await this.respond(this.renderIdleMessage("You have reached the maximum interactions for the current session so it ended."));
+    if (failed) {
+      await this.respond(this.renderIdleMessage("The session ended since you failed to follow the game's instructions."));
       return;
     }
 
-    if (failed) {
-      await this.respond(this.renderIdleMessage("You have been idle for so long. The current session has ended."));
+    if (this.interactions >= GameContext.MaximumInteractions) {
+      await this.respond(this.renderIdleMessage("You have reached the maximum interactions for this session."));
       return;
     }
 
     if (this.db.energy.isExpired()) {
-      await this.respond(this.renderIdleMessage("Your energy has expired! The current session has ended."))
+      await this.respond(this.renderIdleMessage("Your energy just expired!."))
       return;
     }
 
     if (this.db.bet.value > this.db.wallet.value) {
-      await this.respond(this.renderIdleMessage("You don't have enough coins to play."));
+      await this.respond(this.renderIdleMessage("You don't have enough coins to play anymore."));
       return;
     }
 
     if (this.db.wallet.isMaxValue(this.db.upgrades.mastery)) {
-      await this.respond(this.renderIdleMessage("You're rich. The session has ended."));
+      await this.respond(this.renderIdleMessage("Your wallet just reached its maximum capacity."));
       return;
     }
 
@@ -102,7 +102,7 @@ export class GameContext {
     return new InteractionMessageContentBuilder()
       .setAllowedMentions({ users: [this.command.user.id] })
       .setContent(this.command.user.toString())
-      .addEmbed((embed) => embed.setTitle('Exiting Game...').setColor(Constants.Colors.RED).setDescription(message));
+      .addEmbed((embed) => embed.setColor(Constants.Colors.RED).setDescription(message));
   }
 
   /**
