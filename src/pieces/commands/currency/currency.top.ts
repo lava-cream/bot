@@ -4,7 +4,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 
 import type { PlayerSchema } from '#lib/database';
 import type { MessageSelectOptionData } from 'discord.js';
-import { randomColor, join, createComponentId, Collector, seconds, InteractionMessageContentBuilder, DeferCommandInteraction, edit } from '#lib/utilities';
+import { randomColor, join, createComponentId, Collector, seconds, InteractionMessageContentBuilder, DeferCommandInteraction, edit, CustomId, pluralise } from '#lib/utilities';
 import { inlineCode, bold } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
 
@@ -35,8 +35,9 @@ export default class TopCommand extends Command {
     let activeType: PageType = PageType.Wallet;
 
     const dbs = await this.container.db.players.fetchAll(true);
+    const componentId = createComponentId(ComponentIdentifiers.Paginator, new Date(command.createdTimestamp));
     const collector = new Collector({
-      message: await edit(command, this.renderContent(command, activeType, dbs)),
+      message: await edit(command, this.renderContent(command, activeType, dbs, componentId)),
       componentType: 'SELECT_MENU',
       time: seconds(30),
       max: Infinity,
@@ -46,23 +47,20 @@ export default class TopCommand extends Command {
         return context;
       },
       end: async () => {
-        await edit(command, this.renderContent(command, activeType, dbs));
+        await edit(command, this.renderContent(command, activeType, dbs, componentId));
         return;
       }
     });
 
-    collector.actions.add(
-      createComponentId(ComponentIdentifiers.Paginator, new Date(command.createdTimestamp)).id,
-      async (ctx) => {
-        activeType = ctx.interaction.values.at(0) as PageType;
-        await edit(ctx.interaction, this.renderContent(command, activeType, dbs));
-      }
-    );
+    collector.actions.add(componentId.id, async (ctx) => {
+      activeType = ctx.interaction.values.at(0) as PageType;
+      await edit(ctx.interaction, this.renderContent(command, activeType, dbs, componentId));
+    });
 
     await collector.start();
   }
 
-  protected renderContent(command: CommandInteraction<'cached'>, page: PageType, dbs: PlayerSchema[]) {
+  protected renderContent(command: CommandInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], componentId: CustomId<ComponentIdentifiers>) {
     const leaderboard = dbs
       .map(db => ({ db, value: leaderboards[page](db) }))
       .filter(({ value }) => value > 0)
@@ -72,7 +70,7 @@ export default class TopCommand extends Command {
     return new InteractionMessageContentBuilder()
       .addEmbed(embed => 
         embed
-          .setTitle(`Top ${leaderboard.length} ${page}`)
+          .setTitle(`Top ${leaderboard.length} ${pluralise(toTitleCase(page), leaderboard.length)}`)
           .setColor(randomColor())
           .setDescription(
             join(
@@ -82,12 +80,13 @@ export default class TopCommand extends Command {
               })
             )
           )
+          .setFooter({ text: `Requested By: ${command.user.tag}` })
       )
       .addRow(row => 
         row  
           .addSelectMenuComponent(menu => 
             menu  
-            .setCustomId(createComponentId(ComponentIdentifiers.Paginator, new Date(command.createdTimestamp)).id)
+            .setCustomId(componentId.id)
             .setPlaceholder(toTitleCase(page))
             .setMaxValues(1)
             .setOptions(

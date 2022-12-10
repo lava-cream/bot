@@ -2,7 +2,7 @@ import { CommandInteraction, Constants } from 'discord.js';
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { hasDecimal, edit, DeferCommandInteraction, parseNumber } from '#lib/utilities';
+import { hasDecimal, edit, DeferCommandInteraction, parseNumber, getUserAvatarURL } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
 import { isNullOrUndefined } from '@sapphire/utilities';
 
@@ -34,6 +34,10 @@ export default class BetCommand extends Command {
       case amount < db.minBet || amount > db.maxBet: {
         return await edit(command, `Bro you can only set it higher than ${bold(db.minBet.toLocaleString())} but lower than ${bold(db.maxBet.toLocaleString())} smh`);
       };
+
+      case amount > db.wallet.value: {
+        return await edit(command, `You only have ${bold(db.wallet.value.toLocaleString())}, you can't bet beyond that.`);
+      }
     }
 
     await db.run((db) => db.bet.setValue(amount)).save();
@@ -44,9 +48,13 @@ export default class BetCommand extends Command {
             .setTitle('Bet Changed')
             .setColor(Constants.Colors.GREEN)
             .addFields(
-              { name: 'Previous', value: inlineCode(oldAmount.toLocaleString()), inline: true },
-              { name: 'New', value: inlineCode(amount.toLocaleString()), inline: true }
+              { name: 'Previous', value: inlineCode(oldAmount.toLocaleString()) },
+              { name: 'New', value: inlineCode(amount.toLocaleString()) }
             )
+            .setFooter({
+              text: command.user.tag,
+              iconURL: getUserAvatarURL(command.user)
+            })
         )
     );
 

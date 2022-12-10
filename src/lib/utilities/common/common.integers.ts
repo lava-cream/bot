@@ -20,11 +20,11 @@ export function parseNumber(parameter: string | number, options: ParseNumberOpti
   if (typeof parameter === 'string') {
     switch (parameter.toLowerCase()) {
       case 'max': {
-        return Math.min(options.maximum, options.amount);
+        return options.maximum;
       }
 
       case 'min': {
-        return Math.min(options.minimum, options.amount);
+        return options.minimum;
       }
 
       case 'half': {

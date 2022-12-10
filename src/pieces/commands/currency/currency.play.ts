@@ -5,9 +5,11 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Collector, join, randomColor, seconds, minutes, SelectMenuBuilder, InteractionMessageContentBuilder, ButtonBuilder, edit, send, ComponentId, getUserAvatarURL } from '#lib/utilities';
 import { type Game, GameContext } from '#lib/framework';
 import { isNullish, isNullOrUndefined } from '@sapphire/utilities';
+import type { PlayerSchema } from '#lib/database';
 
 enum PickerControl {
   Dropdown = 'picker_list',
+  Proceed = 'picker_proceed',
   Cancel = 'picker_cancel'
 }
 
@@ -45,13 +47,13 @@ export default class PlayCommand extends Command {
     const game = await this.chooseGame(command, componentId);
     if (isNullOrUndefined(game)) return;
 
-    const energized = await this.checkEnergy(command);
+    const energized = await this.checkEnergy(command, db);
     const play = energized ? await this.promptPlay(command, game) : false;
 
     return play ? await game.play(new GameContext({ command, db, game })) : void 0;
   }
 
-  private renderGamePickerContent(command: CommandInteraction<'cached'>, componentId: ComponentId, ended = false) {
+  private renderGamePickerContent(command: CommandInteraction<'cached'>, componentId: ComponentId, game: Game | null, ended = false) {
     return new InteractionMessageContentBuilder<ButtonBuilder | SelectMenuBuilder>()
       .addRow((row) =>
         row.addSelectMenuComponent((menu) =>
@@ -61,28 +63,37 @@ export default class PlayCommand extends Command {
             .setDisabled(ended)
             .setMaxValues(1)
             .setOptions(
-              this.container.stores.get('games').map((game) => ({
-                label: game.name,
-                value: game.id,
-                description: game.description ?? void 0
+              this.container.stores.get('games').map((g) => ({
+                label: g.name,
+                value: g.id,
+                description: g.description ?? void 0,
+                default: g.id === game?.id
               }))
             )
         )
       )
       .addRow((row) =>
-        row.addButtonComponent((btn) =>
-          btn
-            .setCustomId(componentId.create(PickerControl.Cancel).id)
-            .setStyle(Constants.MessageButtonStyles.SECONDARY)
-            .setLabel('End Interaction')
-            .setDisabled(ended)
-        )
+        row
+          .addButtonComponent((btn) => 
+            btn
+              .setCustomId(componentId.create(PickerControl.Proceed).id)
+              .setStyle(Constants.MessageButtonStyles.SUCCESS)
+              .setLabel('Play')
+              .setDisabled(isNullish(game))
+          )
+          .addButtonComponent((btn) =>
+            btn
+              .setCustomId(componentId.create(PickerControl.Cancel).id)
+              .setStyle(Constants.MessageButtonStyles.SECONDARY)
+              .setLabel('End Interaction')
+              .setDisabled(ended)
+          )
       )
       .addEmbed((embed) =>
         embed
           .setTitle('Game Picker')
           .setColor(ended ? Constants.Colors.NOT_QUITE_BLACK : randomColor(true))
-          .setDescription(join('Choose a game to play! Use the dropdown below to proceed.', 'Will choose a random one if you refuse to pick.'))
+          .setDescription(isNullish(game) ? 'Choose a game to play! Use the dropdown below to proceed.' : game.detailedDescription ?? 'No description provided.')
           .setFooter({ text: command.user.tag, iconURL: getUserAvatarURL(command.user) })
       );
   }
@@ -90,8 +101,9 @@ export default class PlayCommand extends Command {
   private async chooseGame(command: CommandInteraction<'cached'>, componentId: ComponentId): Promise<Game | null> {
     return new Promise(async (resolve) => {
       const gamesStore = this.container.stores.get('games');
+      const selection = new Map<string, Game>();
       const collector = new Collector({
-        message: await edit(command, this.renderGamePickerContent(command, componentId)),
+        message: await edit(command, this.renderGamePickerContent(command, componentId, null)),
         // componentType: 'ACTION_ROW',
         max: Infinity,
         time: seconds(60),
@@ -110,16 +122,27 @@ export default class PlayCommand extends Command {
             const game = !isNullOrUndefined(gameId) ? gamesStore.find(g => g.id === gameId) : null;
 
             if (!isNullOrUndefined(game)) {
-              await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, true));
-              ctx.collector.stop(game.id);
-              return resolve(game);
+              await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, game, true));
+              selection.set(command.id, game);
+              ctx.collector.resetTimer();
+              return;
             }
           }
 
           if (ctx.interaction.isButton()) {
-            await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, true));
-            ctx.collector.stop(ctx.interaction.customId);
-            return resolve(null);
+            switch(ctx.interaction.customId) {
+              case componentId.create(PickerControl.Proceed).id: {
+                const game = selection.get(command.id)!;
+                await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, game, true));
+                return resolve(game);
+              }
+
+              case componentId.create(PickerControl.Cancel).id: {
+                await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, null, true));
+                ctx.collector.stop(ctx.interaction.customId);
+                return resolve(null);
+              }
+            }
           }
         });
       }
@@ -136,10 +159,10 @@ export default class PlayCommand extends Command {
           .setColor(isNullish(energized) ? Constants.Colors.NOT_QUITE_BLACK : energized ? Constants.Colors.GREEN : Constants.Colors.RED)
           .setDescription(
             isNullish(energized)
-              ? 'Your energy died! You can restore it again by converting the stars you earned from winning games into energy.'
+              ? 'Your energy expired! You can restore it again by converting the stars you earned from winning games into energy.'
               : energized
-              ? 'Your energy has been restored. Goodluck playing!'
-              : 'Okay then. Come back next time, I guess.'
+                ? 'Your energy has been restored. Goodluck playing!'
+                : 'Okay then. Come back next time, I guess.'
           )
       )
       .addRow((row) =>
@@ -154,8 +177,8 @@ export default class PlayCommand extends Command {
                 isNullish(energized)
                   ? Constants.MessageButtonStyles.PRIMARY
                   : energized
-                  ? Constants.MessageButtonStyles.SUCCESS
-                  : Constants.MessageButtonStyles.SECONDARY
+                    ? Constants.MessageButtonStyles.SUCCESS
+                    : Constants.MessageButtonStyles.SECONDARY
               )
           )
           .addButtonComponent((btn) =>
@@ -167,8 +190,8 @@ export default class PlayCommand extends Command {
                 isNullish(energized)
                   ? Constants.MessageButtonStyles.PRIMARY
                   : energized
-                  ? Constants.MessageButtonStyles.SECONDARY
-                  : Constants.MessageButtonStyles.SUCCESS
+                    ? Constants.MessageButtonStyles.SECONDARY
+                    : Constants.MessageButtonStyles.SUCCESS
               )
           )
       );
@@ -180,10 +203,8 @@ export default class PlayCommand extends Command {
     );
   }
 
-  private checkEnergy(command: CommandInteraction<'cached'>): Promise<boolean> {
+  private checkEnergy(command: CommandInteraction<'cached'>, db: PlayerSchema.Document): Promise<boolean> {
     return new Promise(async (resolve) => {
-      const db = await this.container.db.players.fetch(command.user.id);
-
       if (!db.energy.isExpired()) return resolve(true);
       if (db.energy.value < 1) {
         await edit(command, this.renderNoEnergyMessage());
@@ -247,8 +268,8 @@ export default class PlayCommand extends Command {
                 isNullish(picked)
                   ? Constants.MessageButtonStyles.PRIMARY
                   : picked
-                  ? Constants.MessageButtonStyles.SUCCESS
-                  : Constants.MessageButtonStyles.SECONDARY
+                    ? Constants.MessageButtonStyles.SUCCESS
+                    : Constants.MessageButtonStyles.SECONDARY
               )
               .setCustomId(Control.Proceed)
               .setDisabled(!isNullish(picked))
@@ -260,8 +281,8 @@ export default class PlayCommand extends Command {
                 isNullish(picked)
                   ? Constants.MessageButtonStyles.PRIMARY
                   : !picked
-                  ? Constants.MessageButtonStyles.SUCCESS
-                  : Constants.MessageButtonStyles.SECONDARY
+                    ? Constants.MessageButtonStyles.SUCCESS
+                    : Constants.MessageButtonStyles.SECONDARY
               )
               .setCustomId(Control.Cancel)
               .setDisabled(!isNullish(picked))
