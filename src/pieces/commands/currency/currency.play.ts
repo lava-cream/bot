@@ -6,6 +6,7 @@ import { Collector, join, randomColor, seconds, minutes, SelectMenuBuilder, Inte
 import { type Game, GameContext } from '#lib/framework';
 import { isNullish, isNullOrUndefined } from '@sapphire/utilities';
 import type { PlayerSchema } from '#lib/database';
+import { bold } from '@discordjs/builders';
 
 enum PickerControl {
   Dropdown = 'picker_list',
@@ -38,7 +39,7 @@ export default class PlayCommand extends Command {
         command,
         join(
           "You can't play games right now since your wallet is full.",
-          `Your limit is ${db.wallet.getMaxValue(db.upgrades.mastery).toLocaleString()} coins.`
+          `Your current limit is ${bold(db.wallet.getMaxValue(db.upgrades.mastery).toLocaleString())} coins.`
         )
       ));
     }
@@ -104,7 +105,6 @@ export default class PlayCommand extends Command {
       const selection = new Map<string, Game>();
       const collector = new Collector({
         message: await edit(command, this.renderGamePickerContent(command, componentId, null)),
-        // componentType: 'ACTION_ROW',
         max: Infinity,
         time: seconds(60),
         filter: async (component) => {
@@ -159,7 +159,7 @@ export default class PlayCommand extends Command {
           .setColor(isNullish(energized) ? Constants.Colors.NOT_QUITE_BLACK : energized ? Constants.Colors.GREEN : Constants.Colors.RED)
           .setDescription(
             isNullish(energized)
-              ? 'Your energy expired! You can restore it again by converting the stars you earned from winning games into energy.'
+              ? 'Your energy expired! You can restore it again by converting the stars you earned from winning previous games into energy.'
               : energized
                 ? 'Your energy has been restored. Goodluck playing!'
                 : 'Okay then. Come back next time, I guess.'

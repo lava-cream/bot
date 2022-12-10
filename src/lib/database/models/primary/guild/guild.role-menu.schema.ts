@@ -46,11 +46,11 @@ export class GuildMenuSchema extends SubSchema {
   }
 
   private static getProperLimit(type: GuildMenuSchemaTypes, limit: number): number {
-    const Limits: Record<GuildMenuSchemaTypes, number> = {
+    const Limits = {
       [GuildMenuSchemaTypes.Single]: 1,
       [GuildMenuSchemaTypes.Limited]: limit,
       [GuildMenuSchemaTypes.Multiple]: Infinity
-    };
+    } satisfies Record<GuildMenuSchemaTypes, number>;
 
     return Reflect.get(Limits, type);
   }

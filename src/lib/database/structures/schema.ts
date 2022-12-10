@@ -1,4 +1,4 @@
-import { type OmitFunctions, pushElement, resolveElement, removeElement } from '#lib/utilities';
+import { type OmitFunctions, pushElement, resolveElement, removeElement, toNearestReadable } from '#lib/utilities';
 import typegoose, { types } from '@typegoose/typegoose';
 import { Ctor, FirstArgument, isNullOrUndefined, Primitive } from '@sapphire/utilities';
 
@@ -95,7 +95,7 @@ export function CreateSubSchemaManager<TSchema extends SubSchema, Args extends u
      * @param args The constructor parameters.
      */
     public create(...args: ConstructorParameters<typeof SubSchema>) {
-      return pushElement(this.entries, new SubSchema(...args));
+      return pushElement(this.entries, Reflect.construct(SubSchema, args));
     }
 
     /**
@@ -160,8 +160,20 @@ export function CreateValueSchema<T extends ValueSchemaTypes = ValueSchemaTypes>
   return ValueSchema;
 }
 
+/**
+ * Creates a {@link ValueSchema} with a string value.
+ * @param defaultValue The default string value of the schema.
+ * @returns A schema.
+ * @since 6.0.0
+ */
 export function CreateStringValueSchema(defaultValue?: string) {
+  /**
+   * Represents a {@link ValueSchema} with a string value. 
+   */
   abstract class StringValueSchema extends CreateValueSchema(defaultValue) {
+    /**
+     * The trimmed version of this schema's value.
+     */
     public get cleanValue() {
       return this.value.trim();
     }
@@ -170,14 +182,42 @@ export function CreateStringValueSchema(defaultValue?: string) {
   return StringValueSchema;
 }
 
+/**
+ * Creates a {@link ValueSchema} with a number value.
+ * @param defaultValue The default number value of the schema.
+ * @returns A schema.
+ * @since 6.0.0
+ */
 export function CreateNumberValueSchema(defaultValue?: number) {
+  /**
+   * Represents a {@link ValueSchema} with a number value.
+   */
   abstract class NumberValueSchema extends CreateValueSchema(defaultValue) {
+    /**
+     * Increments the current value of this schema.
+     * @param value The value to add.
+     * @returns This schema.
+     */
     public addValue(value: number): this {
       return this.setValue(this.value + value);
     }
 
+    /**
+     * Decrements the current value of this schema. 
+     * @param value The value to deduct.
+     * @returns This schema.
+     */
     public subValue(value: number): this {
       return this.setValue(this.value - value);
+    }
+
+    /**
+     * Formats this schema's value to its shorter form.
+     * @param fractionDigits The decimal places to preserve.
+     * @returns The shortened form.
+     */
+    public shortenValue(fractionDigits = 0) {
+      return toNearestReadable(this.value, fractionDigits);
     }
   }
 

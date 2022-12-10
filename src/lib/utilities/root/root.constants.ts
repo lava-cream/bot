@@ -15,3 +15,8 @@ export const srcDir = join(rootDir);
  * The pieces directory.
  */
 export const piecesDir = join(srcDir, 'pieces');
+
+/**
+ * The lib directory.
+ */
+export const libDir = join(srcDir, 'lib');

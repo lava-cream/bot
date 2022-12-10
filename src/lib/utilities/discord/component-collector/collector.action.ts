@@ -54,7 +54,7 @@ export class CollectorAction<in out T extends ComponentType, Cached extends bool
    * @returns The logic's return type.
    */
   public run(context: CollectorActionContext<T, Cached>) {
-    return this.logic.call(this, context);
+    return Reflect.apply(this.logic, this, [context]);
   }
 
   /**

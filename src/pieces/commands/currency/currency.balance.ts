@@ -2,7 +2,7 @@ import type { CommandInteraction } from 'discord.js';
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { getHighestRoleColor, join, percent, edit } from '#lib/utilities';
+import { getHighestRoleColor, join, percent, edit, DeferCommandInteraction } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
 
 @ApplyOptions<Command.Options>({
@@ -11,9 +11,8 @@ import { bold, inlineCode } from '@discordjs/builders';
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class BalanceCommand extends Command {
+  @DeferCommandInteraction()
   public override async chatInputRun(command: CommandInteraction<'cached'>) {
-    await command.deferReply();
-
     const db = await this.container.db.players.fetch(command.user.id);
     const member = command.options.getMember('user') ?? command.member;
 
@@ -27,7 +26,7 @@ export default class BalanceCommand extends Command {
             join(
               `${bold('👛 Wallet:')} ${db.wallet.value.toLocaleString()}`,
               `${bold('💳 Bank:')} ${db.bank.value.toLocaleString()}/${db.bank.space.value.toLocaleString()} ${inlineCode(
-                percent(db.bank.value, db.bank.space.value, 0)
+                percent(db.bank.value, db.bank.space.value, 1)
               )}`,
               `${bold('💰 Net Worth:')} ${db.netWorth.toLocaleString()}`
             )

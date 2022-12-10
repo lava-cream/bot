@@ -40,7 +40,7 @@ export function createNowId(date = new Date()): string {
  * @since 6.0.0
  */
 export function percent(value: number, base: number, decimals = 0): `${string}%` {
-  return `${Math.round((value / base) * 100).toFixed(decimals)}%`;
+  return `${(Math.round((value / base) * 100) || 0).toFixed(decimals)}%`;
 }
 
 /**

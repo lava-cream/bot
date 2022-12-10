@@ -14,7 +14,7 @@ export const DeferCommandInteraction = (ephemeral = false): MethodDecorator => {
 
     descriptor.value = <any> async function (this: ChatInputCommand, command: CommandInteraction, context: ChatInputCommandContext) {
       await command.deferReply({ ephemeral });
-      return method.call(this, command, context);
+      return Reflect.apply(method, this, [command, context]);
     };
   });
 };

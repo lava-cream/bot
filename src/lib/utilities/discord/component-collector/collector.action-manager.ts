@@ -25,9 +25,7 @@ export class CollectorActionManager<in out T extends ComponentType, Cached exten
    * @returns A {@link CollectorAction} instance.
    */
   public add(id: string, logic: CollectorActionLogic<T, Cached>): CollectorAction<T, Cached> {
-    const action = new CollectorAction(id, logic);
-    this.actions.set(id, action);
-    return action;
+    return this.actions.ensure(id, () => Reflect.construct(CollectorAction, [id, logic]));
   }
 
   /**
@@ -56,8 +54,13 @@ export class CollectorActionManager<in out T extends ComponentType, Cached exten
    * @returns The total amount of actions in this manager.
    */
   public set(actions: CollectorAction<T, Cached>[]): number {
-    for (const existingAction of this.actions.values()) this.remove(existingAction.id);
-    for (const action of actions.values()) this.add(action.id, action.logic);
-    return this.actions.size;
+    this.actions.clear();
+
+    return actions
+      .reduce((manager, action) => {
+        this.add(action.id, action.logic);
+        return manager;
+      }, this.actions)
+      .size;
   }
 }

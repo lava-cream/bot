@@ -1,5 +1,6 @@
 import type { Awaitable } from 'discord.js';
 import { setTimeout } from 'node:timers/promises';
+import { minutes } from './common.dates.js';
 
 /**
  * Creates a responsive timer that calls out a function every second while an internal timer is ticking until both ends.
@@ -9,9 +10,10 @@ import { setTimeout } from 'node:timers/promises';
  */
 export async function createResponsiveTimer<T>(duration: number, callback: (timeLeft: number) => Awaitable<T>): Promise<void> {
   await Promise.all<void>([
-    new Promise<void>((resolve) => sleepFor(duration * 1_000).then(() => resolve())),
+    new Promise<void>((resolve) => sleepFor(minutes(1)).then(() => resolve())),
     new Promise<void>(async (resolve) => {
       let secondsLeft = duration;
+      
       while (secondsLeft > 0) {
         await callback(secondsLeft);
         await setTimeout(1_000, secondsLeft--);
