@@ -155,6 +155,15 @@ export function CreateValueSchema<T extends ValueSchemaTypes = ValueSchemaTypes>
       this.value = value;
       return this;
     }
+
+    /**
+     * Resets this schema's value back to its default configured value.
+     * @returns This schema.
+     */
+    public resetValue(): this {
+      if (!isNullOrUndefined(defaultValue)) this.setValue(defaultValue);
+      return this;
+    }
   }
 
   return ValueSchema;
