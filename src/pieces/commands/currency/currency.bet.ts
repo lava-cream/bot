@@ -30,7 +30,7 @@ export default class BetCommand extends Command {
               .setDescription(
                 join(
                   `Your bet right now is ${bold(db.bet.value.toLocaleString())} coins.`,
-                  `You ${bold(isSufficient ? 'can' : 'cannot')} use your coins on games.`
+                  `You ${bold(isSufficient ? 'can' : 'cannot')} use this to bet on games.`
                 )
               )
           )
@@ -51,7 +51,7 @@ export default class BetCommand extends Command {
         .addEmbed(embed => 
           embed  
             .setColor(Constants.Colors.GREEN)
-            .setDescription(`You're now betting for ${bold(parsedAmount.toLocaleString())} coins.`)
+            .setDescription(`You're now betting ${bold(parsedAmount.toLocaleString())} coins.`)
             .setTimestamp(new Date(command.createdTimestamp))
         )
     );
@@ -63,11 +63,16 @@ export default class BetCommand extends Command {
     db: PlayerSchema.Document,
     parsedAmount: ReturnType<typeof parseNumber>
   ): asserts parsedAmount is number {
-    if (isNullOrUndefined(parsedAmount) || hasDecimal(parsedAmount)) throw new CommandError('You need to pass an actual number.');
-    if (parsedAmount === db.bet.value) throw new CommandError("Cannot change your bet due to it being exactly similar.");
-    if (parsedAmount < db.minBet) throw new CommandError(`You can't bet lower than your minimum ${bold(db.minBet.toLocaleString())} limit.`);
-    if (parsedAmount > db.maxBet) throw new CommandError(`You can't bet higher than your maximum ${bold(db.maxBet.toLocaleString())} limit.`);
-    if (parsedAmount > db.wallet.value) throw new CommandError(`You only have ${bold(db.wallet.value.toLocaleString())} coins.`);
+    try {
+      if (isNullOrUndefined(parsedAmount) || hasDecimal(parsedAmount)) throw 'You need to pass an actual number.';
+      if (parsedAmount === db.bet.value) throw "Cannot change your bet due to it being exactly similar.";
+      if (parsedAmount < db.minBet) throw `You can't bet lower than your minimum ${bold(db.minBet.toLocaleString())} limit.`;
+      if (parsedAmount > db.maxBet) throw `You can't bet higher than your maximum ${bold(db.maxBet.toLocaleString())} limit.`;
+      if (parsedAmount > db.wallet.value) throw `You only have ${bold(db.wallet.value.toLocaleString())} coins.`;
+    } catch(error) {
+      if (typeof error !== 'string') throw error;
+      throw new CommandError(error as string);
+    }
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

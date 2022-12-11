@@ -155,13 +155,13 @@ export default class PlayCommand extends Command {
     return new InteractionMessageContentBuilder()
       .addEmbed((embed) =>
         embed
-          .setTitle(isNullish(energized) || !energized ? 'Energy Dead' : 'Energy Restored')
+          .setTitle(isNullish(energized) || !energized ? 'Energy Dead' : 'Energy Recharged')
           .setColor(isNullish(energized) ? Constants.Colors.NOT_QUITE_BLACK : energized ? Constants.Colors.GREEN : Constants.Colors.RED)
           .setDescription(
             isNullish(energized)
-              ? 'Your energy expired! You can restore it again by converting the stars you earned from winning previous games into energy.'
+              ? 'Your energy expired! Restore it by converting to energy the stars you earned from winning previous games.'
               : energized
-                ? 'Your energy has been restored. Goodluck playing!'
+                ? 'Your energy has been recharged. Goodluck playing!'
                 : 'Okay then. Come back next time, I guess.'
           )
       )
@@ -186,6 +186,7 @@ export default class PlayCommand extends Command {
               .setLabel('Cancel')
               .setDisabled(!isNullish(energized))
               .setCustomId(EnergyControl.Cancel)
+              .setEmoji('❌')
               .setStyle(
                 isNullish(energized)
                   ? Constants.MessageButtonStyles.PRIMARY
