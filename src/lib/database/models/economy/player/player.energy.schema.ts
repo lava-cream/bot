@@ -14,7 +14,7 @@ export class PlayerEnergySchema extends CreateNumberValueSchema(PlayerDefaults.S
   }
 
   public isMaxEnergy(tier: number) {
-    return this.energy >= (PlayerLimits.Energy + (PlayerTierAddedLimits.Energy * tier));
+    return this.energy >= PlayerLimits.Energy + PlayerTierAddedLimits.Energy * tier;
   }
 
   public isExpired() {

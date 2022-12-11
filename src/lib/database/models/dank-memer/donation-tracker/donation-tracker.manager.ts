@@ -32,20 +32,25 @@ export class DonationTrackerManager extends Manager<DonationTrackerSchema> {
   public async updateDonator(db: DonationTrackerSchema.Document, options: DonationUpdateLoggerPayload): Promise<boolean> {
     const { amount, context, method } = options;
     const category = db.categories.resolve(context.donation.id);
-    const donator =
-      category?.donators.resolve(context.donator.user.id) ?? category?.donators.create({ id: context.donator.user.id, amount: 0 });
+    const donator = category?.donators.resolve(context.donator.user.id) ?? category?.donators.create({ id: context.donator.user.id, amount: 0 });
     if (isNullOrUndefined(category) || isNullOrUndefined(donator)) return false;
 
-    switch(method) {
+    switch (method) {
       case DonationUpdateMethod.Increment: {
         const addedAmount = Math.round(amount.amount * category.multiplier);
-        donator.setAmount(donator.amount + addedAmount).season.setValue(donator.season.value + addedAmount).setTotal(donator.season.value);
+        donator
+          .setAmount(donator.amount + addedAmount)
+          .season.setValue(donator.season.value + addedAmount)
+          .setTotal(donator.season.value);
         break;
-      };
+      }
 
       case DonationUpdateMethod.Decrement: {
         const removedAmount = amount.amount;
-        donator.setAmount(donator.amount - removedAmount).season.setValue(donator.season.value - removedAmount).setTotal(donator.season.value);
+        donator
+          .setAmount(donator.amount - removedAmount)
+          .season.setValue(donator.season.value - removedAmount)
+          .setTotal(donator.season.value);
       }
     }
 

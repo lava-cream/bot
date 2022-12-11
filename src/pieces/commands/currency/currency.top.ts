@@ -4,7 +4,18 @@ import { ApplyOptions } from '@sapphire/decorators';
 
 import type { PlayerSchema } from '#lib/database';
 import type { MessageSelectOptionData } from 'discord.js';
-import { randomColor, join, createComponentId, Collector, seconds, InteractionMessageContentBuilder, DeferCommandInteraction, edit, CustomId, pluralise } from '#lib/utilities';
+import {
+  randomColor,
+  join,
+  createComponentId,
+  Collector,
+  seconds,
+  InteractionMessageContentBuilder,
+  DeferCommandInteraction,
+  edit,
+  CustomId,
+  pluralise
+} from '#lib/utilities';
 import { inlineCode, bold } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
 
@@ -19,9 +30,9 @@ enum PageType {
 }
 
 const leaderboards: Record<PageType, (db: PlayerSchema) => number> = {
-  [PageType.Wallet]: db => db.wallet.value,
-  [PageType.Bank]: db => db.bank.value,
-  [PageType.Star]: db => db.energy.value
+  [PageType.Wallet]: (db) => db.wallet.value,
+  [PageType.Bank]: (db) => db.bank.value,
+  [PageType.Star]: (db) => db.energy.value
 };
 
 @ApplyOptions<Command.Options>({
@@ -62,13 +73,13 @@ export default class TopCommand extends Command {
 
   protected renderContent(command: CommandInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], componentId: CustomId<ComponentIdentifiers>) {
     const leaderboard = dbs
-      .map(db => ({ db, value: leaderboards[page](db) }))
+      .map((db) => ({ db, value: leaderboards[page](db) }))
       .filter(({ value }) => value > 0)
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
 
     return new InteractionMessageContentBuilder()
-      .addEmbed(embed => 
+      .addEmbed((embed) =>
         embed
           .setTitle(`Top ${leaderboard.length} ${pluralise(toTitleCase(page), leaderboard.length)}`)
           .setColor(randomColor())
@@ -82,10 +93,9 @@ export default class TopCommand extends Command {
           )
           .setFooter({ text: `Requested By: ${command.user.tag}` })
       )
-      .addRow(row => 
-        row  
-          .addSelectMenuComponent(menu => 
-            menu  
+      .addRow((row) =>
+        row.addSelectMenuComponent((menu) =>
+          menu
             .setCustomId(componentId.id)
             .setPlaceholder(toTitleCase(page))
             .setMaxValues(1)
@@ -99,8 +109,8 @@ export default class TopCommand extends Command {
                   }
               )
             )
-          )
-      )
+        )
+      );
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

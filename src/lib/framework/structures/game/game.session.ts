@@ -64,19 +64,19 @@ export class GameContext {
    */
   public async end(failed = false): Promise<void> {
     if (isCommandInteractionExpired(this.command)) return;
-    
+
     if (failed) {
       await this.respond(this.renderIdleMessage("The session ended since you failed to follow the game's instructions."));
       return;
     }
 
     if (this.interactions >= GameContext.MaximumInteractions) {
-      await this.respond(this.renderIdleMessage("You have reached the maximum interactions for this session."));
+      await this.respond(this.renderIdleMessage('You have reached the maximum interactions for this session.'));
       return;
     }
 
     if (this.db.energy.isExpired()) {
-      await this.respond(this.renderIdleMessage("Your energy just expired!."))
+      await this.respond(this.renderIdleMessage('Your energy just expired!.'));
       return;
     }
 
@@ -86,7 +86,7 @@ export class GameContext {
     }
 
     if (this.db.wallet.isMaxValue(this.db.upgrades.mastery)) {
-      await this.respond(this.renderIdleMessage("Your wallet just reached its maximum capacity."));
+      await this.respond(this.renderIdleMessage('Your wallet just reached its maximum capacity.'));
       return;
     }
 

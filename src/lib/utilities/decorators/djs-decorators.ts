@@ -1,6 +1,6 @@
-import { createMethodDecorator } from "@sapphire/decorators";
-import type { ChatInputCommand, ChatInputCommandContext } from "@sapphire/framework";
-import type { CommandInteraction } from "discord.js";
+import { createMethodDecorator } from '@sapphire/decorators';
+import type { ChatInputCommand, ChatInputCommandContext } from '@sapphire/framework';
+import type { CommandInteraction } from 'discord.js';
 
 /**
  * Defers the {@link CommandInteraction} passed into chatInputRun.
@@ -12,7 +12,7 @@ export const DeferCommandInteraction = (ephemeral = false): MethodDecorator => {
   return createMethodDecorator((_target, _key, descriptor) => {
     const method = descriptor.value as ChatInputCommand['chatInputRun'];
 
-    descriptor.value = <any> async function (this: ChatInputCommand, command: CommandInteraction, context: ChatInputCommandContext) {
+    descriptor.value = <any>async function (this: ChatInputCommand, command: CommandInteraction, context: ChatInputCommandContext) {
       await command.deferReply({ ephemeral });
       return Reflect.apply(method, this, [command, context]);
     };

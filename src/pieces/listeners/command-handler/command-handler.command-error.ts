@@ -11,16 +11,14 @@ export class ChatInputCommandErrorListener extends Listener<typeof Events.ChatIn
   }
 
   public async run(error: UserError, payload: ChatInputCommandErrorPayload): Promise<void> {
-    const defaultEmbed = new MessageEmbed()
-      .setColor(Constants.Colors.RED)
-      .setDescription(error.message);
+    const defaultEmbed = new MessageEmbed().setColor(Constants.Colors.RED).setDescription(error.message);
 
     if (isCommandError(error)) {
-      await send(payload.interaction, builder => builder.addEmbed(() => defaultEmbed.setTitle('Command Error')));
+      await send(payload.interaction, (builder) => builder.addEmbed(() => defaultEmbed.setTitle('Command Error')));
     } else if (isCommandOptionError(error)) {
-      await send(payload.interaction, builder => builder.addEmbed(() => defaultEmbed.setTitle('Command Input Error')));
+      await send(payload.interaction, (builder) => builder.addEmbed(() => defaultEmbed.setTitle('Command Input Error')));
     }
-    
+
     this.container.logger.error('[CLIENT => COMMAND-HANDLER]', 'Unknown Error', error);
   }
 }

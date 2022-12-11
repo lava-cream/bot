@@ -20,9 +20,7 @@ export default class OwnerOnlyPrecondition extends Precondition {
 
     const app = await user.client.application.fetch();
 
-    return app.owner?.id !== user.id 
-      ? this.error({ identifier: this.name })
-      : this.ok();
+    return app.owner?.id !== user.id ? this.error({ identifier: this.name }) : this.ok();
   }
 
   public override messageRun(message: Message) {

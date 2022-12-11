@@ -5,7 +5,7 @@ export class PlayerWalletSchema extends CreateNumberValueSchema(PlayerDefaults.W
   public isMaxValue(mastery: number) {
     return this.value >= this.getMaxValue(mastery);
   }
-  
+
   public getMaxValue(mastery: number) {
     return Math.round(PlayerLimits.Wallet + PlayerMasteryAddedLimits.Wallet * mastery);
   }

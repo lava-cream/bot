@@ -43,7 +43,7 @@ export class ShopItemSchema extends SubSchema {
   }
 
   public isSharedWith(userId: string) {
-    return Boolean(resolveElement(this.sharers, sharer => sharer === userId));
+    return Boolean(resolveElement(this.sharers, (sharer) => sharer === userId));
   }
 
   public setPrice(price: number): this {
@@ -59,7 +59,7 @@ export class ShopItemSchema extends SubSchema {
   public setExpire(expire: number | null): this {
     this.expire = expire;
     return this;
-  } 
+  }
 
   public setOwner(owner: string | null): this {
     this.owner = owner;
@@ -72,7 +72,7 @@ export class ShopItemSchema extends SubSchema {
   }
 
   public removeSharer(userId: string): this {
-    removeElement(this.sharers, sharer => sharer === userId);
+    removeElement(this.sharers, (sharer) => sharer === userId);
     return this;
   }
 }
@@ -80,14 +80,14 @@ export class ShopItemSchema extends SubSchema {
 export const enum ShopItemType {
   Role = 1,
   ChannelText = 2,
-  ChannelVoice = 3,
+  ChannelVoice = 3
 }
 
 export const enum ShopItemStatus {
   SaleInitial = 1,
   SaleResell = 2,
   OwnedRent = 3,
-  OwnedPermanent = 4,
+  OwnedPermanent = 4
 }
 
 export class ShopItemManagerSchema extends CreateSubSchemaManager(ShopItemSchema) {}

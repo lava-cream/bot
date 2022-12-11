@@ -16,7 +16,6 @@ export class DonationTrackerAutoroleSchema extends SubSchema {
   }
 }
 
-
 export class DonationTrackerAutoroleManagerSchema extends CreateSubSchemaManager(DonationTrackerAutoroleSchema) {
   public sort() {
     return this.entries.sort((a, b) => b.amount - a.amount);

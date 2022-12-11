@@ -7,6 +7,6 @@ export class PlayerLevelsSchema extends CreateNumberValueSchema(PlayerDefaults.L
   }
 
   public isMaxLevel(mastery: number) {
-    return this.level >= (PlayerLimits.Level + (PlayerMasteryAddedLimits.Level * mastery));
+    return this.level >= PlayerLimits.Level + PlayerMasteryAddedLimits.Level * mastery;
   }
 }

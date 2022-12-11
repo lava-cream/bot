@@ -36,9 +36,9 @@ export class PartySchema extends Schema {
 
   public get limits() {
     return {
-      coins: Math.round(PartyLimits.Coins + (PartyPrestige.AddedCoinsLimit * this.prestige)),
-      multiplier: Math.round(PartyLimits.Multiplier + (PartyPrestige.AddedMultiplierLimit * this.prestige)),
-      keys: Math.round(PartyLimits.Keys + (PartyPrestige.AddedKeysLimit * this.prestige)),
+      coins: Math.round(PartyLimits.Coins + PartyPrestige.AddedCoinsLimit * this.prestige),
+      multiplier: Math.round(PartyLimits.Multiplier + PartyPrestige.AddedMultiplierLimit * this.prestige),
+      keys: Math.round(PartyLimits.Keys + PartyPrestige.AddedKeysLimit * this.prestige)
     };
   }
 

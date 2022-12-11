@@ -55,7 +55,7 @@ export class PlayerSchema extends Schema {
     let multiplier = this.multiplier.value;
 
     if (this.party.entries.length) {
-      const parties = await Promise.all(this.party.entries.map(p => container.db.parties.fetch(p.id)));
+      const parties = await Promise.all(this.party.entries.map((p) => container.db.parties.fetch(p.id)));
       multiplier += parties.reduce((n, p) => n + p.multiplier, 0);
     }
 

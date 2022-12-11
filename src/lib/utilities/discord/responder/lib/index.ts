@@ -32,11 +32,11 @@ export async function send<Cached extends CacheType>(
 
     case replied: {
       return target.followUp(content);
-    };
+    }
 
     default: {
       return target.reply({ ...content, fetchReply: true });
-    };
+    }
   }
 }
 

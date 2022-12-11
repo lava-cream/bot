@@ -22,12 +22,12 @@ export default class EnergyCommand extends Command {
       componentType: 'BUTTON',
       max: Infinity,
       time: seconds(10),
-      filter: async btn => {
+      filter: async (btn) => {
         const contextual = btn.user.id === command.user.id;
         await btn.deferUpdate();
         return contextual;
       },
-      end: async ctx => {
+      end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
           await edit(command, EnergyCommand.renderContent(command, db, componentId, false, true));
           return;
@@ -35,8 +35,8 @@ export default class EnergyCommand extends Command {
       }
     });
 
-    collector.actions.add(componentId.create('recharge').id, async ctx => {
-      await db.run(db => db.energy.subEnergy(1)).save();
+    collector.actions.add(componentId.create('recharge').id, async (ctx) => {
+      await db.run((db) => db.energy.subEnergy(1)).save();
       await edit(ctx.interaction, EnergyCommand.renderContent(command, db, componentId, true, true));
       return ctx.collector.stop(ctx.interaction.customId);
     });
@@ -46,8 +46,8 @@ export default class EnergyCommand extends Command {
 
   public static renderContent(command: CommandInteraction<'cached'>, db: PlayerSchema, componentId: ComponentId, recharged: boolean, ended: boolean) {
     return new InteractionMessageContentBuilder()
-      .addEmbed(embed => 
-        embed  
+      .addEmbed((embed) =>
+        embed
           .setTitle(`${command.user.username}'s energy`)
           .setColor(Constants.Colors.GOLD)
           .setDescription(
@@ -58,16 +58,16 @@ export default class EnergyCommand extends Command {
             )
           )
       )
-      .addRow(row => 
-        row.addButtonComponent(btn => 
-          btn  
+      .addRow((row) =>
+        row.addButtonComponent((btn) =>
+          btn
             .setCustomId(componentId.create('recharge').id)
             .setStyle(!recharged && !ended ? Constants.MessageButtonStyles.PRIMARY : Constants.MessageButtonStyles.SECONDARY)
             .setLabel('Recharge')
             .setEmoji('⚡')
             .setDisabled(ended)
         )
-      )
+      );
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

@@ -2,7 +2,20 @@ import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '
 import { CommandInteraction, Constants } from 'discord.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { Collector, join, randomColor, seconds, minutes, SelectMenuBuilder, InteractionMessageContentBuilder, ButtonBuilder, edit, send, ComponentId, getUserAvatarURL } from '#lib/utilities';
+import {
+  Collector,
+  join,
+  randomColor,
+  seconds,
+  minutes,
+  SelectMenuBuilder,
+  InteractionMessageContentBuilder,
+  ButtonBuilder,
+  edit,
+  send,
+  ComponentId,
+  getUserAvatarURL
+} from '#lib/utilities';
 import { type Game, GameContext } from '#lib/framework';
 import { isNullish, isNullOrUndefined } from '@sapphire/utilities';
 import type { PlayerSchema } from '#lib/database';
@@ -75,7 +88,7 @@ export default class PlayCommand extends Command {
       )
       .addRow((row) =>
         row
-          .addButtonComponent((btn) => 
+          .addButtonComponent((btn) =>
             btn
               .setCustomId(componentId.create(PickerControl.Proceed).id)
               .setStyle(Constants.MessageButtonStyles.SUCCESS)
@@ -94,7 +107,9 @@ export default class PlayCommand extends Command {
         embed
           .setTitle('Game Picker')
           .setColor(ended ? Constants.Colors.NOT_QUITE_BLACK : randomColor(true))
-          .setDescription(isNullish(game) ? 'Choose a game to play! Use the dropdown below to proceed.' : game.detailedDescription ?? 'No description provided.')
+          .setDescription(
+            isNullish(game) ? 'Choose a game to play! Use the dropdown below to proceed.' : game.detailedDescription ?? 'No description provided.'
+          )
           .setFooter({ text: command.user.tag, iconURL: getUserAvatarURL(command.user) })
       );
   }
@@ -112,14 +127,14 @@ export default class PlayCommand extends Command {
           await component.deferUpdate();
           return context;
         },
-        end: ctx => ctx.wasInternallyStopped() ? resolve(null) : void 0
+        end: (ctx) => (ctx.wasInternallyStopped() ? resolve(null) : void 0)
       });
 
       for (const customId of Object.values(PickerControl)) {
         collector.actions.add(componentId.create(customId).id, async (ctx) => {
           if (ctx.interaction.isSelectMenu()) {
             const gameId = ctx.interaction.values.at(0) ?? null;
-            const game = !isNullOrUndefined(gameId) ? gamesStore.find(g => g.id === gameId) : null;
+            const game = !isNullOrUndefined(gameId) ? gamesStore.find((g) => g.id === gameId) : null;
 
             if (!isNullOrUndefined(game)) {
               await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, game, true));
@@ -130,7 +145,7 @@ export default class PlayCommand extends Command {
           }
 
           if (ctx.interaction.isButton()) {
-            switch(ctx.interaction.customId) {
+            switch (ctx.interaction.customId) {
               case componentId.create(PickerControl.Proceed).id: {
                 const game = selection.get(command.id)!;
                 await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, game, true));
@@ -161,8 +176,8 @@ export default class PlayCommand extends Command {
             isNullish(energized)
               ? 'Your energy expired! Restore it by converting to energy the stars you earned from winning previous games.'
               : energized
-                ? 'Your energy has been recharged. Goodluck playing!'
-                : 'Okay then. Come back next time, I guess.'
+              ? 'Your energy has been recharged. Goodluck playing!'
+              : 'Okay then. Come back next time, I guess.'
           )
       )
       .addRow((row) =>
@@ -177,8 +192,8 @@ export default class PlayCommand extends Command {
                 isNullish(energized)
                   ? Constants.MessageButtonStyles.PRIMARY
                   : energized
-                    ? Constants.MessageButtonStyles.SUCCESS
-                    : Constants.MessageButtonStyles.SECONDARY
+                  ? Constants.MessageButtonStyles.SUCCESS
+                  : Constants.MessageButtonStyles.SECONDARY
               )
           )
           .addButtonComponent((btn) =>
@@ -191,8 +206,8 @@ export default class PlayCommand extends Command {
                 isNullish(energized)
                   ? Constants.MessageButtonStyles.PRIMARY
                   : energized
-                    ? Constants.MessageButtonStyles.SECONDARY
-                    : Constants.MessageButtonStyles.SUCCESS
+                  ? Constants.MessageButtonStyles.SECONDARY
+                  : Constants.MessageButtonStyles.SUCCESS
               )
           )
       );
@@ -231,11 +246,7 @@ export default class PlayCommand extends Command {
       });
 
       collector.actions.add(EnergyControl.Energize, async (ctx) => {
-        await db
-          .run((db) =>
-            db.energy.subEnergy(1).setExpire(Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)))
-          )
-          .save();
+        await db.run((db) => db.energy.subEnergy(1).setExpire(Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)))).save();
         await edit(ctx.interaction, this.renderEnergyPrompterMessage(true));
         ctx.collector.stop(ctx.interaction.customId);
         resolve(true);
@@ -269,8 +280,8 @@ export default class PlayCommand extends Command {
                 isNullish(picked)
                   ? Constants.MessageButtonStyles.PRIMARY
                   : picked
-                    ? Constants.MessageButtonStyles.SUCCESS
-                    : Constants.MessageButtonStyles.SECONDARY
+                  ? Constants.MessageButtonStyles.SUCCESS
+                  : Constants.MessageButtonStyles.SECONDARY
               )
               .setCustomId(Control.Proceed)
               .setDisabled(!isNullish(picked))
@@ -282,8 +293,8 @@ export default class PlayCommand extends Command {
                 isNullish(picked)
                   ? Constants.MessageButtonStyles.PRIMARY
                   : !picked
-                    ? Constants.MessageButtonStyles.SUCCESS
-                    : Constants.MessageButtonStyles.SECONDARY
+                  ? Constants.MessageButtonStyles.SUCCESS
+                  : Constants.MessageButtonStyles.SECONDARY
               )
               .setCustomId(Control.Cancel)
               .setDisabled(!isNullish(picked))

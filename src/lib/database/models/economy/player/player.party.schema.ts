@@ -21,7 +21,7 @@ export class PlayerPartySchema extends SubSchema {
   }
 
   public isInvited() {
-    return this.type === PlayerPartyTypes.Invited; 
+    return this.type === PlayerPartyTypes.Invited;
   }
 }
 
@@ -33,13 +33,9 @@ export const enum PlayerPartyTypes {
 
 export class PlayerPartyManagerSchema extends CreateSubSchemaManager(PlayerPartySchema) {
   public async fetch() {
-    return (
-      await Promise.allSettled(
-        this.entries.map(entry => container.db.parties.get(entry.id))
-      )
-    )
+    return (await Promise.allSettled(this.entries.map((entry) => container.db.parties.get(entry.id))))
       .filter(isPromiseFulfilled)
-      .map(fulfilled => fulfilled.value)
+      .map((fulfilled) => fulfilled.value)
       .filter(isNullOrUndefined);
   }
 }

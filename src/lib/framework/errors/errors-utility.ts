@@ -9,10 +9,12 @@ import { CommandError } from './errors.command.js';
  * @since 6.0.0
  */
 export function isCommandOptionError(error: UserError): error is CommandOptionError {
-  return Reflect.get(error, 'identifier') === CommandOptionError.name 
-    && Reflect.has(error, 'option')
-    && typeof Reflect.get(error, 'option') === 'string'
-    && error instanceof CommandOptionError;
+  return (
+    Reflect.get(error, 'identifier') === CommandOptionError.name &&
+    Reflect.has(error, 'option') &&
+    typeof Reflect.get(error, 'option') === 'string' &&
+    error instanceof CommandOptionError
+  );
 }
 
 /**
@@ -23,4 +25,4 @@ export function isCommandOptionError(error: UserError): error is CommandOptionEr
  */
 export function isCommandError(error: UserError): error is CommandError {
   return Reflect.get(error, 'identifier') === CommandError.name && error instanceof CommandError;
-};
+}

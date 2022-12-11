@@ -37,7 +37,7 @@ export const enum PlayerLevel {
 export const enum PlayerTierRequirements {
   Wallet = PlayerLimits.Wallet * 0.25,
   Star = PlayerLimits.Star * 0.25,
-  Level = PlayerLimits.Level / PlayerLimits.Tier * 0.4,
+  Level = (PlayerLimits.Level / PlayerLimits.Tier) * 0.4
 }
 
 export const enum PlayerTierAddedLimits {

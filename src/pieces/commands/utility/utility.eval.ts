@@ -3,7 +3,15 @@ import { ApplyOptions } from '@sapphire/decorators';
 import type { CommandInteraction } from 'discord.js';
 
 import { Constants } from 'discord.js';
-import { Collector, MessageContentBuilder, InteractionMessageContentBuilder, ComponentId, DeferCommandInteraction, edit, unsend } from '#lib/utilities';
+import {
+  Collector,
+  MessageContentBuilder,
+  InteractionMessageContentBuilder,
+  ComponentId,
+  DeferCommandInteraction,
+  edit,
+  unsend
+} from '#lib/utilities';
 import { Result } from '@sapphire/result';
 import { Stopwatch } from '@sapphire/stopwatch';
 import { codeBlock } from '@discordjs/builders';
@@ -61,7 +69,7 @@ export default class EvalCommand extends Command {
         const inspected = inspect(await eval(this.getCode(code)), {
           breakLength: 1900,
           depth: 0,
-          compact: false,
+          compact: false
         });
 
         return this.sanitise(inspected);

@@ -166,15 +166,17 @@ export type Scattered = Mutable<{ value: number }>[];
  * @param amount The amount to scatter into lengths of {@link Scattered scattered} elements. Consumed by the internal randomizer from this function.
  * @param length The length of {@link Scattered scattered} elements. When reduced, it should 100% be the {@link amount amount} too.
  * @returns An array of {@link Scattered scattered} elements.
- * @version 6.0.0 - Reduce code. 
+ * @version 6.0.0 - Reduce code.
  * @since 5.1.0
  */
 export function scatter(amount: number, length: number): Scattered {
-  const mutate = (value: number): Scattered[number] => ({ value }); 
+  const mutate = (value: number): Scattered[number] => ({ value });
   const num = 100;
 
   const base = Math.floor(num / length);
-  const scattered: Scattered = Array(length).fill(null).map(() => mutate(base));
+  const scattered: Scattered = Array(length)
+    .fill(null)
+    .map(() => mutate(base));
   const baseTotal = base * length;
   const diff = num - baseTotal;
 
@@ -185,9 +187,7 @@ export function scatter(amount: number, length: number): Scattered {
     randomItem(scattered).value--;
   }
 
-  return scattered
-    .map(s => mutate(amount * (s.value / 100)))
-    .sort((a, b) => b.value - a.value);
+  return scattered.map((s) => mutate(amount * (s.value / 100))).sort((a, b) => b.value - a.value);
 }
 
 /**

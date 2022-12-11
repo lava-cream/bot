@@ -13,7 +13,7 @@ export async function createResponsiveTimer<T>(duration: number, callback: (time
     new Promise<void>((resolve) => sleepFor(minutes(1)).then(() => resolve())),
     new Promise<void>(async (resolve) => {
       let secondsLeft = duration;
-      
+
       while (secondsLeft > 0) {
         await callback(secondsLeft);
         await setTimeout(1_000, secondsLeft--);

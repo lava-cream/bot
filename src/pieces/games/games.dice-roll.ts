@@ -36,15 +36,15 @@ export class DiceRollGame extends Game {
       name: `${ctx.command.user.username}'s dice roll game`,
       iconURL: getUserAvatarURL(ctx.command.user)
     });
-    const button = new MessageButton()
-      .setCustomId(ctx.customId.create('reveal').id)
-      .setDisabled(game.hasBothRolled());
+    const button = new MessageButton().setCustomId(ctx.customId.create('reveal').id).setDisabled(game.hasBothRolled());
     const row = new MessageActionRow().setComponents([button]);
 
     for (const user of [ctx.command.user, ctx.command.client.user!]) {
       embed.addFields({
         name: user.username,
-        value: `Rolled a ${inlineCode(game.hasBothRolled() ? (user.id === ctx.command.user.id ? game.player.value : game.opponent.value).toString() : '?')}`,
+        value: `Rolled a ${inlineCode(
+          game.hasBothRolled() ? (user.id === ctx.command.user.id ? game.player.value : game.opponent.value).toString() : '?'
+        )}`,
         inline: true
       });
     }
@@ -107,13 +107,8 @@ export class DiceRollGame extends Game {
         button.setLabel('Timed Out').setStyle(Constants.MessageButtonStyles.SECONDARY).setDisabled(true);
         embed
           .setColor(Constants.Colors.NOT_QUITE_BLACK)
-          .setDescription(
-            join(
-              `You didn't respond in time. You lost your bet.`,
-              `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`
-            )
-          );
-        
+          .setDescription(join(`You didn't respond in time. You lost your bet.`, `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`));
+
         break;
       }
     }
@@ -133,11 +128,11 @@ export class DiceRollGame extends Game {
           await button.deferUpdate();
           return contextual;
         },
-        end: async ctx => {
+        end: async (ctx) => {
           if (ctx.wasInternallyStopped()) {
             await context.edit(this.updateAndRenderMainContent(context, game));
             return reject();
-          } 
+          }
 
           return resolve();
         }

@@ -13,34 +13,32 @@ import { send } from '#lib/utilities/discord/index.js';
 })
 export default class AboutCommand extends Command {
   public override async chatInputRun(command: CommandInteraction) {
-    return void await send(command, builder => 
-      builder  
-        .setEphemeral(true)
-        .addEmbed(embed => 
-          embed  
-            .setTitle(toTitleCase(this.container.package.name))
-            .setColor(Constants.Colors.NOT_QUITE_BLACK)
-            .setDescription(this.container.package.description)
-            .setThumbnail(DiscordUtil.getUserAvatarURL(command.client.user!))
-            .setFields(
-              {
-                name: 'Build Version',
-                inline: true,
-                value: inlineCode(this.container.package.version)
-              },
-              {
-                name: 'Runtime Version',
-                inline: true,
-                value: process.version
-              },
-              {
-                name: Constants.Package.name,
-                inline: true,
-                value: `v${inlineCode(Constants.Package.version)}`
-              }
-            )
-        )
-    );
+    return void (await send(command, (builder) =>
+      builder.setEphemeral(true).addEmbed((embed) =>
+        embed
+          .setTitle(toTitleCase(this.container.package.name))
+          .setColor(Constants.Colors.NOT_QUITE_BLACK)
+          .setDescription(this.container.package.description)
+          .setThumbnail(DiscordUtil.getUserAvatarURL(command.client.user!))
+          .setFields(
+            {
+              name: 'Build Version',
+              inline: true,
+              value: inlineCode(this.container.package.version)
+            },
+            {
+              name: 'Runtime Version',
+              inline: true,
+              value: process.version
+            },
+            {
+              name: Constants.Package.name,
+              inline: true,
+              value: `v${inlineCode(Constants.Package.version)}`
+            }
+          )
+      )
+    ));
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

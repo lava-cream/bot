@@ -37,12 +37,12 @@ export class EmojiPairGame extends Game {
           await button.deferUpdate();
           return contextual;
         },
-        end: async ctx => {
+        end: async (ctx) => {
           if (ctx.wasInternallyStopped()) {
-            await context.db.run(db => db.wallet.subValue(db.bet.value)).save();
+            await context.db.run((db) => db.wallet.subValue(db.bet.value)).save();
             await context.edit(EmojiPairGame.renderContent(logic, context, true));
             return reject();
-          } 
+          }
 
           return resolve();
         }
@@ -63,16 +63,16 @@ export class EmojiPairGame extends Game {
       row.addButtonComponent((btn) =>
         btn
           .setCustomId(ctx.customId.create('reveal').id)
-          .setLabel(!logic.revealed ? !ended ? 'Reveal' : 'Timed Out' : logic.isWin() ? 'Winner Winner' : 'Loser Loser')
+          .setLabel(!logic.revealed ? (!ended ? 'Reveal' : 'Timed Out') : logic.isWin() ? 'Winner Winner' : 'Loser Loser')
           .setDisabled(ended)
           .setStyle(
             !logic.revealed && !ended
               ? Constants.MessageButtonStyles.PRIMARY
               : logic.revealed
-                ? logic.isWin()
-                  ? Constants.MessageButtonStyles.SUCCESS
-                  : Constants.MessageButtonStyles.DANGER
-                : Constants.MessageButtonStyles.SECONDARY
+              ? logic.isWin()
+                ? Constants.MessageButtonStyles.SUCCESS
+                : Constants.MessageButtonStyles.DANGER
+              : Constants.MessageButtonStyles.SECONDARY
           )
       )
     );
@@ -112,7 +112,7 @@ export class EmojiPairGame extends Game {
       }
 
       default: {
-        ctx.db.run(db => db.wallet.subValue(db.bet.value));
+        ctx.db.run((db) => db.wallet.subValue(db.bet.value));
         description.push("You didn't respond in time. You lost your bet.");
         embed.setColor(Constants.Colors.NOT_QUITE_BLACK);
         break;

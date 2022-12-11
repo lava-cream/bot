@@ -42,7 +42,7 @@ export abstract class BaseMessageContentBuilder<
   }
 
   public setEmbeds(...builders: BuilderCallback<MessageEmbed>[]): this {
-    removeElement(this.embeds ??= [], () => true);
+    removeElement((this.embeds ??= []), () => true);
     for (const builder of builders) this.addEmbed(builder);
     return this;
   }
@@ -53,7 +53,7 @@ export abstract class BaseMessageContentBuilder<
   }
 
   public setRows(...builders: BuilderCallback<MessageActionRowBuilder<Components>>[]): this {
-    removeElement(this.components ??= [], () => true);
+    removeElement((this.components ??= []), () => true);
     for (const builder of builders) this.addRow(builder);
     return this;
   }

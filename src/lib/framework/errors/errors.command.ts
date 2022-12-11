@@ -6,9 +6,9 @@ import { UserError } from '@sapphire/framework';
  */
 export class CommandError extends UserError {
   public constructor(optionsOrString: string | CommandError.Options) {
-    super({ 
-      identifier: CommandError.name, 
-      message: typeof optionsOrString === 'string' ? optionsOrString : optionsOrString.message 
+    super({
+      identifier: CommandError.name,
+      message: typeof optionsOrString === 'string' ? optionsOrString : optionsOrString.message
     });
   }
 }

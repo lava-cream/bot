@@ -27,7 +27,7 @@ export class PartyRequestManagerSchema extends CreateSubSchemaManager(PartyReque
    * @returns An array of expired party requests.
    */
   public getExpired(flush = false) {
-    const expired = this.entries.filter(entry => Date.now() > entry.expire);
+    const expired = this.entries.filter((entry) => Date.now() > entry.expire);
     if (flush) for (const expire of expired) this.delete(expire.id);
     return expired;
   }

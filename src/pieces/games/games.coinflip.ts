@@ -38,7 +38,7 @@ export default class CoinFlipGame extends Game {
       },
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
-          await context.db.run(db => db.wallet.subValue(context.db.bet.value)).save();
+          await context.db.run((db) => db.wallet.subValue(context.db.bet.value)).save();
           await context.edit(this.renderMainContent(context, game, true));
           await context.end(true);
           return;
@@ -113,7 +113,15 @@ export default class CoinFlipGame extends Game {
                   )
             )
           )
-          .setColor(!game.hasPicked() ? !ended ? Constants.Colors.BLURPLE : Constants.Colors.NOT_QUITE_BLACK : game.isWin() ? Constants.Colors.GREEN : Constants.Colors.RED)
+          .setColor(
+            !game.hasPicked()
+              ? !ended
+                ? Constants.Colors.BLURPLE
+                : Constants.Colors.NOT_QUITE_BLACK
+              : game.isWin()
+              ? Constants.Colors.GREEN
+              : Constants.Colors.RED
+          )
           .setFooter(!game.hasPicked() || game.isLose() ? null : { text: `Percent Won: ${percent(won, context.db.bet.value)}` })
       )
       .addRow((row) =>
@@ -127,11 +135,11 @@ export default class CoinFlipGame extends Game {
                 .setStyle(
                   !game.hasPicked() && !ended
                     ? Constants.MessageButtonStyles.PRIMARY
-                    : (game.player.value === Coinflip.Side.HEADS && customId === Coinflip.Side.HEADS) || 
+                    : (game.player.value === Coinflip.Side.HEADS && customId === Coinflip.Side.HEADS) ||
                       (game.player.value === Coinflip.Side.TAILS && customId === Coinflip.Side.TAILS)
-                      ? game.isWin()
-                        ? Constants.MessageButtonStyles.SUCCESS
-                        : Constants.MessageButtonStyles.DANGER
+                    ? game.isWin()
+                      ? Constants.MessageButtonStyles.SUCCESS
+                      : Constants.MessageButtonStyles.DANGER
                     : Constants.MessageButtonStyles.SECONDARY
                 )
             ),

@@ -52,8 +52,7 @@ export class ItemGuideCategoryItemSchema extends SubSchema {
   }
 }
 
-export class ItemGuideCategoryItemManagerSchema extends CreateSubSchemaManager(ItemGuideCategoryItemSchema) {
-}
+export class ItemGuideCategoryItemManagerSchema extends CreateSubSchemaManager(ItemGuideCategoryItemSchema) {}
 
 export class ItemGuideCategorySchema extends SubSchema {
   @prop({ type: String })
@@ -74,5 +73,4 @@ export class ItemGuideCategorySchema extends SubSchema {
   }
 }
 
-export class ItemGuideCategoryManagerSchema extends CreateSubSchemaManager(ItemGuideCategorySchema) {
-}
+export class ItemGuideCategoryManagerSchema extends CreateSubSchemaManager(ItemGuideCategorySchema) {}

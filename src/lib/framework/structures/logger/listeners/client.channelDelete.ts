@@ -14,7 +14,7 @@ export class ClientReadyListener extends Listener<typeof Events.ChannelDelete> {
 
     await tracker
       .run((db) => {
-        const sourceCategory = db.categories.find(c => c.logs.id === channel.id);
+        const sourceCategory = db.categories.find((c) => c.logs.id === channel.id);
         return sourceCategory?.logs.setId(null);
       })
       .save();

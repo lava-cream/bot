@@ -25,6 +25,6 @@ export class PlayerAdvancementsSchema extends SubSchema {
 
 export class PlayerAdvancementsManagerSchema extends CreateSubSchemaManager(PlayerAdvancementsSchema) {
   public get unlocked() {
-    return this.entries.filter(entry => entry.unlocked);
+    return this.entries.filter((entry) => entry.unlocked);
   }
 }

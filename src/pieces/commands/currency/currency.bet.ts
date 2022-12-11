@@ -22,54 +22,49 @@ export default class BetCommand extends Command {
     if (isNullOrUndefined(amount)) {
       const isSufficient = db.bet.value >= db.wallet.value;
 
-      return await edit(command, builder => 
-        builder  
-          .addEmbed(embed => 
-            embed  
-              .setColor(isSufficient ? Constants.Colors.DARK_RED : Constants.Colors.DARK_GREEN)
-              .setDescription(
-                join(
-                  `Your bet right now is ${bold(db.bet.value.toLocaleString())} coins.`,
-                  `You ${bold(isSufficient ? 'can' : 'cannot')} use this to bet on games.`
-                )
+      return await edit(command, (builder) =>
+        builder.addEmbed((embed) =>
+          embed
+            .setColor(isSufficient ? Constants.Colors.DARK_RED : Constants.Colors.DARK_GREEN)
+            .setDescription(
+              join(
+                `Your bet right now is ${bold(db.bet.value.toLocaleString())} coins.`,
+                `You ${bold(isSufficient ? 'can' : 'cannot')} use this to bet on games.`
               )
-          )
+            )
+        )
       );
     }
 
-    const parsedAmount = parseNumber(amount, { 
-      amount: db.bet.value, 
-      minimum: db.minBet, 
-      maximum: db.maxBet 
+    const parsedAmount = parseNumber(amount, {
+      amount: db.bet.value,
+      minimum: db.minBet,
+      maximum: db.maxBet
     });
 
     this.checkAmount(db, parsedAmount);
 
     await db.run((db) => db.bet.setValue(parsedAmount)).save();
-    await edit(command, builder => 
-      builder
-        .addEmbed(embed => 
-          embed  
-            .setColor(Constants.Colors.GREEN)
-            .setDescription(`You're now betting ${bold(parsedAmount.toLocaleString())} coins.`)
-            .setTimestamp(new Date(command.createdTimestamp))
-        )
+    await edit(command, (builder) =>
+      builder.addEmbed((embed) =>
+        embed
+          .setColor(Constants.Colors.GREEN)
+          .setDescription(`You're now betting ${bold(parsedAmount.toLocaleString())} coins.`)
+          .setTimestamp(new Date(command.createdTimestamp))
+      )
     );
 
     return;
   }
 
-  public checkAmount(
-    db: PlayerSchema.Document,
-    parsedAmount: ReturnType<typeof parseNumber>
-  ): asserts parsedAmount is number {
+  public checkAmount(db: PlayerSchema.Document, parsedAmount: ReturnType<typeof parseNumber>): asserts parsedAmount is number {
     try {
       if (isNullOrUndefined(parsedAmount) || hasDecimal(parsedAmount)) throw 'You need to pass an actual number.';
-      if (parsedAmount === db.bet.value) throw "Cannot change your bet due to it being exactly similar.";
+      if (parsedAmount === db.bet.value) throw 'Cannot change your bet due to it being exactly similar.';
       if (parsedAmount < db.minBet) throw `You can't bet lower than your minimum ${bold(db.minBet.toLocaleString())} limit.`;
       if (parsedAmount > db.maxBet) throw `You can't bet higher than your maximum ${bold(db.maxBet.toLocaleString())} limit.`;
       if (parsedAmount > db.wallet.value) throw `You only have ${bold(db.wallet.value.toLocaleString())} coins.`;
-    } catch(error) {
+    } catch (error) {
       if (typeof error !== 'string') throw error;
       throw new CommandError(error as string);
     }
@@ -81,9 +76,7 @@ export default class BetCommand extends Command {
         .setName(this.name)
         .setDescription(this.description)
         .addStringOption((option) =>
-          option
-            .setName('amount')
-            .setDescription('Examples: 10k, 2t, 30%, 55.5% (% of max bet), min, max, half, full, 250_000 or 124,000.')
+          option.setName('amount').setDescription('Examples: 10k, 2t, 30%, 55.5% (% of max bet), min, max, half, full, 250_000 or 124,000.')
         )
     );
   }

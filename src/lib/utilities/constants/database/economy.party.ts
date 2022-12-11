@@ -20,7 +20,7 @@ export const enum PartyMemberLimits {
 
 export const enum PartyMemberDefaults {
   Coins = PartyLimits.Coins / 100,
-  Multiplier = 0,
+  Multiplier = 0
 }
 
 export const enum PartyKeys {

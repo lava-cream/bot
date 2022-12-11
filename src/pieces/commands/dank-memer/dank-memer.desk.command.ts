@@ -96,7 +96,7 @@ export default class DeskCommand extends Command {
         const desk = await this.awaitDeskEntry(command, db.entries.entries);
         if (!desk.isOk()) throw new CommandError('Lmao you have to respond, idiot.');
 
-        desk.inspect(desk => {
+        desk.inspect((desk) => {
           if (!isNullOrUndefined(accessRole)) desk.roles.setAccess(accessRole.id);
           if (!isNullOrUndefined(staffRole)) desk.roles.setStaff(staffRole.id);
           if (!isNullOrUndefined(accessChannel)) db.channels.setAccess(accessChannel.id);
@@ -105,7 +105,7 @@ export default class DeskCommand extends Command {
         await db.save();
         await this.container.db.desks.sendOrUpdateMessage(db, command);
 
-        return await edit(command, builder => builder.setContent('Done.').setRows().setEmbeds());
+        return await edit(command, (builder) => builder.setContent('Done.').setRows().setEmbeds());
       }
 
       case SubCommands.Edit.name: {
@@ -122,7 +122,7 @@ export default class DeskCommand extends Command {
 
         if ([id, name, description].every(isNullOrUndefined)) throw new CommandError('You gotta select at least one option lmao.');
 
-        desk.inspect(desk => {
+        desk.inspect((desk) => {
           if (!isNullOrUndefined(name)) desk.setName(name);
           if (!isNullOrUndefined(description)) desk.setDescription(description);
         });
@@ -130,7 +130,7 @@ export default class DeskCommand extends Command {
         await db.save();
         await this.container.db.desks.sendOrUpdateMessage(db, command);
 
-        return await edit(command, builder => builder.setContent('Done.').setRows().setEmbeds());
+        return await edit(command, (builder) => builder.setContent('Done.').setRows().setEmbeds());
       }
 
       case SubCommands.Delete: {
@@ -142,7 +142,7 @@ export default class DeskCommand extends Command {
         await db.run((db) => db.entries.delete(desk.unwrap().id)).save();
         await this.container.db.desks.sendOrUpdateMessage(db, command);
 
-        return await edit(command, builder => builder.setContent('Done.').setRows().setEmbeds());
+        return await edit(command, (builder) => builder.setContent('Done.').setRows().setEmbeds());
       }
     }
 
@@ -191,20 +191,20 @@ export default class DeskCommand extends Command {
 
   private renderPickerContent(entries: DonationDeskEntrySchema[], failed: boolean): InteractionMessageContentBuilder {
     return new InteractionMessageContentBuilder()
-      .addEmbed(embed => 
-        embed  
+      .addEmbed((embed) =>
+        embed
           .setTitle('Desk Entry Picker')
           .setColor(failed ? Constants.Colors.RED : Constants.Colors.NOT_QUITE_BLACK)
           .setDescription(failed ? 'SMH stop wasting my time.' : 'Please select an entry below to continue.')
       )
-      .addRow(row => 
+      .addRow((row) =>
         entries.reduce(
           (row, entry) =>
             row.addButtonComponent((btn) =>
               btn.setCustomId(entry.id).setLabel(entry.name).setStyle(Constants.MessageButtonStyles.SECONDARY).setDisabled(failed)
             ),
           row
-        )  
+        )
       );
   }
 

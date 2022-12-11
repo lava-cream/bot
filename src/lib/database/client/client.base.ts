@@ -10,7 +10,7 @@ export class BaseClient {
    * The main connection.
    */
   public connection: typeof mongoose | null = null;
-  
+
   /**
    * The constructor of this client.
    * @param options Options to connect to the client.

@@ -15,16 +15,18 @@ export default class PingCommand extends Command {
     const watch = new Stopwatch().start();
 
     await send(command, 'Pinging...');
-    await edit(command, builder => 
-      builder  
+    await edit(command, (builder) =>
+      builder
         .setContent(null)
-        .addEmbed(embed => 
-          embed  
+        .addEmbed((embed) =>
+          embed
             .setColor(randomColor())
-            .setDescription(join(
-              `${bold('✏ Editing Messages:')} ${inlineCode(watch.stop().toString())}`,
-              `${bold('🤖 Websocket Ping:')} ${inlineCode(`${command.inCachedGuild() ? command.guild.shard.ping : command.client.ws.ping}ms`)}`
-            ))
+            .setDescription(
+              join(
+                `${bold('✏ Editing Messages:')} ${inlineCode(watch.stop().toString())}`,
+                `${bold('🤖 Websocket Ping:')} ${inlineCode(`${command.inCachedGuild() ? command.guild.shard.ping : command.client.ws.ping}ms`)}`
+              )
+            )
         )
     );
   }

@@ -44,7 +44,7 @@ export default class SlotMachineGame extends Game {
           await button.deferUpdate();
           return contextual;
         },
-        end: ctx => !ctx.wasInternallyStopped() ? resolve() : reject()
+        end: (ctx) => (!ctx.wasInternallyStopped() ? resolve() : reject())
       });
 
       collector.actions.add(context.customId.create('reveal').id, async (ctx) => {
@@ -108,7 +108,10 @@ export default class SlotMachineGame extends Game {
 
       default: {
         ctx.db.run((db) => db.wallet.subValue(db.bet.value));
-        description.push(`You lost ${bold(ctx.db.bet.value.toLocaleString())} coins.`, `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
+        description.push(
+          `You lost ${bold(ctx.db.bet.value.toLocaleString())} coins.`,
+          `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`
+        );
         embed.setColor(Constants.Colors.RED);
         revealButton.setLabel('Loser Loser').setStyle(Constants.MessageButtonStyles.DANGER);
         break;
@@ -116,7 +119,7 @@ export default class SlotMachineGame extends Game {
     }
 
     embed.setDescription(join(description));
-    return builder.addRow(row => row.addButtonComponent(() => revealButton));
+    return builder.addRow((row) => row.addButtonComponent(() => revealButton));
   }
 
   private static get emojis(): SlotMachine.Emoji[] {

@@ -14,10 +14,14 @@ export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatI
     const embed = new MessageEmbed({ color: Constants.Colors.RED });
 
     this.renderEmbedBasedOnThePreconditionSapphireHasThrownErrorTo(embed, error, payload);
-    await send(payload.interaction, builder => builder.addEmbed(() => embed));
+    await send(payload.interaction, (builder) => builder.addEmbed(() => embed));
   }
 
-  private renderEmbedBasedOnThePreconditionSapphireHasThrownErrorTo(embed: MessageEmbed, error: UserError, _payload: ChatInputCommandDeniedPayload): void {
+  private renderEmbedBasedOnThePreconditionSapphireHasThrownErrorTo(
+    embed: MessageEmbed,
+    error: UserError,
+    _payload: ChatInputCommandDeniedPayload
+  ): void {
     switch (error.identifier as Identifiers & PreconditionNames) {
       case PreconditionNames.UserStaffPermissions: {
         embed.setTitle('Missing Staff Permissions').setDescription(`You need to have the configured staff role to run this command!`);

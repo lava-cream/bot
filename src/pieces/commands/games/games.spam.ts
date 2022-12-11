@@ -37,7 +37,7 @@ enum SpamControls {
 
 enum SpamConfig {
   MinimumSpamAmount = 15,
-  MaximumSpamPlayers = 30,
+  MaximumSpamPlayers = 30
 }
 
 type SpamPlayers = Collection<Snowflake, Spammer>;
@@ -87,26 +87,26 @@ export default class SpamCommand extends Command {
       await send(command, bold('This channel has been locked.'));
     }
 
-    await send(command, content => content.addEmbed(embed => embed.setColor(Constants.Colors.DARK_GOLD).setDescription('Awaiting results...')));
+    await send(command, (content) => content.addEmbed((embed) => embed.setColor(Constants.Colors.DARK_GOLD).setDescription('Awaiting results...')));
 
     const results = await Promise.allSettled(
       SpamCommand.getResults(prize, winners).map(async (result) => {
-        await send(result.button, (content) => 
-          content
-            .setEphemeral(true)
-            .addEmbed(embed => 
-              embed  
-                .setColor(Constants.Colors.GREEN)
-                .setDescription(join(
+        await send(result.button, (content) =>
+          content.setEphemeral(true).addEmbed((embed) =>
+            embed
+              .setColor(Constants.Colors.GREEN)
+              .setDescription(
+                join(
                   `You won ${inlineCode(result.won.toLocaleString())} coins.`,
                   `That's ${inlineCode(toNearestReadable(result.won))} for each message!\n`,
                   'The host will distribute your share shortly.'
-                ))
-                .setFooter({
-                  text: command.guild.name,
-                  iconURL: getGuildIconURL(command.guild) ?? undefined
-                })
-            )
+                )
+              )
+              .setFooter({
+                text: command.guild.name,
+                iconURL: getGuildIconURL(command.guild) ?? undefined
+              })
+          )
         );
 
         return result;
@@ -131,7 +131,9 @@ export default class SpamCommand extends Command {
             join(
               ...results.filter<PromiseFulfilledResult<Spammer>>(isPromiseFulfilled).map(({ value: { spams, button, won } }, idx) => {
                 const emojis = ['🥇', '🥈', '🥉'] as const;
-                return `${bold(`${emojis.at(idx) ?? '👏'} ${spams.toLocaleString()}`)} - ${bold(button.user.username)} got ${bold(won.toLocaleString())}`;
+                return `${bold(`${emojis.at(idx) ?? '👏'} ${spams.toLocaleString()}`)} - ${bold(button.user.username)} got ${bold(
+                  won.toLocaleString()
+                )}`;
               }),
               ...losers.map(({ button, spams }) => `${bold(`💀 ${spams.toLocaleString()} - ${button.user.username} didn't make it`)}`)
             )
@@ -288,7 +290,7 @@ export default class SpamCommand extends Command {
       collector.on('end', async (_, reason) => {
         if (reason === SpamControls.Stop) return;
         if (players.size < 1) {
-          await send(command, content => content.setEphemeral(true).setContent('No one joined.'));
+          await send(command, (content) => content.setEphemeral(true).setContent('No one joined.'));
           await edit(command, this.renderIntroEmbed(command.user, players, prize, true, true));
           return reject(players);
         }
@@ -340,11 +342,7 @@ export default class SpamCommand extends Command {
         .setName(this.name)
         .setDescription(this.description)
         .addNumberOption((builder) =>
-          builder
-            .setName('prize')
-            .setDescription('The amount to be split by the players.')
-            .setRequired(true)
-            .setMinValue(5_000_000)
+          builder.setName('prize').setDescription('The amount to be split by the players.').setRequired(true).setMinValue(5_000_000)
         )
         .addBooleanOption((builder) => builder.setName('lock_channel').setDescription('Whether or not to unlock this channel when the event starts.'))
     );

@@ -27,7 +27,7 @@ export class PlayerUpgradesSchema {
 }
 
 export class PlayerUpgradesRequirementManager {
-  public constructor(private context: PlayerUpgradesSchema) { }
+  public constructor(private context: PlayerUpgradesSchema) {}
 
   public get tier() {
     return this.context.isMaxTier()

@@ -87,7 +87,7 @@ export function CreateSubSchemaManager<TSchema extends SubSchema, Args extends u
      * The "keys" of this manager are all entry ids.
      */
     public get keys() {
-      return this.entries.map(entry => entry.id);
+      return this.entries.map((entry) => entry.id);
     }
 
     /**
@@ -108,7 +108,7 @@ export function CreateSubSchemaManager<TSchema extends SubSchema, Args extends u
 
     /**
      * Applies {@link Array#find} against the entries of this subschema manager.
-     * @param fn A function that must return a boolean based on the predicate. 
+     * @param fn A function that must return a boolean based on the predicate.
      * @returns The found element.
      */
     public find(fn: FirstArgument<TSchema[]['find']>) {
@@ -177,7 +177,7 @@ export function CreateValueSchema<T extends ValueSchemaTypes = ValueSchemaTypes>
  */
 export function CreateStringValueSchema(defaultValue?: string) {
   /**
-   * Represents a {@link ValueSchema} with a string value. 
+   * Represents a {@link ValueSchema} with a string value.
    */
   abstract class StringValueSchema extends CreateValueSchema(defaultValue) {
     /**
@@ -212,7 +212,7 @@ export function CreateNumberValueSchema(defaultValue?: number) {
     }
 
     /**
-     * Decrements the current value of this schema. 
+     * Decrements the current value of this schema.
      * @param value The value to deduct.
      * @returns This schema.
      */

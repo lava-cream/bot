@@ -27,7 +27,7 @@ export class DonationDeskEntryQuestionSchema extends SubSchema {
 
 export class DonationDeskEntryQuestionManagerSchema extends CreateSubSchemaManager(DonationDeskEntryQuestionSchema) {
   public get labels() {
-    return this.entries.map(entry => entry.label);
+    return this.entries.map((entry) => entry.label);
   }
 }
 
@@ -69,7 +69,7 @@ export class DonationDeskEntryRequestDataSchema extends SubSchema {
   }
 }
 
-export class DonationDeskEntryRequestDataManagerSchema extends CreateSubSchemaManager(DonationDeskEntryRequestDataSchema) { }
+export class DonationDeskEntryRequestDataManagerSchema extends CreateSubSchemaManager(DonationDeskEntryRequestDataSchema) {}
 
 export class DonationDeskEntryRequestSchema extends SubSchema {
   @prop({ type: String, immutable: true })
@@ -85,7 +85,7 @@ export class DonationDeskEntryRequestSchema extends SubSchema {
   }
 }
 
-export class DonationDeskEntryRequestManagerSchema extends CreateSubSchemaManager(DonationDeskEntryRequestSchema) { }
+export class DonationDeskEntryRequestManagerSchema extends CreateSubSchemaManager(DonationDeskEntryRequestSchema) {}
 
 export class DonationDeskEntrySchema extends SubSchema {
   @prop({ type: String })
@@ -125,6 +125,6 @@ export class DonationDeskEntrySchema extends SubSchema {
 
 export class DonationDeskEntryManagerSchema extends CreateSubSchemaManager(DonationDeskEntrySchema) {
   public get names() {
-    return this.entries.map(entry => entry.name);
+    return this.entries.map((entry) => entry.name);
   }
 }

@@ -52,9 +52,7 @@ export class DonationTrackerCategoryDonatorSchema extends SubSchema {
   }
 }
 
-export class DonationTrackerCategoryDonatorManagerSchema extends CreateSubSchemaManager(DonationTrackerCategoryDonatorSchema) {
-}
-
+export class DonationTrackerCategoryDonatorManagerSchema extends CreateSubSchemaManager(DonationTrackerCategoryDonatorSchema) {}
 
 export class DonationTrackerCategoryLogsSchema {
   @prop({ type: SchemaTypes.Mixed })
@@ -126,11 +124,11 @@ export class DonationTrackerCategorySchema extends SubSchema {
 
 export const enum DonationTrackerCategoryStatus {
   Enabled = 1,
-  Disabled = 2,
+  Disabled = 2
 }
 
 export class DonationTrackerCategoryManagerSchema extends CreateSubSchemaManager(DonationTrackerCategorySchema) {
   public get default() {
-    return this.find(category => category.default) ?? null;
+    return this.find((category) => category.default) ?? null;
   }
 }

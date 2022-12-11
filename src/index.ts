@@ -10,7 +10,7 @@ import MemersClient from '#lib/framework/core/client.js';
 const exitWithError = (tag: string, ...message: any[]) => {
   container.logger.error(`[${tag}]`, ...message);
   return process.exit(1);
-}
+};
 
 new AmariClient({ token: process.env.AMARI_API_KEY });
 

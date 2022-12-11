@@ -9,5 +9,5 @@ export const enum ServerLimits {
 export const enum ServerShopLimits {
   Role = ServerLimits.Shop * 0.5,
   TextChannel = ServerLimits.Shop * 0.3,
-  VoiceChannel = ServerLimits.Shop * 0.2,
+  VoiceChannel = ServerLimits.Shop * 0.2
 }

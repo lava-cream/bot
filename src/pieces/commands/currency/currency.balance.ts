@@ -7,7 +7,7 @@ import { bold, inlineCode } from '@discordjs/builders';
 
 @ApplyOptions<Command.Options>({
   name: 'balance',
-  description: 'Checks for the balance of you or someone else\'s.',
+  description: "Checks for the balance of you or someone else's.",
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class BalanceCommand extends Command {

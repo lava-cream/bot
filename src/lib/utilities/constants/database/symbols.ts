@@ -1,7 +1,7 @@
 export const PlayerSymbols = {
   wallet: Symbol('wallet'),
   bank: Symbol('bank')
-} as const; 
+} as const;
 
 export const Symbols = {
   player: PlayerSymbols

@@ -44,14 +44,14 @@ export class PartyMemberSchema extends SubSchema {
   /**
    * Subtracts a specific amount of coins to the member's coins.
    * @param coins The coins to subtract.
-   * @returns This chema. 
+   * @returns This chema.
    */
   public subCoins(coins: number): this {
     return this.setCoins(this.coins - coins);
   }
 
   /**
-   * Converts and sets the specified amount of coins to keys.  
+   * Converts and sets the specified amount of coins to keys.
    * @param coins The amount of coins to convert.
    * @returns The calculated keys amount.
    */
@@ -72,7 +72,7 @@ export class PartyMemberSchema extends SubSchema {
   }
 
   /**
-   * Converts and sets the specified keys amount to multipliers. 
+   * Converts and sets the specified keys amount to multipliers.
    * @param keys The amount of keys to convert.
    * @returns The gained multipliers.
    */
@@ -84,4 +84,3 @@ export class PartyMemberSchema extends SubSchema {
 }
 
 export class PartyMemberManagerSchema extends CreateSubSchemaManager(PartyMemberSchema) {}
-

@@ -140,10 +140,7 @@ export default class BlackjackGame extends Game {
     await collector.start();
   }
 
-  private static renderMainContent(
-    context: Game.Context,
-    game: Blackjack.Logic
-  ) {
+  private static renderMainContent(context: Game.Context, game: Blackjack.Logic) {
     const renderCard = (card: Blackjack.Card, index: number, hide: boolean): string => {
       return hyperlink(`${inlineCode(index > 0 && hide ? '?' : `${card.suit} ${card.face}`)}`, 'https://discord.gg/memer');
     };
@@ -155,8 +152,8 @@ export default class BlackjackGame extends Game {
     };
 
     return new InteractionMessageContentBuilder()
-      .addEmbed(embed => 
-        embed  
+      .addEmbed((embed) =>
+        embed
           .setAuthor({
             name: `${game.player.user.username}'s blackjack game`,
             iconURL: getUserAvatarURL(game.player.user)
@@ -169,8 +166,8 @@ export default class BlackjackGame extends Game {
           )
           .addFields(
             {
-              name: `${game.player.user.username} (Player)`, 
-              value: renderHand(game.player, false), 
+              name: `${game.player.user.username} (Player)`,
+              value: renderHand(game.player, false),
               inline: true
             },
             {
@@ -183,7 +180,7 @@ export default class BlackjackGame extends Game {
             text: isNullOrUndefined(game.outcome) ? 'K, Q, J = 10  |  A = 1 OR 11' : ''
           })
       )
-      .addRow(row => 
+      .addRow((row) =>
         Object.values(Control).reduce(
           (row, customId) =>
             row.addButtonComponent((btn) =>
@@ -193,8 +190,8 @@ export default class BlackjackGame extends Game {
                 .setStyle(isNullOrUndefined(game.outcome) ? Constants.MessageButtonStyles.PRIMARY : Constants.MessageButtonStyles.SECONDARY)
                 .setLabel(toTitleCase(customId))
             ),
-            row
-        )  
-      )
+          row
+        )
+      );
   }
 }

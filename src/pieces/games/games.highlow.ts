@@ -43,8 +43,9 @@ export default class HighlowGame extends Game {
         embed
           .setAuthor({
             iconURL: getUserAvatarURL(context.command.user),
-            name: `${context.command.user.username}'s ${!logic.hasGuessed() ? '' : logic.isJackpot() ? 'jackpot' : logic.isWin() ? 'winning' : 'losing'
-              } high-low game`
+            name: `${context.command.user.username}'s ${
+              !logic.hasGuessed() ? '' : logic.isJackpot() ? 'jackpot' : logic.isWin() ? 'winning' : 'losing'
+            } high-low game`
           })
           .setColor(
             logic.isJackpot() || logic.isWin() ? Constants.Colors.GREEN : logic.isLose() ? Constants.Colors.RED : Constants.Colors.NOT_QUITE_BLACK
@@ -58,21 +59,18 @@ export default class HighlowGame extends Game {
             !logic.hasGuessed()
               ? !ended
                 ? join(
-                  `You placed ${bold(context.db.bet.value.toLocaleString())} coins.\n`,
-                  `I just chose a secret number between ${logic.min} and ${logic.max}.`,
-                  `Is the secret number ${italic('higher')} or ${italic('lower')} than ${bold(logic.hint.toLocaleString())}.`
-                )
-                : join(
-                  "You didn't respond in time. You lost your bet.",
+                    `You placed ${bold(context.db.bet.value.toLocaleString())} coins.\n`,
+                    `I just chose a secret number between ${logic.min} and ${logic.max}.`,
+                    `Is the secret number ${italic('higher')} or ${italic('lower')} than ${bold(logic.hint.toLocaleString())}.`
+                  )
+                : join("You didn't respond in time. You lost your bet.", `You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`)
+              : join(
+                  `${logic.isJackpot() ? bold('JACKPOT! ') : ''}You ${logic.isLose() ? 'lost' : 'won'} ${bold(
+                    (logic.isLose() ? context.db.bet.value : winnings.final).toLocaleString()
+                  )} coins.\n`,
+                  `Your hint was ${bold(logic.hint.toLocaleString())}. The hidden number was ${bold(logic.value.toLocaleString())}.`,
                   `You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`
                 )
-              : join(
-                `${logic.isJackpot() ? bold('JACKPOT! ') : ''}You ${logic.isLose() ? 'lost' : 'won'} ${bold(
-                  (logic.isLose() ? context.db.bet.value : winnings.final).toLocaleString()
-                )} coins.\n`,
-                `Your hint was ${bold(logic.hint.toLocaleString())}. The hidden number was ${bold(logic.value.toLocaleString())}.`,
-                `You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`
-              )
           )
       )
       .addRow((row) =>
@@ -89,10 +87,10 @@ export default class HighlowGame extends Game {
                     : (logic.guess === Highlow.Guess.HIGHER && customId === Control.HIGHER) ||
                       (logic.guess === Highlow.Guess.JACKPOT && customId === Control.JACKPOT) ||
                       (logic.guess === Highlow.Guess.LOWER && customId === Control.LOWER)
-                      ? logic.isWin() || logic.isJackpot()
-                        ? Constants.MessageButtonStyles.SUCCESS
-                        : Constants.MessageButtonStyles.DANGER
-                      : Constants.MessageButtonStyles.SECONDARY
+                    ? logic.isWin() || logic.isJackpot()
+                      ? Constants.MessageButtonStyles.SUCCESS
+                      : Constants.MessageButtonStyles.DANGER
+                    : Constants.MessageButtonStyles.SECONDARY
                 )
             ),
           row
@@ -112,12 +110,12 @@ export default class HighlowGame extends Game {
           await button.deferUpdate();
           return contextual;
         },
-        end: async ctx => {
+        end: async (ctx) => {
           if (ctx.wasInternallyStopped()) {
-            await context.db.run(db => db.wallet.subValue(db.bet.value)).save();
+            await context.db.run((db) => db.wallet.subValue(db.bet.value)).save();
             await context.edit(this.renderMainContent(context, logic, { final: 0, raw: 0 }, true));
             return reject();
-          } 
+          }
 
           return resolve();
         }
@@ -157,9 +155,7 @@ export default class HighlowGame extends Game {
                 });
 
                 logic.setGuess(Highlow.Guess.JACKPOT);
-                await context.db
-                  .run((db) => db.wallet.addValue(logic.isJackpot() ? winnings.final : -db.bet.value))
-                  .save();
+                await context.db.run((db) => db.wallet.addValue(logic.isJackpot() ? winnings.final : -db.bet.value)).save();
 
                 return winnings;
               }

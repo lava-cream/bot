@@ -75,7 +75,10 @@ export class DonationUpdateLogger extends Logger<LoggerType.DonationUpdate> {
       switch (method) {
         case DonationUpdateMethod.Increment: {
           const withMultiplier = context.donation.multiplier * amount.amount;
-          embed.addFields({ name: 'Added Amount', value: inlineCode(`⏣ ${withMultiplier.toLocaleString()} (+${(withMultiplier - amount.amount).toLocaleString()}})`) });
+          embed.addFields({
+            name: 'Added Amount',
+            value: inlineCode(`⏣ ${withMultiplier.toLocaleString()} (+${(withMultiplier - amount.amount).toLocaleString()}})`)
+          });
           break;
         }
 

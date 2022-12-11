@@ -3,7 +3,7 @@ import { DiscordSnowflake } from '@sapphire/snowflake';
 import { isNullOrUndefined } from '@sapphire/utilities';
 
 /**
- * Transforms a numerical value into something humans could easily read. 
+ * Transforms a numerical value into something humans could easily read.
  * The original {@link toReadable} util will be depreciated after the next minor release.
  * This makes use of the internal {@link Intl} global namespace. Credits to Fireship.
  * @param x The number to transform.
@@ -28,7 +28,10 @@ export function toNearestReadable(x: number, maximumFractionDigits = 2): string 
  * @since 6.0.0
  */
 export function createNowId(date = new Date()): string {
-  return Math.round(date.getTime() * 0xffffff).toString(36).toUpperCase().slice(-7, -1);
+  return Math.round(date.getTime() * 0xffffff)
+    .toString(36)
+    .toUpperCase()
+    .slice(-7, -1);
 }
 
 /**
