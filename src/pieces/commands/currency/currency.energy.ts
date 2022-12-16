@@ -45,7 +45,7 @@ export default class EnergyCommand extends Command {
           await edit(command, EnergyCommand.renderContent(command, db, componentId, false, true));
           return;
         }
-      },
+      }
     });
 
     await collector.start();

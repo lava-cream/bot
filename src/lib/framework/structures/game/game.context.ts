@@ -64,9 +64,9 @@ export class GameContext {
    */
   public async end(force = false): Promise<void> {
     if (isCommandInteractionExpired(this.command)) return;
-    
+
     const checked = Result.from<void, string>(this.check(force));
-    if (checked.isErr()) return void await this.respond(this.renderMessage(checked.unwrapErr()));
+    if (checked.isErr()) return void (await this.respond(this.renderMessage(checked.unwrapErr())));
 
     this.interactions++;
     await this.game.play(this);
@@ -79,7 +79,7 @@ export class GameContext {
    */
   protected check(force: boolean) {
     if (force) throw 'This session has ended.';
-    if (this.interactions >= GameContext.MaximumInteractions) throw 'You have reached the maximum interactions for this session.'; 
+    if (this.interactions >= GameContext.MaximumInteractions) throw 'You have reached the maximum interactions for this session.';
     if (this.db.energy.isExpired()) throw 'Your energy just expired!';
     if (this.db.bet.value > this.db.wallet.value) throw "You don't have enough coins to play anymore.";
     if (this.db.wallet.isMaxValue(this.db.upgrades.mastery)) throw 'Your wallet just reached its maximum capacity.';
@@ -89,8 +89,9 @@ export class GameContext {
    * Renders the idle message.
    */
   private renderMessage(message: string) {
-    return new InteractionMessageContentBuilder()
-      .addEmbed((embed) => embed.setTitle('Game Ended').setColor(Constants.Colors.RED).setDescription(message));
+    return new InteractionMessageContentBuilder().addEmbed((embed) =>
+      embed.setTitle('Game Ended').setColor(Constants.Colors.RED).setDescription(message)
+    );
   }
 
   /**

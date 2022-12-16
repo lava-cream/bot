@@ -126,7 +126,7 @@ export class DiceRollGame extends Game {
         actions: {
           [context.customId.create('reveal').id]: async (ctx) => {
             game.roll();
-    
+
             await ctx.interaction.editReply(this.updateAndRenderMainContent(context, game));
             return ctx.collector.stop(ctx.interaction.customId);
           }

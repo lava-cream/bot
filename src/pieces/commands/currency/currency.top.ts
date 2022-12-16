@@ -69,7 +69,6 @@ export default class TopCommand extends Command {
       }
     });
 
-
     await collector.start();
   }
 

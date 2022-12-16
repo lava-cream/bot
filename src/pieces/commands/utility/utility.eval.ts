@@ -59,7 +59,7 @@ export default class EvalCommand extends Command {
       evalTime: 0
     };
 
-    await edit(command, content => content.addEmbed(embed => embed.setTitle('Evaluating...').setColor(Constants.Colors.NOT_QUITE_BLACK)));
+    await edit(command, (content) => content.addEmbed((embed) => embed.setTitle('Evaluating...').setColor(Constants.Colors.NOT_QUITE_BLACK)));
     session.watch.start();
 
     const evaluate = async () => {
