@@ -9,7 +9,7 @@ export default class ClientGuildRoleDeleteListener extends Listener<typeof Event
 
   public async run(role: Role) {
     const db = await this.container.db.trackers.fetch(role.guild.id);
-    const autorole = db.autoroles.entries.find((ar) => ar.id === role.id);
+    const autorole = db.autoroles.find((ar) => ar.id === role.id);
 
     if (isNullOrUndefined(autorole)) return;
 

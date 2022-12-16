@@ -1,4 +1,4 @@
-import type { AmariClient } from '../client/amari.client.js';
+import type AmariClient from '../client/amari.client.js';
 import { Routes } from '../client/routes.api.js';
 import { Member } from '../structures/member.structure.js';
 import type { APIMember } from '../types/member.js';

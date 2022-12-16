@@ -1,18 +1,13 @@
 import type { Message, CommandInteraction, ContextMenuInteraction } from 'discord.js';
-import type { PieceContext } from '@sapphire/framework';
-import { Precondition } from '@sapphire/framework';
+import { AllFlowsPrecondition, PieceContext } from '@sapphire/framework';
 
 import type { User } from 'discord.js';
 import { hours } from '#lib/utilities/common/index.js';
 import { PreconditionNames } from '#lib/framework/preconditions/index.js';
 
-export default class AccountAgePrecondition extends Precondition {
+export default class AccountAgePrecondition extends AllFlowsPrecondition {
   public constructor(context: PieceContext) {
     super(context, { name: PreconditionNames.UserAccountAge, position: 3 });
-  }
-
-  private isYoung(user: User) {
-    return Date.now() - user.createdTimestamp < hours(24);
   }
 
   public override messageRun(message: Message) {
@@ -28,7 +23,7 @@ export default class AccountAgePrecondition extends Precondition {
   }
 
   public sharedRun(user: User) {
-    return !this.isYoung(user) ? this.ok() : super.error({ identifier: this.name });
+    return Date.now() - user.createdTimestamp > hours(24) ? this.ok() : super.error({ identifier: this.name });
   }
 }
 

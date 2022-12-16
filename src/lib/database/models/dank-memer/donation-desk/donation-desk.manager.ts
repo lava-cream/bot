@@ -1,4 +1,4 @@
-import type { Client } from '#lib/database/client/client.js';
+import type DatabaseClient from '#lib/database/client/client.js';
 import { Manager } from '#lib/database/structures/manager.js';
 import { createComponentId, join, MessageContentBuilder, type SelectMenuBuilder } from '#lib/utilities';
 import { bold } from '@discordjs/builders';
@@ -8,7 +8,7 @@ import type { CommandInteraction, MessageEditOptions, MessageOptions, MessageSel
 import { DonationDeskSchema } from './donation-desk.schema.js';
 
 export class DonationDeskManager extends Manager<DonationDeskSchema> {
-  public constructor(client: Client) {
+  public constructor(client: DatabaseClient) {
     super({ client, name: 'dank-memer.donation-desk', holds: DonationDeskSchema });
   }
 

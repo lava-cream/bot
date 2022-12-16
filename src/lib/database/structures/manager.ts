@@ -4,12 +4,12 @@ import { ReturnModelType, mongoose, getModelForClass, Severity } from '@typegoos
 import type { AnyParamConstructor } from '@typegoose/typegoose/lib/types';
 import { BaseManager, Collection } from 'discord.js';
 import type { CreateResolvableSchemaType, CastDocument, Schema } from './schema.js';
-import type { Client } from '#lib/database/client/client';
+import type DatabaseClient from '#lib/database/client/client';
 
 export interface ManagerOptions<T extends Schema> {
   readonly holds: AnyParamConstructor<T>;
   readonly name: string;
-  readonly client: Client;
+  readonly client: DatabaseClient;
 }
 
 export abstract class Manager<T extends Schema> extends BaseManager {

@@ -1,12 +1,11 @@
 import type { Message, CommandInteraction, ContextMenuInteraction } from 'discord.js';
-import type { PieceContext } from '@sapphire/framework';
-import { Precondition } from '@sapphire/framework';
+import { AllFlowsPrecondition, PieceContext } from '@sapphire/framework';
 
 import { PreconditionNames } from '#lib/framework/preconditions/index.js';
 import { UserSchemaStatus } from '#lib/database/models/primary/user/index.js';
 import type { User } from 'discord.js';
 
-export default class UserBlockPrecondition extends Precondition {
+export default class UserBlockPrecondition extends AllFlowsPrecondition {
   public constructor(context: PieceContext) {
     super(context, { name: PreconditionNames.UserStatus, position: 1 });
   }

@@ -1,4 +1,5 @@
 import { Listener, Events } from '@sapphire/framework';
+import chalk from 'chalk';
 
 export default class ClientDebugListener extends Listener<typeof Events.Debug> {
   public constructor(context: Listener.Context) {
@@ -6,6 +7,6 @@ export default class ClientDebugListener extends Listener<typeof Events.Debug> {
   }
 
   public run(message: string) {
-    return this.container.logger.info(message);
+    return this.container.logger.debug(chalk.white(message));
   }
 }

@@ -1,5 +1,5 @@
 import type { DonationTrackerCategorySchema, DonationTrackerCategoryDonatorSchema } from './donation-tracker.category.schema.js';
-import type { Client } from '#lib/database/client/client.js';
+import type DatabaseClient from '#lib/database/client/client.js';
 import { DonationUpdateLoggerPayload, DonationUpdateMethod } from '#pieces/loggers/dank-memer/dank-memer.donation-tracker-donation-update.js';
 import { Manager } from '#lib/database/structures/manager.js';
 import { DonationTrackerSchema } from './donation-tracker.schema.js';
@@ -11,7 +11,7 @@ import type { GuildMember, Role } from 'discord.js';
 import { toCollection } from '#lib/utilities';
 
 export class DonationTrackerManager extends Manager<DonationTrackerSchema> {
-  public constructor(client: Client) {
+  public constructor(client: DatabaseClient) {
     super({ client, name: 'dank-memer.donation-tracker', holds: DonationTrackerSchema });
   }
 

@@ -1,6 +1,6 @@
 import { Collection } from '@discordjs/collection';
 import type { Constructable } from 'discord.js';
-import type { AmariClient } from '../client/amari.client.js';
+import type AmariClient from '../client/amari.client.js';
 
 export interface BaseFetchOptions {
   cache?: boolean;
