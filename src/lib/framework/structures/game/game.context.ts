@@ -1,5 +1,6 @@
 import type { PlayerSchema } from '#lib/database';
 import { ComponentId, InteractionMessageContentBuilder, isCommandInteractionExpired } from '#lib/utilities';
+import { Result } from '@sapphire/result';
 import { CommandInteraction, Constants, InteractionReplyOptions, WebhookEditMessageOptions } from 'discord.js';
 import type { Game } from './game.piece.js';
 
@@ -63,35 +64,25 @@ export class GameContext {
    */
   public async end(force = false): Promise<void> {
     if (isCommandInteractionExpired(this.command)) return;
-
-    if (force) {
-      await this.respond(this.renderMessage('This session has ended.'));
-      return;
-    }
-
-    if (this.interactions >= GameContext.MaximumInteractions) {
-      await this.respond(this.renderMessage('You have reached the maximum interactions for this session.'));
-      return;
-    }
-
-    if (this.db.energy.isExpired()) {
-      await this.respond(this.renderMessage('Your energy just expired!'));
-      return;
-    }
-
-    if (this.db.bet.value > this.db.wallet.value) {
-      await this.respond(this.renderMessage("You don't have enough coins to play anymore."));
-      return;
-    }
-
-    if (this.db.wallet.isMaxValue(this.db.upgrades.mastery)) {
-      await this.respond(this.renderMessage('Your wallet just reached its maximum capacity.'));
-      return;
-    }
+    
+    const checked = Result.from<void, string>(this.check(force));
+    if (checked.isErr()) return void await this.respond(this.renderMessage(checked.unwrapErr()));
 
     this.interactions++;
     await this.game.play(this);
     return;
+  }
+
+  /**
+   * Does all the necessary checks to see if the player can still continue playing games or not.
+   * @param force Whether the game ended forcefully.
+   */
+  protected check(force: boolean) {
+    if (force) throw 'This session has ended.';
+    if (this.interactions >= GameContext.MaximumInteractions) throw 'You have reached the maximum interactions for this session.'; 
+    if (this.db.energy.isExpired()) throw 'Your energy just expired!';
+    if (this.db.bet.value > this.db.wallet.value) throw "You don't have enough coins to play anymore.";
+    if (this.db.wallet.isMaxValue(this.db.upgrades.mastery)) throw 'Your wallet just reached its maximum capacity.';
   }
 
   /**
