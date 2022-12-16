@@ -21,7 +21,7 @@ export default class BalanceCommand extends Command {
         embed
           .setAuthor({ name: `${member.user.username}'s balance`, iconURL: getUserAvatarURL(member.user) })
           .setColor(getHighestRoleColor(member))
-          .setTimestamp(Date.now())
+          .setTimestamp(command.createdAt)
           .setDescription(
             join(
               `${bold('Wallet:')} ${db.wallet.value.toLocaleString()}`,

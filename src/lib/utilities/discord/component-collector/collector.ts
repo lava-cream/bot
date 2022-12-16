@@ -7,7 +7,7 @@ import type {
   InteractionCollector
 } from 'discord.js';
 import { CollectorActionManager } from './collector.action-manager.js';
-import type { CollectorActionContext } from './collector.action.js';
+import type { CollectorActionContext, CollectorActionLogic } from './collector.action.js';
 
 /**
  * Options to create a {@link Collector}.
@@ -28,6 +28,10 @@ export interface CollectorOptions<in out T extends MessageComponentTypeResolvabl
    * Called when the InteractionCollector attached emits the `end` event.
    */
   end?: CollectorEndPredicate<T, Cached>;
+  /**
+   * The collector's actions.
+   */
+  actions?: Record<string, CollectorActionLogic<T, Cached>>;
 }
 
 /**
@@ -81,7 +85,13 @@ export class Collector<in out T extends MessageComponentTypeResolvable, Cached e
    * The component collector's constructor.
    * @param options Options to create an interaction collector.
    */
-  public constructor(public options: CollectorOptions<T, Cached>) {}
+  public constructor(public options: CollectorOptions<T, Cached>) {
+    if (options.actions) {
+      for (const action of Object.entries(options.actions)) {
+        Reflect.apply(this.actions.add, this.actions, action);
+      }
+    }
+  }
 
   /**
    * Starts collecting for interactions.

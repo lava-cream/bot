@@ -129,7 +129,7 @@ export default class HighlowGame extends Game {
             switch (ctx.interaction.customId) {
               case context.customId.create(Control.HIGHER).id: {
                 const winnings = Game.calculateWinnings({
-                  base: 0.5,
+                  base: 1,
                   bet: context.db.bet.value,
                   multiplier: context.db.multiplier.value,
                   random: 0
@@ -148,7 +148,7 @@ export default class HighlowGame extends Game {
 
               case context.customId.create(Control.JACKPOT).id: {
                 const winnings = Game.calculateWinnings({
-                  base: 10, // 10x or 1,000%
+                  base: 5, // 10x or 1,000%
                   bet: context.db.bet.value,
                   multiplier: context.db.multiplier.value,
                   random: 0
@@ -162,7 +162,7 @@ export default class HighlowGame extends Game {
 
               case context.customId.create(Control.LOWER).id: {
                 const winnings = Game.calculateWinnings({
-                  base: 0.5,
+                  base: 1,
                   bet: context.db.bet.value,
                   multiplier: context.db.multiplier.value,
                   random: 0
@@ -179,7 +179,7 @@ export default class HighlowGame extends Game {
             }
           };
 
-          await edit(ctx.interaction, this.renderMainContent(context, logic, await update()));
+          await edit(ctx.interaction, this.renderMainContent(context, logic, await update(), true));
           ctx.collector.stop(ctx.interaction.customId);
         });
       }

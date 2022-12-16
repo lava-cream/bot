@@ -52,6 +52,12 @@ export default class TopCommand extends Command {
       componentType: 'SELECT_MENU',
       time: seconds(30),
       max: Infinity,
+      actions: {
+        [componentId.id]: async (ctx) => {
+          activeType = ctx.interaction.values.at(0) as PageType;
+          await edit(ctx.interaction, this.renderContent(command, activeType, dbs, componentId));
+        }
+      },
       filter: async (menu) => {
         const context = menu.user.id === command.user.id;
         await menu.deferUpdate();
@@ -63,10 +69,6 @@ export default class TopCommand extends Command {
       }
     });
 
-    collector.actions.add(componentId.id, async (ctx) => {
-      activeType = ctx.interaction.values.at(0) as PageType;
-      await edit(ctx.interaction, this.renderContent(command, activeType, dbs, componentId));
-    });
 
     await collector.start();
   }

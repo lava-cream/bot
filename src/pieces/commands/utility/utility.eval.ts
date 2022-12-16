@@ -52,14 +52,14 @@ export default class EvalCommand extends Command {
   public override async chatInputRun(command: CommandInteraction<'cached'>) {
     const code = command.options.getString('code', true);
     const dm = command.options.getBoolean('dm') ?? false;
-    const componentCustomId = new ComponentId(new Date(command.createdTimestamp));
+    const customId = new ComponentId(new Date(command.createdTimestamp));
     const session = {
       watch: new Stopwatch(),
       evaled: '',
       evalTime: 0
     };
 
-    await edit(command, 'Evaluating...');
+    await edit(command, content => content.addEmbed(embed => embed.setTitle('Evaluating...').setColor(Constants.Colors.NOT_QUITE_BLACK)));
     session.watch.start();
 
     const evaluate = async () => {
@@ -76,26 +76,26 @@ export default class EvalCommand extends Command {
       });
 
       session.watch.stop();
-      return (session.evaled = evaled.isOk() ? evaled.unwrap() : evaled.unwrapErr().message);
+      Reflect.set(session, 'evaled', evaled.isOk() ? evaled.unwrap() : evaled.unwrapErr().message);
+      return session.evaled;
     };
 
     const renderContent = (done: boolean) => {
       return new InteractionMessageContentBuilder()
-        .setContent(null)
         .addEmbed((embed) =>
           embed
             .setColor(done ? Constants.Colors.NOT_QUITE_BLACK : Constants.Colors.BLURPLE)
             .setDescription(codeBlock('js', session.evaled))
-            .setFooter({ text: `Duration: ${session.watch.duration.toFixed(2)}ms` })
+            .setFooter({ text: `Duration: ${session.watch.toString()}` })
         )
         .addRow((row) =>
           Object.values(EvalControls).reduce(
-            (row, customId) =>
+            (row, control) =>
               row.addButtonComponent((btn) =>
                 btn
-                  .setCustomId(componentCustomId.create(customId).id)
+                  .setCustomId(customId.create(control).id)
                   .setStyle(done ? Constants.MessageButtonStyles.SECONDARY : Constants.MessageButtonStyles.PRIMARY)
-                  .setLabel(toTitleCase(customId))
+                  .setLabel(toTitleCase(control))
                   .setDisabled(done)
               ),
             row
@@ -116,6 +116,18 @@ export default class EvalCommand extends Command {
       componentType: 'BUTTON',
       time: seconds(60),
       max: Infinity,
+      actions: {
+        [customId.create(EvalControls.Repeat).id]: async (ctx) => {
+          ctx.collector.resetTimer();
+          await evaluate();
+          await edit(ctx.interaction, renderContent(false));
+        },
+        [customId.create(EvalControls.Delete).id]: async (ctx) => {
+          await unsend(command).catch(noop);
+          await unsend(ctx.interaction).catch(noop);
+          ctx.collector.stop(ctx.interaction.customId);
+        }
+      },
       filter: async (button) => {
         const context = button.user.id === command.user.id;
         await button.deferUpdate();
@@ -125,18 +137,6 @@ export default class EvalCommand extends Command {
         await edit(command, renderContent(true)).catch(noop);
         if (dm) await command.user.send(renderEvaluatedCodeMessage()).catch(noop);
       }
-    });
-
-    collector.actions.add(componentCustomId.create(EvalControls.Repeat).id, async (ctx) => {
-      ctx.collector.resetTimer();
-      await evaluate();
-      await edit(ctx.interaction, renderContent(false));
-    });
-
-    collector.actions.add(componentCustomId.create(EvalControls.Delete).id, async (ctx) => {
-      await unsend(command).catch(noop);
-      await unsend(ctx.interaction).catch(noop);
-      ctx.collector.stop(ctx.interaction.customId);
     });
 
     await collector.start();

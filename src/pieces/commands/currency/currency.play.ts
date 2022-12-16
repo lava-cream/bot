@@ -220,6 +220,19 @@ export default class PlayCommand extends Command {
         componentType: 'BUTTON',
         max: Infinity,
         time: seconds(60),
+        actions: {
+          [EnergyControl.Energize]: async (ctx) => {
+            await db.run((db) => db.energy.subEnergy(1).setExpire(Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)))).save();
+            await edit(ctx.interaction, this.renderEnergyPrompterMessage(true));
+            ctx.collector.stop(ctx.interaction.customId);
+            resolve(true);
+          },
+          [EnergyControl.Cancel]: async (ctx) => {
+            await edit(ctx.interaction, this.renderEnergyPrompterMessage(false));
+            ctx.collector.stop(ctx.interaction.customId);
+            resolve(false);
+          }
+        },
         filter: async (button) => {
           const context = button.user.id === command.user.id;
           await button.deferUpdate();
@@ -231,19 +244,6 @@ export default class PlayCommand extends Command {
             return resolve(false);
           }
         }
-      });
-
-      collector.actions.add(EnergyControl.Energize, async (ctx) => {
-        await db.run((db) => db.energy.subEnergy(1).setExpire(Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)))).save();
-        await edit(ctx.interaction, this.renderEnergyPrompterMessage(true));
-        ctx.collector.stop(ctx.interaction.customId);
-        resolve(true);
-      });
-
-      collector.actions.add(EnergyControl.Cancel, async (ctx) => {
-        await edit(ctx.interaction, this.renderEnergyPrompterMessage(false));
-        ctx.collector.stop(ctx.interaction.customId);
-        resolve(false);
       });
 
       await collector.start();

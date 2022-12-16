@@ -32,6 +32,12 @@ export class EmojiPairGame extends Game {
         message: await context.respond(EmojiPairGame.renderContent(logic, context, false)),
         time: seconds(60),
         max: Infinity,
+        actions: {
+          [context.customId.create('reveal').id]: async (ctx) => {
+            await edit(ctx.interaction, EmojiPairGame.renderContent(logic.reveal(), context, true));
+            ctx.collector.stop(ctx.interaction.customId);
+          }
+        },
         filter: async (button) => {
           const contextual = button.user.id === context.command.user.id;
           await button.deferUpdate();
@@ -46,11 +52,6 @@ export class EmojiPairGame extends Game {
 
           return resolve();
         }
-      });
-
-      collector.actions.add(context.customId.create('reveal').id, async (ctx) => {
-        await edit(ctx.interaction, EmojiPairGame.renderContent(logic.reveal(), context, true));
-        ctx.collector.stop(ctx.interaction.customId);
       });
 
       await collector.start();

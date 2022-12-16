@@ -39,17 +39,18 @@ export default class SlotMachineGame extends Game {
         componentType: 'BUTTON',
         time: seconds(60),
         max: Infinity,
+        actions: {
+          [context.customId.create('reveal').id]: async (ctx) => {
+            await edit(ctx.interaction, SlotMachineGame.renderContent(machine.reveal(), context, true));
+            ctx.collector.stop(ctx.interaction.customId);
+          }
+        },
         filter: async (button) => {
           const contextual = button.user.id === context.command.user.id;
           await button.deferUpdate();
           return contextual;
         },
         end: (ctx) => (!ctx.wasInternallyStopped() ? resolve() : reject())
-      });
-
-      collector.actions.add(context.customId.create('reveal').id, async (ctx) => {
-        await edit(ctx.interaction, SlotMachineGame.renderContent(machine.reveal(), context, true));
-        ctx.collector.stop(ctx.interaction.customId);
       });
 
       await collector.start();

@@ -28,6 +28,13 @@ export default class EnergyCommand extends Command {
       componentType: 'BUTTON',
       max: Infinity,
       time: seconds(10),
+      actions: {
+        [componentId.create('energize').id]: async (ctx) => {
+          await db.run((db) => db.energy.subEnergy(1).setExpire(Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)))).save();
+          await edit(ctx.interaction, EnergyCommand.renderContent(command, db, componentId, true, true));
+          return ctx.collector.stop(ctx.interaction.customId);
+        }
+      },
       filter: async (btn) => {
         const contextual = btn.user.id === command.user.id;
         await btn.deferUpdate();
@@ -38,13 +45,7 @@ export default class EnergyCommand extends Command {
           await edit(command, EnergyCommand.renderContent(command, db, componentId, false, true));
           return;
         }
-      }
-    });
-
-    collector.actions.add(componentId.create('energize').id, async (ctx) => {
-      await db.run((db) => db.energy.subEnergy(1).setExpire(Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)))).save();
-      await edit(ctx.interaction, EnergyCommand.renderContent(command, db, componentId, true, true));
-      return ctx.collector.stop(ctx.interaction.customId);
+      },
     });
 
     await collector.start();

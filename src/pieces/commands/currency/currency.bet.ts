@@ -25,9 +25,9 @@ export default class BetCommand extends Command {
       return await edit(command, (builder) =>
         builder.addEmbed((embed) =>
           embed
-            .setColor(isSufficient ? Constants.Colors.DARK_RED : Constants.Colors.DARK_GREEN)
+            .setColor(isSufficient ? Constants.Colors.DARK_GREEN : Constants.Colors.DARK_RED)
             .setDescription(
-              join(`Your bet is ${bold(db.bet.value.toLocaleString())} coins.`, `${bold(isSufficient ? 'S' : 'Ins')}ufficient to use on games.`)
+              join(`Your bet is ${bold(db.bet.value.toLocaleString())} coins.`, `${bold(`${isSufficient ? 'S' : 'Ins'}ufficient`)} to use on games.`)
             )
         )
       );

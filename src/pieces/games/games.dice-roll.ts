@@ -123,6 +123,14 @@ export class DiceRollGame extends Game {
         componentType: 'BUTTON',
         max: Infinity,
         time: seconds(10),
+        actions: {
+          [context.customId.create('reveal').id]: async (ctx) => {
+            game.roll();
+    
+            await ctx.interaction.editReply(this.updateAndRenderMainContent(context, game));
+            return ctx.collector.stop(ctx.interaction.customId);
+          }
+        },
         filter: async (button) => {
           const contextual = button.user.id === context.command.user.id;
           await button.deferUpdate();
@@ -136,13 +144,6 @@ export class DiceRollGame extends Game {
 
           return resolve();
         }
-      });
-
-      collector.actions.add(context.customId.create('reveal').id, async (ctx) => {
-        game.roll();
-
-        await ctx.interaction.editReply(this.updateAndRenderMainContent(context, game));
-        return ctx.collector.stop(ctx.interaction.customId);
       });
 
       await collector.start();

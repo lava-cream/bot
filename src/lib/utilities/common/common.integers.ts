@@ -15,7 +15,7 @@ import { randomItem } from './index.js';
  * @since 6.0.0
  */
 export function parseNumber(parameter: string | number, options: ParseNumberOptions): number | null {
-  if (isNumber(parameter)) return parameter;
+  if (isNumber(parameter) || isNumber(Number(parameter))) return Number(parameter);
 
   if (typeof parameter === 'string') {
     switch (parameter.toLowerCase()) {
@@ -128,7 +128,7 @@ export function parsePercent(parameter: string, number: number): number | null {
  * @since 6.0.0
  */
 export function isNumber<T>(x: T | unknown): x is number {
-  return typeof x === 'number' && !Number.isNaN(x);
+  return typeof x === 'number' && !Number.isNaN(Number(x));
 }
 
 /**
@@ -236,5 +236,5 @@ export function randomColor(hex?: boolean) {
  * @since 1.0.0
  */
 export function randomNumber(min: number, max: number): number {
-  return Math.round(Math.random() * (max - min + 1) + min);
+  return Math.round(Math.random() * (max - min) + min);
 }

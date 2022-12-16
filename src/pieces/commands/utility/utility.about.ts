@@ -9,7 +9,7 @@ import { send } from '#lib/utilities/discord/index.js';
 
 @ApplyOptions<Command.Options>({
   name: 'about',
-  description: 'Shows some information regarding this instance of the bot.'
+  description: 'Shows some information regarding this current running instance of the bot.'
 })
 export default class AboutCommand extends Command {
   public override async chatInputRun(command: CommandInteraction) {
@@ -24,17 +24,17 @@ export default class AboutCommand extends Command {
             {
               name: 'Build Version',
               inline: true,
-              value: inlineCode(this.container.package.version)
+              value: inlineCode(`v${this.container.package.version}`)
             },
             {
               name: 'Runtime Version',
               inline: true,
-              value: process.version
+              value: inlineCode(process.version)
             },
             {
               name: Constants.Package.name,
               inline: true,
-              value: `v${inlineCode(Constants.Package.version)}`
+              value: inlineCode(`v${Constants.Package.version}`)
             }
           )
       )
