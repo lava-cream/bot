@@ -1,16 +1,11 @@
 import { ClientOptions, transformOptions } from './client.options.js';
-import mongoose from 'mongoose';
 import { isNullOrUndefined } from '@sapphire/utilities';
+import mongoose from 'mongoose';
 
 /**
  * The base database client. Handles the establishment of connection between this application and the database.
  */
 export class BaseClient {
-  /**
-   * The main connection.
-   */
-  public connection: typeof mongoose | null = null;
-
   /**
    * The constructor of this client.
    * @param options Options to connect to the client.
@@ -18,10 +13,17 @@ export class BaseClient {
   public constructor(protected options: ClientOptions) {}
 
   /**
+   * The current mongoose connection.
+   */
+  public get connection() {
+    return mongoose.connections.at(0);
+  }
+
+  /**
    * Creates a single connection to mongodb via mongoose.
    */
   public async connect(): Promise<void> {
-    this.connection = await mongoose.connect(this.options.connectionUri, transformOptions(this.options));
+    await mongoose.connect(this.options.connectionUri, transformOptions(this.options));
   }
 
   /**

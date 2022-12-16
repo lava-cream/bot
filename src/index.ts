@@ -19,9 +19,9 @@ await Result.fromAsync(Reflect.construct(MemersClient, [CLIENT_OPTIONS]).login()
   result.inspectErr((err) => container.logger.fatal(chalk.redBright(err)))
 );
 
-Result.ok(new AmariClient({ token: process.env.AMARI_API_KEY })).inspect((amari) =>
-  container.logger.info(chalk.yellow(`${amari.constructor.name} instance created.`))
-);
+Result.from(new AmariClient({ token: process.env.AMARI_API_KEY }))
+  .inspectErr(() => container.logger.info(chalk.redBright(`Failed to create ${AmariClient.name} instance.`)))
+  .inspect((amari) => container.logger.info(chalk.yellowBright(`${amari.constructor.name} instance created.`)));
 
 await Result.fromAsync(
   Reflect.construct(DatabaseClient, [
