@@ -13,7 +13,7 @@ export default class ClientReadyListener extends Listener<typeof Events.ClientRe
 
     client.user.presence.set(ClientReadyListener.getPresenceData(client));
     client.logger.info(white('[CLIENT]'), green(`Logged in as ${client.user.tag}`));
-    client.logger.info(white('[CLIENT]'), green(`Loaded ${client.stores.reduce((acc, s) => acc + s.size, 0).toLocaleString()} total pieces.`));
+    client.logger.info(white('[CLIENT]'), green(`Loaded ${client.stores.reduce((acc, s) => acc + s.size, 0).toLocaleString()} pieces from ${client.stores.size} stores.`));
   }
 
   private static getPresenceData(client: SapphireClient<true>): PresenceData {

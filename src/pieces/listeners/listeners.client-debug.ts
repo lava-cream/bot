@@ -7,6 +7,6 @@ export default class ClientDebugListener extends Listener<typeof Events.Debug> {
   }
 
   public run(message: string) {
-    return this.container.logger.debug(chalk.white(message));
+    return this.container.logger.info(chalk.whiteBright(message));
   }
 }

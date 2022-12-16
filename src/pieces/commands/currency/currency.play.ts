@@ -1,10 +1,9 @@
-import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
+import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum, Result } from '@sapphire/framework';
 import { CommandInteraction, Constants } from 'discord.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
 import {
   Collector,
-  join,
   randomColor,
   seconds,
   minutes,
@@ -12,14 +11,14 @@ import {
   InteractionMessageContentBuilder,
   ButtonBuilder,
   edit,
-  send,
   ComponentId,
-  getUserAvatarURL
+  getUserAvatarURL,
+  DeferCommandInteraction
 } from '#lib/utilities';
 import { type Game, GameContext } from '#lib/framework';
 import { isNullish, isNullOrUndefined } from '@sapphire/utilities';
 import type { PlayerSchema } from '#lib/database';
-import { bold } from '@discordjs/builders';
+import type { MessageSelectOptionData } from 'discord.js';
 
 enum PickerControl {
   Dropdown = 'picker_list',
@@ -32,39 +31,25 @@ enum EnergyControl {
   Cancel = 'energy_cancel'
 }
 
-enum Control {
-  Proceed = 'game_proceed',
-  Cancel = 'game_cancel'
-}
-
 @ApplyOptions<Command.Options>({
   name: 'play',
   description: 'Play games to earn coins.',
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class PlayCommand extends Command {
+  @DeferCommandInteraction()
   public override async chatInputRun(command: CommandInteraction<'cached'>) {
-    await command.deferReply();
-
     const db = await this.container.db.players.fetch(command.user.id);
-    if (db.wallet.isMaxValue(db.upgrades.mastery)) {
-      return void (await edit(
-        command,
-        join(
-          "You can't play games right now since your wallet is full.",
-          `Your current limit is ${bold(db.wallet.getMaxValue(db.upgrades.mastery).toLocaleString())} coins.`
-        )
-      ));
-    }
+    const game = await Result.fromAsync(this.chooseGame(command, Reflect.construct(ComponentId, [new Date(command.createdTimestamp)])));
+    
+    return game.inspectAsync(async game => {
+      if (isNullOrUndefined(game)) return;
 
-    const componentId = new ComponentId(new Date(command.createdTimestamp));
-    const game = await this.chooseGame(command, componentId);
-    if (isNullOrUndefined(game)) return;
+      const energized = await Result.fromAsync(this.checkEnergy(command, db));
+      const context = Reflect.construct(GameContext, [{ command, db, game }]);
 
-    const energized = await this.checkEnergy(command, db);
-    const play = energized ? await this.promptPlay(command, game) : false;
-
-    return play ? await game.play(new GameContext({ command, db, game })) : void 0;
+      await Result.fromAsync(energized.unwrap() ? game.play(context) : Promise.resolve(void 0));
+    })
   }
 
   private renderGamePickerContent(command: CommandInteraction<'cached'>, componentId: ComponentId, game: Game | null, ended = false) {
@@ -77,12 +62,14 @@ export default class PlayCommand extends Command {
             .setDisabled(ended)
             .setMaxValues(1)
             .setOptions(
-              this.container.stores.get('games').map((g) => ({
-                label: g.name,
-                value: g.id,
-                description: g.description ?? void 0,
-                default: g.id === game?.id
-              }))
+              this.container.stores
+                .get('games')
+                .map((g) => (<MessageSelectOptionData>{
+                  label: g.name,
+                  value: g.id,
+                  description: g.description ?? void 0,
+                  default: g.id === game?.id
+                }))
             )
         )
       )
@@ -93,19 +80,19 @@ export default class PlayCommand extends Command {
               .setCustomId(componentId.create(PickerControl.Proceed).id)
               .setStyle(Constants.MessageButtonStyles.SUCCESS)
               .setLabel('Play')
-              .setDisabled(isNullish(game))
+              .setDisabled(isNullish(game) || ended)
           )
           .addButtonComponent((btn) =>
             btn
               .setCustomId(componentId.create(PickerControl.Cancel).id)
               .setStyle(Constants.MessageButtonStyles.SECONDARY)
-              .setLabel('End Interaction')
+              .setLabel('Cancel')
               .setDisabled(ended)
           )
       )
       .addEmbed((embed) =>
         embed
-          .setTitle('Game Picker')
+          .setTitle(isNullish(game) ? 'Game Picker' : game.name)
           .setColor(ended ? Constants.Colors.NOT_QUITE_BLACK : randomColor(true))
           .setDescription(
             isNullish(game) ? 'Choose a game to play! Use the dropdown below to proceed.' : game.detailedDescription ?? 'No description provided.'
@@ -137,7 +124,7 @@ export default class PlayCommand extends Command {
             const game = !isNullOrUndefined(gameId) ? gamesStore.find((g) => g.id === gameId) : null;
 
             if (!isNullOrUndefined(game)) {
-              await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, game, true));
+              await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, game));
               selection.set(command.id, game);
               ctx.collector.resetTimer();
               return;
@@ -176,8 +163,8 @@ export default class PlayCommand extends Command {
             isNullish(energized)
               ? 'Your energy expired! Restore it by converting to energy the stars you earned from winning previous games.'
               : energized
-              ? 'Your energy has been recharged. Goodluck playing!'
-              : 'Okay then. Come back next time, I guess.'
+                ? 'Your energy has been recharged. Goodluck playing!'
+                : 'Okay then. Come back next time, I guess.'
           )
       )
       .addRow((row) =>
@@ -192,8 +179,8 @@ export default class PlayCommand extends Command {
                 isNullish(energized)
                   ? Constants.MessageButtonStyles.PRIMARY
                   : energized
-                  ? Constants.MessageButtonStyles.SUCCESS
-                  : Constants.MessageButtonStyles.SECONDARY
+                    ? Constants.MessageButtonStyles.SUCCESS
+                    : Constants.MessageButtonStyles.SECONDARY
               )
           )
           .addButtonComponent((btn) =>
@@ -206,8 +193,8 @@ export default class PlayCommand extends Command {
                 isNullish(energized)
                   ? Constants.MessageButtonStyles.PRIMARY
                   : energized
-                  ? Constants.MessageButtonStyles.SECONDARY
-                  : Constants.MessageButtonStyles.SUCCESS
+                    ? Constants.MessageButtonStyles.SECONDARY
+                    : Constants.MessageButtonStyles.SUCCESS
               )
           )
       );
@@ -256,79 +243,6 @@ export default class PlayCommand extends Command {
         await edit(ctx.interaction, this.renderEnergyPrompterMessage(false));
         ctx.collector.stop(ctx.interaction.customId);
         resolve(false);
-      });
-
-      await collector.start();
-    });
-  }
-
-  private renderPrompterMessage(game: Game, command: CommandInteraction<'cached'>, picked: null | boolean) {
-    return new InteractionMessageContentBuilder()
-      .setAllowedMentions({ users: [command.user.id] })
-      .setContent(command.user.toString())
-      .addEmbed((embed) =>
-        embed
-          .setTitle(game.name)
-          .setColor(isNullish(picked) ? Constants.Colors.BLURPLE : picked ? Constants.Colors.GREEN : Constants.Colors.RED)
-          .setDescription(game.detailedDescription ?? 'No description provided.')
-      )
-      .addRow((row) =>
-        row
-          .addButtonComponent((button) =>
-            button
-              .setStyle(
-                isNullish(picked)
-                  ? Constants.MessageButtonStyles.PRIMARY
-                  : picked
-                  ? Constants.MessageButtonStyles.SUCCESS
-                  : Constants.MessageButtonStyles.SECONDARY
-              )
-              .setCustomId(Control.Proceed)
-              .setDisabled(!isNullish(picked))
-              .setLabel('Play')
-          )
-          .addButtonComponent((button) =>
-            button
-              .setStyle(
-                isNullish(picked)
-                  ? Constants.MessageButtonStyles.PRIMARY
-                  : !picked
-                  ? Constants.MessageButtonStyles.SUCCESS
-                  : Constants.MessageButtonStyles.SECONDARY
-              )
-              .setCustomId(Control.Cancel)
-              .setDisabled(!isNullish(picked))
-              .setLabel('Cancel')
-          )
-      );
-  }
-
-  private async promptPlay(command: CommandInteraction<'cached'>, game: Game): Promise<boolean> {
-    return new Promise(async (resolve) => {
-      const collector = new Collector({
-        message: await send(command, this.renderPrompterMessage(game, command, null)),
-        componentType: 'BUTTON',
-        max: Infinity,
-        time: seconds(60),
-        filter: async (button) => {
-          const context = button.user.id === command.user.id;
-          await button.deferUpdate();
-          return context;
-        }
-      });
-
-      collector.actions.add(Control.Proceed, async (ctx) => {
-        await edit(ctx.interaction, this.renderPrompterMessage(game, command, true));
-        ctx.collector.stop(ctx.interaction.customId);
-        return resolve(true);
-      });
-
-      collector.actions.add(Control.Cancel, async (ctx) => {
-        await edit(ctx.interaction, this.renderPrompterMessage(game, command, false));
-        await send(ctx.interaction, 'Ok then.');
-
-        ctx.collector.stop(ctx.interaction.customId);
-        return resolve(false);
       });
 
       await collector.start();

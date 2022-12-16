@@ -4,7 +4,7 @@ import type {
   MessageCollectorOptionsParams,
   Awaitable,
   MappedInteractionTypes,
-  InteractionCollector,
+  InteractionCollector
 } from 'discord.js';
 import { CollectorActionManager } from './collector.action-manager.js';
 import type { CollectorActionContext } from './collector.action.js';
@@ -41,15 +41,15 @@ type CollectorEndPredicate<T extends MessageComponentTypeResolvable, Cached exte
    */
   context: Omit<CollectorActionContext<T, Cached>, 'interaction' | 'action'> & Readonly<{
     /**
-     * The interaction or null if no interactions were found from the collected elements.
+     * The last collected interaction, if there were any.
      */
     interaction: MappedInteractionTypes<Cached>[T] | null;
     /**
-     * The reason why the collector ended.
+     * The reason why the collector stopped.
      */
     reason: string;
     /**
-     * Checks if the InteractionCollector attached stopped this collector from running.
+     * A function to check if the attached InteractionCollector stopped itself or not.
      */
     wasInternallyStopped(): boolean
   }>

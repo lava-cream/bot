@@ -11,7 +11,7 @@ export const enum PreconditionNames {
   UserAccountAge = 'UserAccountAge',
   /**
    * Guild Status
-   * -----
+   * -------------
    * This precondition controls whether the guild can or cannot use the bot.
    */
   GuildStatus = 'GuildStatus',

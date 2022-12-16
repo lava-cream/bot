@@ -2,7 +2,7 @@ import type { CommandInteraction } from 'discord.js';
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { getHighestRoleColor, join, percent, edit, DeferCommandInteraction } from '#lib/utilities';
+import { getHighestRoleColor, join, percent, edit, DeferCommandInteraction, getUserAvatarURL } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
 
 @ApplyOptions<Command.Options>({
@@ -19,16 +19,16 @@ export default class BalanceCommand extends Command {
     await edit(command, (content) =>
       content.addEmbed((embed) =>
         embed
-          .setTitle(`${member.user.username}'s balance`)
+          .setAuthor({ name: `${member.user.username}'s balance`, iconURL: getUserAvatarURL(member.user) })
           .setColor(getHighestRoleColor(member))
           .setTimestamp(Date.now())
           .setDescription(
             join(
-              `${bold('👛 Wallet:')} ${db.wallet.value.toLocaleString()}`,
-              `${bold('💳 Bank:')} ${db.bank.value.toLocaleString()}/${db.bank.space.value.toLocaleString()} ${inlineCode(
+              `${bold('Wallet:')} ${db.wallet.value.toLocaleString()}`,
+              `${bold('Bank:')} ${db.bank.value.toLocaleString()}/${db.bank.space.value.toLocaleString()} ${inlineCode(
                 percent(db.bank.value, db.bank.space.value, 1)
               )}`,
-              `${bold('💰 Net Worth:')} ${db.netWorth.toLocaleString()}`
+              `${bold('Net Worth:')} ${db.netWorth.toLocaleString()}`
             )
           )
       )

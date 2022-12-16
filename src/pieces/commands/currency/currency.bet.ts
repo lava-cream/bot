@@ -20,7 +20,7 @@ export default class BetCommand extends Command {
     const amount = command.options.getString('amount');
 
     if (isNullOrUndefined(amount)) {
-      const isSufficient = db.bet.value >= db.wallet.value;
+      const isSufficient = db.wallet.value >= db.bet.value;
 
       return await edit(command, (builder) =>
         builder.addEmbed((embed) =>
@@ -28,8 +28,8 @@ export default class BetCommand extends Command {
             .setColor(isSufficient ? Constants.Colors.DARK_RED : Constants.Colors.DARK_GREEN)
             .setDescription(
               join(
-                `Your bet right now is ${bold(db.bet.value.toLocaleString())} coins.`,
-                `You ${bold(isSufficient ? 'can' : 'cannot')} use this to bet on games.`
+                `Your bet is ${bold(db.bet.value.toLocaleString())} coins.`,
+                `${bold(isSufficient ? 'S' : 'Ins')}ufficient to use on games.`
               )
             )
         )
@@ -50,7 +50,6 @@ export default class BetCommand extends Command {
         embed
           .setColor(Constants.Colors.GREEN)
           .setDescription(`You're now betting ${bold(parsedAmount.toLocaleString())} coins.`)
-          .setTimestamp(new Date(command.createdTimestamp))
       )
     );
 
@@ -60,7 +59,7 @@ export default class BetCommand extends Command {
   public checkAmount(db: PlayerSchema.Document, parsedAmount: ReturnType<typeof parseNumber>): asserts parsedAmount is number {
     try {
       if (isNullOrUndefined(parsedAmount) || hasDecimal(parsedAmount)) throw 'You need to pass an actual number.';
-      if (parsedAmount === db.bet.value) throw 'Cannot change your bet due to it being exactly similar.';
+      if (parsedAmount === db.bet.value) throw 'Cannot change your bet to the same one.';
       if (parsedAmount < db.minBet) throw `You can't bet lower than your minimum ${bold(db.minBet.toLocaleString())} limit.`;
       if (parsedAmount > db.maxBet) throw `You can't bet higher than your maximum ${bold(db.maxBet.toLocaleString())} limit.`;
       if (parsedAmount > db.wallet.value) throw `You only have ${bold(db.wallet.value.toLocaleString())} coins.`;

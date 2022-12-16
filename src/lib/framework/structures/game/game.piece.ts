@@ -1,7 +1,7 @@
 import type { PieceContext, PieceOptions } from '@sapphire/framework';
 import { Piece } from '@sapphire/framework';
 import type { Awaitable } from 'discord.js';
-import type { GameContext } from './game.session.js';
+import type { GameContext } from './game.context.js';
 import type { GameStore } from './game.store.js';
 import { roundZero } from '#lib/utilities';
 
@@ -31,7 +31,6 @@ export abstract class Game extends Piece<GameOptions> implements GameOptions {
 
   public constructor(context: PieceContext, options: GameOptions) {
     super(context, options);
-
     this.id = options.id;
     this.description = options.description ?? null;
     this.detailedDescription = options.detailedDescription ?? null;

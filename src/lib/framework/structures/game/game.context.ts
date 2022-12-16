@@ -62,11 +62,11 @@ export class GameContext {
   /**
    * Ends the current session. Calls {@link Game#play()} again if necessary.
    */
-  public async end(failed = false): Promise<void> {
+  public async end(force = false): Promise<void> {
     if (isCommandInteractionExpired(this.command)) return;
 
-    if (failed) {
-      await this.respond(this.renderIdleMessage("The session ended since you failed to follow the game's instructions."));
+    if (force) {
+      await this.respond(this.renderIdleMessage("This session has ended."));
       return;
     }
 
@@ -76,7 +76,7 @@ export class GameContext {
     }
 
     if (this.db.energy.isExpired()) {
-      await this.respond(this.renderIdleMessage('Your energy just expired!.'));
+      await this.respond(this.renderIdleMessage('Your energy just expired!'));
       return;
     }
 
@@ -102,7 +102,7 @@ export class GameContext {
     return new InteractionMessageContentBuilder()
       .setAllowedMentions({ users: [this.command.user.id] })
       .setContent(this.command.user.toString())
-      .addEmbed((embed) => embed.setColor(Constants.Colors.RED).setDescription(message));
+      .addEmbed((embed) => embed.setColor(Constants.Colors.RED).setDescription(message).setTimestamp(this.command.createdTimestamp));
   }
 
   /**

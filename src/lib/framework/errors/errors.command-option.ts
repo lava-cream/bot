@@ -6,7 +6,7 @@ import { UserError } from '@sapphire/framework';
  */
 export class CommandOptionError extends UserError {
   /**
-   * The option the reason why this one was thrown.
+   * The option the reason why this error was thrown.
    */
   public readonly option: string;
   public constructor({ message, option }: CommandOptionError.Options) {

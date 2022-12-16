@@ -3,7 +3,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import type { DonationTrackerCategorySchema } from '#lib/database/models/dank-memer/donation-tracker/donation-tracker.category.schema.js';
 import { BaseLoggerPayload, LoggerType } from '#lib/framework/structures/logger/resources/logger.entries.js';
 import { Logger } from '#lib/framework/structures/logger/resources/logger.piece.js';
-import { getUserAvatarURL, isPromiseFulfilled, MessageContentBuilder } from '#lib/utilities';
+import { getUserAvatarURL, MessageContentBuilder } from '#lib/utilities';
 import { inlineCode } from '@discordjs/builders';
 import { Resolvers } from '@sapphire/framework';
 import { isNullOrUndefined } from '@sapphire/utilities';
@@ -38,23 +38,14 @@ export enum DonationUpdateMethod {
 export class DonationUpdateLogger extends Logger<LoggerType.DonationUpdate> {
   public async sync(guild: Guild) {
     const tracker = await this.container.db.trackers.fetch(guild.id);
-    const channels = await Promise.allSettled(
-      tracker.categories.entries.map(async (c) => {
-        if (isNullOrUndefined(c.logs.id)) return null;
 
-        const channel = Resolvers.resolveGuildTextChannel(c.logs.id, guild);
-        if (channel.isErr()) {
-          await tracker.run(() => c.logs.setId(null)).save();
-          return null;
-        }
+    for (const entry of tracker.categories.entries.values()) {
+      if (isNullOrUndefined(entry.logs.id)) continue;
 
-        return channel.unwrap();
-      })
-    );
-
-    for (const channel of channels) {
-      if (!isPromiseFulfilled(channel) || isNullOrUndefined(channel.value)) continue;
-      this.createHandler(guild.id, channel.value.id);
+      await Resolvers
+        .resolveGuildTextChannel(entry.logs.id, guild)
+        .inspect(channel => this.createHandler(guild.id, channel.id))
+        .inspectErrAsync(() => tracker.run(() => entry.logs.setId(null)).save());
     }
   }
 

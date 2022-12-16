@@ -14,7 +14,7 @@ import chalk from 'chalk';
 
 await Result
   .fromAsync(Reflect.construct(MemersClient, [CLIENT_OPTIONS]).login())
-  .then(result => result.inspectErr((err) => container.logger.error(err)));
+  .then(result => result.inspectErr((err) => container.logger.fatal(chalk.redBright(err))));
 
 Result
   .ok(new AmariClient({ token: process.env.AMARI_API_KEY }))
@@ -29,4 +29,4 @@ await Result
       databaseName: process.env.MONGO_DB_NAME,
     }]).connect()
   )
-  .then(result => result.inspectErr((err) => container.logger.error(err)));
+  .then(result => result.inspectErr((err) => container.logger.fatal(chalk.redBright(err))));

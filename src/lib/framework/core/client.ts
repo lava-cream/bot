@@ -1,6 +1,7 @@
 import { piecesDir, pluralise } from '#lib/utilities';
 import { ApplicationCommandRegistries, container, Piece, RegisterBehavior, SapphireClient, Store } from '@sapphire/framework';
-import { isNullOrUndefined } from '@sapphire/utilities';
+import { isNullOrUndefined, toTitleCase } from '@sapphire/utilities';
+import chalk from 'chalk';
 import { ClientOptions, Guild, InviteGenerationOptions, Permissions, Team, User } from 'discord.js';
 
 /**
@@ -15,9 +16,18 @@ export default class MemersClient extends SapphireClient {
     container.client = this;
     container.logger.debug('[CLIENT]', `Instance of ${this.constructor.name} created.`);
 
-    Store.defaultStrategy.onLoadAll = (store: Store<Piece>) => {
-      return store.container.logger.info(`[${store.name.toUpperCase()}]`, `Loaded ${store.size} ${pluralise('piece', store.size)}`);
-    };
+    Reflect.set(Store.defaultStrategy, 'onLoadAll', (store: Store<Piece>) => {
+      store.container.logger.info(
+        chalk`{whiteBright Loaded {greenBright ${store.size}} ${toTitleCase(
+          (
+            store.name.toLowerCase().endsWith('s')
+              ? store.name.toLowerCase()
+              : pluralise(store.name.toLowerCase(), store.size)
+          )
+            .replaceAll('-', ' ')
+        )}}`
+      );
+    });
   }
 
   public override get support(): Guild | null {
