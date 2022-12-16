@@ -20,12 +20,11 @@ export class GameContext {
    */
   public command: CommandInteraction<'cached'>;
   /**
-   * The amount of user interactions this context has took.
+   * The amount of user interactions this context has spent.
    */
   public interactions = 0;
-
   /**
-   * The custom id util based on this context's command interaction.
+   * The custom id utility based on this context's attached command interaction.
    * @since 6.0.0
    */
   public customId: ComponentId;
@@ -38,7 +37,7 @@ export class GameContext {
     this.game = options.game;
     this.db = options.db;
     this.command = options.command;
-    this.customId = new ComponentId(new Date(options.command.createdTimestamp));
+    this.customId = new ComponentId(options.command.createdAt);
   }
 
   /**
@@ -66,27 +65,27 @@ export class GameContext {
     if (isCommandInteractionExpired(this.command)) return;
 
     if (force) {
-      await this.respond(this.renderIdleMessage('This session has ended.'));
+      await this.respond(this.renderMessage('This session has ended.'));
       return;
     }
 
     if (this.interactions >= GameContext.MaximumInteractions) {
-      await this.respond(this.renderIdleMessage('You have reached the maximum interactions for this session.'));
+      await this.respond(this.renderMessage('You have reached the maximum interactions for this session.'));
       return;
     }
 
     if (this.db.energy.isExpired()) {
-      await this.respond(this.renderIdleMessage('Your energy just expired!'));
+      await this.respond(this.renderMessage('Your energy just expired!'));
       return;
     }
 
     if (this.db.bet.value > this.db.wallet.value) {
-      await this.respond(this.renderIdleMessage("You don't have enough coins to play anymore."));
+      await this.respond(this.renderMessage("You don't have enough coins to play anymore."));
       return;
     }
 
     if (this.db.wallet.isMaxValue(this.db.upgrades.mastery)) {
-      await this.respond(this.renderIdleMessage('Your wallet just reached its maximum capacity.'));
+      await this.respond(this.renderMessage('Your wallet just reached its maximum capacity.'));
       return;
     }
 
@@ -98,11 +97,9 @@ export class GameContext {
   /**
    * Renders the idle message.
    */
-  private renderIdleMessage(message: string) {
+  private renderMessage(message: string) {
     return new InteractionMessageContentBuilder()
-      .setAllowedMentions({ users: [this.command.user.id] })
-      .setContent(this.command.user.toString())
-      .addEmbed((embed) => embed.setColor(Constants.Colors.RED).setDescription(message).setTimestamp(this.command.createdTimestamp));
+      .addEmbed((embed) => embed.setTitle('Game Ended').setColor(Constants.Colors.RED).setDescription(message));
   }
 
   /**
