@@ -46,10 +46,7 @@ export class ItemGuideManager extends Manager<ItemGuideSchema> {
 
     switch (type) {
       case ItemGuideItemUpdateType.Name: {
-        embed.addFields(
-          { name: 'Previous Name', value: oldItem.name, inline: true },
-          { name: 'New Name', value: newItem.name, inline: true },
-        );
+        embed.addFields({ name: 'Previous Name', value: oldItem.name, inline: true }, { name: 'New Name', value: newItem.name, inline: true });
         break;
       }
 
@@ -63,9 +60,7 @@ export class ItemGuideManager extends Manager<ItemGuideSchema> {
       }
 
       case ItemGuideItemUpdateType.Hidden: {
-        embed.addFields(
-          { name: 'Currently Hidden', value: inlineCode(newItem.hidden.toString()), inline: true },
-        );
+        embed.addFields({ name: 'Currently Hidden', value: inlineCode(newItem.hidden.toString()), inline: true });
         break;
       }
     }

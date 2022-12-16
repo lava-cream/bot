@@ -66,7 +66,7 @@ export class GameContext {
     if (isCommandInteractionExpired(this.command)) return;
 
     if (force) {
-      await this.respond(this.renderIdleMessage("This session has ended."));
+      await this.respond(this.renderIdleMessage('This session has ended.'));
       return;
     }
 

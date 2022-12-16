@@ -42,9 +42,8 @@ export class DonationUpdateLogger extends Logger<LoggerType.DonationUpdate> {
     for (const entry of tracker.categories.entries.values()) {
       if (isNullOrUndefined(entry.logs.id)) continue;
 
-      await Resolvers
-        .resolveGuildTextChannel(entry.logs.id, guild)
-        .inspect(channel => this.createHandler(guild.id, channel.id))
+      await Resolvers.resolveGuildTextChannel(entry.logs.id, guild)
+        .inspect((channel) => this.createHandler(guild.id, channel.id))
         .inspectErrAsync(() => tracker.run(() => entry.logs.setId(null)).save());
     }
   }

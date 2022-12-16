@@ -41,15 +41,15 @@ export default class PlayCommand extends Command {
   public override async chatInputRun(command: CommandInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
     const game = await Result.fromAsync(this.chooseGame(command, Reflect.construct(ComponentId, [new Date(command.createdTimestamp)])));
-    
-    return game.inspectAsync(async game => {
+
+    return game.inspectAsync(async (game) => {
       if (isNullOrUndefined(game)) return;
 
       const energized = await Result.fromAsync(this.checkEnergy(command, db));
       const context = Reflect.construct(GameContext, [{ command, db, game }]);
 
       await Result.fromAsync(energized.unwrap() ? game.play(context) : Promise.resolve(void 0));
-    })
+    });
   }
 
   private renderGamePickerContent(command: CommandInteraction<'cached'>, componentId: ComponentId, game: Game | null, ended = false) {
@@ -62,14 +62,15 @@ export default class PlayCommand extends Command {
             .setDisabled(ended)
             .setMaxValues(1)
             .setOptions(
-              this.container.stores
-                .get('games')
-                .map((g) => (<MessageSelectOptionData>{
-                  label: g.name,
-                  value: g.id,
-                  description: g.description ?? void 0,
-                  default: g.id === game?.id
-                }))
+              this.container.stores.get('games').map(
+                (g) =>
+                  <MessageSelectOptionData>{
+                    label: g.name,
+                    value: g.id,
+                    description: g.description ?? void 0,
+                    default: g.id === game?.id
+                  }
+              )
             )
         )
       )
@@ -163,8 +164,8 @@ export default class PlayCommand extends Command {
             isNullish(energized)
               ? 'Your energy expired! Restore it by converting to energy the stars you earned from winning previous games.'
               : energized
-                ? 'Your energy has been recharged. Goodluck playing!'
-                : 'Okay then. Come back next time, I guess.'
+              ? 'Your energy has been recharged. Goodluck playing!'
+              : 'Okay then. Come back next time, I guess.'
           )
       )
       .addRow((row) =>
@@ -179,8 +180,8 @@ export default class PlayCommand extends Command {
                 isNullish(energized)
                   ? Constants.MessageButtonStyles.PRIMARY
                   : energized
-                    ? Constants.MessageButtonStyles.SUCCESS
-                    : Constants.MessageButtonStyles.SECONDARY
+                  ? Constants.MessageButtonStyles.SUCCESS
+                  : Constants.MessageButtonStyles.SECONDARY
               )
           )
           .addButtonComponent((btn) =>
@@ -193,8 +194,8 @@ export default class PlayCommand extends Command {
                 isNullish(energized)
                   ? Constants.MessageButtonStyles.PRIMARY
                   : energized
-                    ? Constants.MessageButtonStyles.SECONDARY
-                    : Constants.MessageButtonStyles.SUCCESS
+                  ? Constants.MessageButtonStyles.SECONDARY
+                  : Constants.MessageButtonStyles.SUCCESS
               )
           )
       );

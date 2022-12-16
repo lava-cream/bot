@@ -19,12 +19,7 @@ export default class MemersClient extends SapphireClient {
     Reflect.set(Store.defaultStrategy, 'onLoadAll', (store: Store<Piece>) => {
       store.container.logger.info(
         chalk`{whiteBright Loaded {greenBright ${store.size}} ${toTitleCase(
-          (
-            store.name.toLowerCase().endsWith('s')
-              ? store.name.toLowerCase()
-              : pluralise(store.name.toLowerCase(), store.size)
-          )
-            .replaceAll('-', ' ')
+          (store.name.toLowerCase().endsWith('s') ? store.name.toLowerCase() : pluralise(store.name.toLowerCase(), store.size)).replaceAll('-', ' ')
         )}}`
       );
     });
