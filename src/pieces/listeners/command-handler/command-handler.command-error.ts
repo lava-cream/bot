@@ -1,4 +1,4 @@
-import type { ChatInputCommandErrorPayload, UserError } from '@sapphire/framework';
+import { type ChatInputCommandErrorPayload, UserError } from '@sapphire/framework';
 import { Listener, Events } from '@sapphire/framework';
 
 import { Constants, MessageEmbed } from 'discord.js';
@@ -11,12 +11,14 @@ export class ChatInputCommandErrorListener extends Listener<typeof Events.ChatIn
   }
 
   public async run(error: UserError, payload: ChatInputCommandErrorPayload): Promise<void> {
-    const defaultEmbed = new MessageEmbed().setColor(Constants.Colors.RED).setDescription(error.message);
+    const defaultEmbed = new MessageEmbed().setColor(Constants.Colors.RED).setDescription(typeof error.message === 'string' ? error.message : `${error}`);
 
-    if (isCommandError(error)) {
-      await send(payload.interaction, (builder) => builder.addEmbed(() => defaultEmbed.setTitle('Command Error')));
-    } else if (isCommandOptionError(error)) {
-      await send(payload.interaction, (builder) => builder.addEmbed(() => defaultEmbed.setTitle('Command Input Error')));
+    if (error instanceof UserError) {
+      if (isCommandError(error)) {
+        await send(payload.interaction, (builder) => builder.addEmbed(() => defaultEmbed.setTitle('Command Error')));
+      } else if (isCommandOptionError(error)) {
+        await send(payload.interaction, (builder) => builder.addEmbed(() => defaultEmbed.setTitle('Command Input Error')));
+      }
     }
 
     this.container.logger.error('[CLIENT => COMMAND-HANDLER]', 'Unknown Error', error);

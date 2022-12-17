@@ -1,11 +1,12 @@
 import { Game, GameCalculatedWinnings } from '#lib/framework/index.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { join, percent, seconds, getUserAvatarURL, Collector, InteractionMessageContentBuilder, ButtonBuilder, edit } from '#lib/utilities';
+import { join, percent, seconds, getUserAvatarURL, Collector, InteractionMessageContentBuilder, ButtonBuilder, edit, randomNumber } from '#lib/utilities';
 import * as Highlow from '#lib/utilities/games/highlow/index.js';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
 import { bold, italic } from '@discordjs/builders';
+import { Result } from '@sapphire/result';
 
 enum Control {
   LOWER = 'lower',
@@ -28,16 +29,12 @@ declare module '#lib/framework/structures/game/game.types' {
 export default class HighlowGame extends Game {
   public async play(context: Game.Context) {
     const logic = new Highlow.Logic(1, 10);
+    const result = await Result.fromAsync(this.awaitAction(context, logic));
 
-    try {
-      await this.awaitAction(context, logic);
-      await context.end();
-    } catch {
-      await context.end(true);
-    }
+    await context.end(result.isErr());
   }
 
-  public renderMainContent(context: Game.Context, logic: Highlow.Logic, winnings: Game.CalculatedWinnings, ended = false) {
+  public renderMainContent(context: Game.Context, logic: Highlow.Logic, winnings: Game.CalculatedWinnings | null, ended = false) {
     return new InteractionMessageContentBuilder<ButtonBuilder>()
       .addEmbed((embed) =>
         embed
@@ -53,7 +50,7 @@ export default class HighlowGame extends Game {
           .setFooter(
             !logic.hasGuessed() || !ended
               ? null
-              : { text: logic.isWin() || logic.isJackpot() ? `Percent Won: ${percent(winnings.final, context.db.bet.value)}` : 'loser loser' }
+              : { text: logic.isWin() || logic.isJackpot() ? `Percent Won: ${percent(winnings?.final ?? 0, context.db.bet.value)}` : 'loser loser' }
           )
           .setDescription(
             !logic.hasGuessed()
@@ -63,10 +60,10 @@ export default class HighlowGame extends Game {
                     `I just chose a secret number between ${logic.min} and ${logic.max}.`,
                     `Is the secret number ${italic('higher')} or ${italic('lower')} than ${bold(logic.hint.toLocaleString())}.`
                   )
-                : join("You didn't respond in time. You lost your bet.", `You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`)
+                : join("You didn't respond in time. You lost your bet.\n", `You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`)
               : join(
                   `${logic.isJackpot() ? bold('JACKPOT! ') : ''}You ${logic.isLose() ? 'lost' : 'won'} ${bold(
-                    (logic.isLose() ? context.db.bet.value : winnings.final).toLocaleString()
+                    (logic.isLose() ? context.db.bet.value : (winnings?.final ?? 0)).toLocaleString()
                   )} coins.\n`,
                   `Your hint was ${bold(logic.hint.toLocaleString())}. The hidden number was ${bold(logic.value.toLocaleString())}.`,
                   `You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`
@@ -101,7 +98,7 @@ export default class HighlowGame extends Game {
   public async awaitAction(context: Game.Context, logic: Highlow.Logic) {
     return new Promise<void>(async (resolve, reject) => {
       const collector = new Collector({
-        message: await context.respond(this.renderMainContent(context, logic, { raw: 0, final: 0 })),
+        message: await context.respond(this.renderMainContent(context, logic, null)),
         componentType: 'BUTTON',
         max: Infinity,
         time: seconds(60),
@@ -113,7 +110,7 @@ export default class HighlowGame extends Game {
         end: async (ctx) => {
           if (ctx.wasInternallyStopped()) {
             await context.db.run((db) => db.wallet.subValue(db.bet.value)).save();
-            await context.edit(this.renderMainContent(context, logic, { final: 0, raw: 0 }, true));
+            await context.edit(this.renderMainContent(context, logic, null, true));
             return reject();
           }
 
@@ -122,17 +119,15 @@ export default class HighlowGame extends Game {
       });
 
       for (const componentId of Object.values(Control)) {
-        const customId = context.customId.create(componentId);
-
-        collector.actions.add(customId.id, async (ctx) => {
+        collector.actions.add(context.customId.create(componentId).id, async (ctx) => {
           const update = async (): Promise<GameCalculatedWinnings> => {
             switch (ctx.interaction.customId) {
               case context.customId.create(Control.HIGHER).id: {
                 const winnings = Game.calculateWinnings({
-                  base: 1,
+                  base: 0.75,
                   bet: context.db.bet.value,
                   multiplier: context.db.multiplier.value,
-                  random: 0
+                  random: randomNumber(0, 50) / 100
                 });
 
                 logic.setGuess(Highlow.Guess.HIGHER);
@@ -148,7 +143,7 @@ export default class HighlowGame extends Game {
 
               case context.customId.create(Control.JACKPOT).id: {
                 const winnings = Game.calculateWinnings({
-                  base: 5, // 10x or 1,000%
+                  base: 10, // 10x or 1,000%
                   bet: context.db.bet.value,
                   multiplier: context.db.multiplier.value,
                   random: 0
@@ -162,10 +157,10 @@ export default class HighlowGame extends Game {
 
               case context.customId.create(Control.LOWER).id: {
                 const winnings = Game.calculateWinnings({
-                  base: 1,
+                  base: 0.75,
                   bet: context.db.bet.value,
                   multiplier: context.db.multiplier.value,
-                  random: 0
+                  random: randomNumber(0, 50) / 100
                 });
 
                 logic.setGuess(Highlow.Guess.LOWER);

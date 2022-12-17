@@ -47,8 +47,7 @@ export default class PlayCommand extends Command {
 
       const energized = await Result.fromAsync(this.checkEnergy(command, db));
       const context = Reflect.construct(GameContext, [{ command, db, game }]);
-
-      await Result.fromAsync(energized.unwrap() ? game.play(context) : Promise.resolve(void 0));
+      if (energized.isOk() && energized.unwrap()) return await context.play();
     });
   }
 
@@ -137,6 +136,7 @@ export default class PlayCommand extends Command {
               case componentId.create(PickerControl.Proceed).id: {
                 const game = selection.get(command.id)!;
                 await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, game, true));
+                ctx.collector.stop(ctx.interaction.customId);
                 return resolve(game);
               }
 
@@ -172,7 +172,7 @@ export default class PlayCommand extends Command {
         row
           .addButtonComponent((btn) =>
             btn
-              .setLabel('Use')
+              .setLabel('Energize')
               .setDisabled(!isNullish(energized))
               .setCustomId(EnergyControl.Energize)
               .setEmoji('⚡')
@@ -210,7 +210,7 @@ export default class PlayCommand extends Command {
   private checkEnergy(command: CommandInteraction<'cached'>, db: PlayerSchema.Document): Promise<boolean> {
     return new Promise(async (resolve) => {
       if (!db.energy.isExpired()) return resolve(true);
-      if (db.energy.value < 1) {
+      if (db.energy.energy < 1) {
         await edit(command, this.renderNoEnergyMessage());
         return resolve(false);
       }

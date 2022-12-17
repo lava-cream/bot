@@ -6,6 +6,7 @@ import { Constants, MessageEmbed } from 'discord.js';
 import { bold, inlineCode } from '@discordjs/builders';
 
 import * as SlotMachine from '#lib/utilities/games/slot-machine/index.js';
+import { Result } from '@sapphire/result';
 
 declare module '#lib/framework/structures/game/game.types' {
   interface Games {
@@ -20,28 +21,24 @@ declare module '#lib/framework/structures/game/game.types' {
   detailedDescription: 'Test your chances at spinning the slot machine.'
 })
 export default class SlotMachineGame extends Game {
-  public async play(ctx: Game.Context) {
+  public async play(context: Game.Context) {
     const machine = new SlotMachine.Logic(SlotMachineGame.emojis);
+    const result = await Result.fromAsync(SlotMachineGame.runCollector(machine, context));
 
-    try {
-      await SlotMachineGame.runCollector(machine, ctx);
-      await ctx.db.save();
-      await ctx.end();
-    } catch {
-      await ctx.end(true);
-    }
+    return context.end(result.isErr());
   }
 
   private static runCollector(machine: SlotMachine.Logic, context: Game.Context): Promise<void> {
     return new Promise(async (resolve, reject) => {
       const collector = new Collector({
-        message: await context.respond(SlotMachineGame.renderContent(machine, context, false)),
+        message: await context.respond(SlotMachineGame.renderContentAndUpdate(machine, context, false)),
         componentType: 'BUTTON',
         time: seconds(60),
         max: Infinity,
         actions: {
           [context.customId.create('reveal').id]: async (ctx) => {
-            await edit(ctx.interaction, SlotMachineGame.renderContent(machine.reveal(), context, true));
+            await edit(ctx.interaction, SlotMachineGame.renderContentAndUpdate(machine.reveal(), context, true));
+            await context.db.save();
             ctx.collector.stop(ctx.interaction.customId);
           }
         },
@@ -57,7 +54,7 @@ export default class SlotMachineGame extends Game {
     });
   }
 
-  private static renderContent(machine: SlotMachine.Logic, ctx: Game.Context, ended: boolean) {
+  private static renderContentAndUpdate(machine: SlotMachine.Logic, ctx: Game.Context, ended: boolean) {
     const embed = new MessageEmbed();
     const builder = new InteractionMessageContentBuilder<ButtonBuilder>().addEmbed(() => embed);
     const description: string[] = [];
@@ -125,15 +122,15 @@ export default class SlotMachineGame extends Game {
 
   private static get emojis(): SlotMachine.Emoji[] {
     return [
-      { emoji: '9️⃣', multiplier: 2 },
-      { emoji: '8️⃣', multiplier: 1 },
-      { emoji: '7️⃣', multiplier: 0.5 },
-      { emoji: '6️⃣', multiplier: 0.5 },
-      { emoji: '5️⃣', multiplier: 0.5 },
-      { emoji: '4️⃣', multiplier: 0.25 },
-      { emoji: '3️⃣', multiplier: 0.25 },
-      { emoji: '2️⃣', multiplier: 0.25 },
-      { emoji: '1️⃣', multiplier: 0.25 }
+      { emoji: '9️⃣', multiplier: 1.5 },
+      { emoji: '8️⃣', multiplier: 1.5 },
+      { emoji: '7️⃣', multiplier: 1.0 },
+      { emoji: '6️⃣', multiplier: 1.0 },
+      { emoji: '5️⃣', multiplier: 1.0 },
+      { emoji: '4️⃣', multiplier: 1.0 },
+      { emoji: '3️⃣', multiplier: 0.5 },
+      { emoji: '2️⃣', multiplier: 0.5 },
+      { emoji: '1️⃣', multiplier: 0.5 }
     ];
   }
 }

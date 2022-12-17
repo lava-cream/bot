@@ -1,6 +1,6 @@
 export const enum PlayerLimits {
-  Wallet = 2_000_000,
-  Bet = 100_000,
+  Wallet = 10_000_000,
+  Bet = 250_000,
   Bank = 5_000_000,
   Star = 1_000,
   Energy = 100,
@@ -51,7 +51,7 @@ export const enum PlayerMasteryRequirements {
 }
 
 export const enum PlayerMasteryAddedLimits {
-  Wallet = (10_000_000 - PlayerLimits.Wallet) / PlayerLimits.Mastery,
+  Wallet = (50_000_000 - PlayerLimits.Wallet) / PlayerLimits.Mastery,
   Bet = (500_000 - PlayerLimits.Bet) / PlayerLimits.Mastery,
   Bank = (25_000_000 - PlayerLimits.Bank) / PlayerLimits.Mastery,
   Level = (1_000 - PlayerLimits.Level) / PlayerLimits.Mastery

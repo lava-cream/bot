@@ -100,6 +100,7 @@ export class EmojiPairGame extends Game {
           db.wallet.addValue(final);
           db.energy.addValue(+!db.energy.isMaxStars());
         });
+        
         description.push(`${bold('PAIRED!')} You won ${bold(final.toLocaleString())} coins.`);
         embed.setColor(Constants.Colors.GREEN).setFooter({ text: `Percent Won: ${percent(final, ctx.db.bet.value)}` });
         break;
@@ -128,11 +129,11 @@ export class EmojiPairGame extends Game {
    */
   private static get pairs(): EmojiPair.Emoji[] {
     return [
-      { emoji: ':pineapple:', multiplier: 2 },
-      { emoji: ':apple:', multiplier: 1 },
-      { emoji: ':carrot:', multiplier: 0.75 },
-      { emoji: ':peach:', multiplier: 0.5 },
-      { emoji: ':eggplant:', multiplier: 0.25 }
+      { emoji: ':pineapple:', multiplier: 1.5 },
+      { emoji: ':apple:', multiplier: 1.25 },
+      { emoji: ':carrot:', multiplier: 1.00 },
+      { emoji: ':peach:', multiplier: 0.75 },
+      { emoji: ':eggplant:', multiplier: 0.5 }
     ];
   }
 }

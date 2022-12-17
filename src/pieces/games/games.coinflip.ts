@@ -54,11 +54,12 @@ export default class CoinFlipGame extends Game {
 
         switch (true) {
           case game.isWin(): {
+            // 25% (0.25) to 175% (1.5+0.25)
             const won = Game.calculateWinnings({
-              base: 0.5,
+              base: 0.25,
               multiplier: context.db.multiplier.value,
               bet: context.db.bet.value,
-              random: Common.randomNumber(0, 10) / 10
+              random: Common.randomNumber(0, 150) / 100
             });
 
             await context.db
@@ -103,7 +104,7 @@ export default class CoinFlipGame extends Game {
                       `You bet for ${bold(context.db.bet.value.toLocaleString())} coins.`
                     )
                   : Common.join(
-                      "You didn't respond in time. You lost your bet.",
+                      "You didn't respond in time. You lost your bet.\n",
                       `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}`
                     )
                 : Common.join(

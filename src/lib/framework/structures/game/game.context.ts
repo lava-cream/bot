@@ -23,7 +23,7 @@ export class GameContext {
   /**
    * The amount of user interactions this context has spent.
    */
-  public interactions = 0;
+  public interactions = 1;
   /**
    * The custom id utility based on this context's attached command interaction.
    * @since 6.0.0
@@ -39,6 +39,14 @@ export class GameContext {
     this.db = options.db;
     this.command = options.command;
     this.customId = new ComponentId(options.command.createdAt);
+  }
+
+  /**
+   * Calls for the play method of the game.
+   * @returns The return value of {@link Game#play}.
+   */
+  public play() {
+    return Reflect.apply(this.game.play, this.game, [this]);
   }
 
   /**
@@ -60,24 +68,33 @@ export class GameContext {
   }
 
   /**
-   * Ends the current session. Calls {@link Game#play()} again if necessary.
+   * Ends the current session. Calls {@link GameContext#play()} again if necessary.
+   * @param force Whether the game should not call {@link GameContext#play} again or not.
    */
-  public async end(force = false): Promise<void> {
+  public async end(force = false): Promise<unknown> {
     if (isCommandInteractionExpired(this.command)) return;
 
-    const checked = Result.from<void, string>(this.check(force));
-    if (checked.isErr()) return void (await this.respond(this.renderMessage(checked.unwrapErr())));
+    const checked = Result.from<void, string>(() => this.check(force));
+    if (checked.isErr()) return this.respond(this.renderMessage(checked.unwrapErr()));
 
-    this.interactions++;
-    await this.game.play(this);
-    return;
+    return this.setInteractions(this.interactions + 1).play();
+  }
+
+  /**
+   * Sets the interactions amount of this context.
+   * @param value The value to set.
+   * @returns This context.
+   */
+  protected setInteractions(value: number): this {
+    this.interactions = value;
+    return this;
   }
 
   /**
    * Does all the necessary checks to see if the player can still continue playing games or not.
    * @param force Whether the game ended forcefully.
    */
-  protected check(force: boolean) {
+  protected check(force: boolean): void {
     if (force) throw 'This session has ended.';
     if (this.interactions >= GameContext.MaximumInteractions) throw 'You have reached the maximum interactions for this session.';
     if (this.db.energy.isExpired()) throw 'Your energy just expired!';

@@ -1,10 +1,11 @@
 import { Game } from '#lib/framework';
-import { Collector, percent, getUserAvatarURL, join, seconds } from '#lib/utilities';
+import { Collector, percent, getUserAvatarURL, join, seconds, checkClientReadyStatus, randomNumber } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
 import { ApplyOptions } from '@sapphire/decorators';
 import { WebhookEditMessageOptions, Constants, MessageEmbed, MessageButton, MessageActionRow } from 'discord.js';
 
 import * as DiceRoll from '#lib/utilities/games/dice-roll/index.js';
+import { Result } from '@sapphire/result';
 
 declare module '#lib/framework/structures/game/game.types' {
   interface Games {
@@ -19,19 +20,16 @@ declare module '#lib/framework/structures/game/game.types' {
   detailedDescription: 'Roll a dice to win coins. Whoever gets the highest rolled value wins.'
 })
 export class DiceRollGame extends Game {
-  public async play(ctx: Game.Context) {
-    const game = new DiceRoll.Logic(ctx.command.client.user!, ctx.command.user);
+  public async play(context: Game.Context) {
+    checkClientReadyStatus(context.command.client);
 
-    try {
-      await this.awaitResponse(ctx, game);
-      await ctx.db.save();
-      await ctx.end();
-    } catch {
-      await ctx.end(true);
-    }
+    const game = new DiceRoll.Logic(context.command.client.user, context.command.user);
+    const response = await Result.fromAsync(this.awaitResponse(context, game));
+
+    await context.end(response.isErr());
   }
 
-  public updateAndRenderMainContent(ctx: Game.Context, game: DiceRoll.Logic): WebhookEditMessageOptions {
+  public renderContentAndUpdate(ctx: Game.Context, game: DiceRoll.Logic): WebhookEditMessageOptions {
     const embed = new MessageEmbed().setAuthor({
       name: `${ctx.command.user.username}'s dice roll game`,
       iconURL: getUserAvatarURL(ctx.command.user)
@@ -39,7 +37,7 @@ export class DiceRollGame extends Game {
     const button = new MessageButton().setCustomId(ctx.customId.create('reveal').id).setDisabled(game.hasBothRolled());
     const row = new MessageActionRow().setComponents([button]);
 
-    for (const user of [ctx.command.user, ctx.command.client.user!]) {
+    for (const user of [game.player.user, game.opponent.user]) {
       embed.addFields({
         name: user.username,
         value: `Rolled a ${inlineCode(
@@ -60,7 +58,8 @@ export class DiceRollGame extends Game {
         const { final } = Game.calculateWinnings({
           base: 0.5,
           multiplier: ctx.db.multiplier.value,
-          bet: ctx.db.bet.value
+          bet: ctx.db.bet.value,
+          random: randomNumber(0, 100) / 100
         });
 
         ctx.db.run((db) => {
@@ -119,7 +118,7 @@ export class DiceRollGame extends Game {
   protected async awaitResponse(context: Game.Context, game: DiceRoll.Logic): Promise<void> {
     return new Promise(async (resolve, reject) => {
       const collector = new Collector({
-        message: await context.respond(this.updateAndRenderMainContent(context, game)),
+        message: await context.respond(this.renderContentAndUpdate(context, game)),
         componentType: 'BUTTON',
         max: Infinity,
         time: seconds(10),
@@ -127,8 +126,9 @@ export class DiceRollGame extends Game {
           [context.customId.create('reveal').id]: async (ctx) => {
             game.roll();
 
-            await ctx.interaction.editReply(this.updateAndRenderMainContent(context, game));
-            return ctx.collector.stop(ctx.interaction.customId);
+            await ctx.interaction.editReply(this.renderContentAndUpdate(context, game));
+            await context.db.save();
+            ctx.collector.stop(ctx.interaction.customId);
           }
         },
         filter: async (button) => {
@@ -138,7 +138,8 @@ export class DiceRollGame extends Game {
         },
         end: async (ctx) => {
           if (ctx.wasInternallyStopped()) {
-            await context.edit(this.updateAndRenderMainContent(context, game));
+            await context.db.run(db => db.wallet.subValue(db.bet.value)).save();
+            await context.edit(this.renderContentAndUpdate(context, game));
             return reject();
           }
 

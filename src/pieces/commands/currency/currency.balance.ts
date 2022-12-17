@@ -13,8 +13,8 @@ import { bold, inlineCode } from '@discordjs/builders';
 export default class BalanceCommand extends Command {
   @DeferCommandInteraction()
   public override async chatInputRun(command: CommandInteraction<'cached'>) {
-    const db = await this.container.db.players.fetch(command.user.id);
     const member = command.options.getMember('user') ?? command.member;
+    const db = await this.container.db.players.fetch(member.user.id);
 
     await edit(command, (content) =>
       content.addEmbed((embed) =>
