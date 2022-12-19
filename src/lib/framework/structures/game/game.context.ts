@@ -1,4 +1,5 @@
 import type { PlayerSchema } from '#lib/database';
+import type { PlayerGamesStatisticSchema } from '#lib/database/models/economy/player/player.game.schema.js';
 import { ComponentId, InteractionMessageContentBuilder, isCommandInteractionExpired } from '#lib/utilities';
 import { Result } from '@sapphire/result';
 import { isNullOrUndefined } from '@sapphire/utilities';
@@ -92,12 +93,7 @@ export class GameContext {
    * @returns This context.
    */
   public win(coins: number): this {
-    this.dbGame.wins.addValue(1).streak.addValue();
-    this.dbGame.wins.coins.addValue(coins);
-    this.dbGame.loses.streak.resetValue();
-    this.dbGame.ties.streak.resetValue();
-
-    return this;
+    return this.updateStats(this.dbGame.wins, coins, [this.dbGame.loses, this.dbGame.ties]);
   }
 
   /**
@@ -106,12 +102,7 @@ export class GameContext {
    * @returns This context.
    */
   public lose(coins: number): this {
-    this.dbGame.loses.addValue(1).streak.addValue();
-    this.dbGame.loses.coins.addValue(coins);
-    this.dbGame.wins.streak.resetValue();
-    this.dbGame.ties.streak.resetValue();
-
-    return this;
+    return this.updateStats(this.dbGame.loses, coins, [this.dbGame.wins, this.dbGame.ties]);
   }
 
   /**
@@ -120,12 +111,7 @@ export class GameContext {
    * @returns This context.
    */
   public tie(coins: number): this {
-    this.dbGame.ties.addValue(1).streak.addValue();
-    this.dbGame.ties.coins.addValue(coins);
-    this.dbGame.loses.streak.resetValue();
-    this.dbGame.wins.streak.resetValue();
-
-    return this;
+    return this.updateStats(this.dbGame.ties, coins, [this.dbGame.loses, this.dbGame.wins]);
   }
 
   /**
@@ -139,6 +125,22 @@ export class GameContext {
     if (checked.isErr()) return this.respond(this.renderMessage(checked.unwrapErr()));
 
     return this.setInteractions(this.interactions + 1).play();
+  }
+
+  /**
+   * Updates a statistic.
+   * @param stat The stats to update.
+   * @param coins The coins to add to the stat.
+   * @param statsToResetStreak The stats to reset its respective streaks.
+   * @returns This context.
+   */
+  protected updateStats(stat: PlayerGamesStatisticSchema, coins: number, statsToResetStreak: PlayerGamesStatisticSchema[]) {
+    for (const stat of statsToResetStreak.values()) stat.streak.resetValue();
+
+    stat.addValue(1).streak.addValue();
+    stat.coins.addValue(coins);
+
+    return this;
   }
 
   /**
