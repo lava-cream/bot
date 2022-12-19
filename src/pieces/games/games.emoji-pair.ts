@@ -6,6 +6,12 @@ import { Constants, MessageEmbed } from 'discord.js';
 import { bold } from '@discordjs/builders';
 import * as EmojiPair from '#lib/utilities/games/emoji-pair/index.js';
 
+declare module '#lib/framework/structures/game/game.types' {
+  interface Games {
+    emojipair: never;
+  }
+}
+
 @ApplyOptions<Game.Options>({
   id: 'emojipair',
   name: 'Emoji Pair',
@@ -98,24 +104,27 @@ export class EmojiPairGame extends Game {
 
         ctx.db.run((db) => {
           db.wallet.addValue(final);
-          db.energy.addValue(+!db.energy.isMaxStars());
+          db.energy.addValue();
+          ctx.win(final);
         });
         
-        description.push(`${bold('PAIRED!')} You won ${bold(final.toLocaleString())} coins.`);
+        description.push(`${bold('PAIRED!')} You won ${bold(final.toLocaleString())} coins.`, `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
         embed.setColor(Constants.Colors.GREEN).setFooter({ text: `Percent Won: ${percent(final, ctx.db.bet.value)}` });
         break;
       }
 
       case logic.isLose(): {
+        ctx.lose(ctx.db.bet.value);
         ctx.db.run((db) => db.wallet.subValue(db.bet.value));
-        description.push("You didn't get an outstanding pair sad. You lost your bet.");
+        description.push("You didn't get a unique pair sad. You lost your bet.", `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
         embed.setColor(Constants.Colors.RED);
         break;
       }
 
       default: {
+        ctx.lose(ctx.db.bet.value);
         ctx.db.run((db) => db.wallet.subValue(db.bet.value));
-        description.push("You didn't respond in time. You lost your bet.");
+        description.push("You didn't respond in time. You lost your bet.", `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
         embed.setColor(Constants.Colors.NOT_QUITE_BLACK);
         break;
       }
@@ -129,11 +138,11 @@ export class EmojiPairGame extends Game {
    */
   private static get pairs(): EmojiPair.Emoji[] {
     return [
-      { emoji: ':pineapple:', multiplier: 1.5 },
-      { emoji: ':apple:', multiplier: 1.25 },
-      { emoji: ':carrot:', multiplier: 1.00 },
-      { emoji: ':peach:', multiplier: 0.75 },
-      { emoji: ':eggplant:', multiplier: 0.5 }
+      { emoji: '🤑', multiplier: 1.9 },
+      { emoji: '💰', multiplier: 1.5 },
+      { emoji: '💵', multiplier: 1.0 },
+      { emoji: '🪙', multiplier: 0.5 },
+      { emoji: '🤡', multiplier: 0.1 }
     ];
   }
 }

@@ -9,6 +9,7 @@ import { PlayerBetSchema } from './player.bet.schema.js';
 import { PlayerMultiplierSchema } from './player.multiplier.schema.js';
 import { PlayerAdvancementsManagerSchema } from './player.advancements.schema.js';
 import { PlayerPartyManagerSchema } from './player.party.schema.js';
+import { PlayerGamesManagerSchema } from './player.game.schema.js';
 import { container } from '@sapphire/framework';
 
 export class PlayerSchema extends Schema {
@@ -38,6 +39,9 @@ export class PlayerSchema extends Schema {
 
   @prop({ type: () => PlayerPartyManagerSchema, immutable: true, default: new PlayerPartyManagerSchema() })
   public readonly party!: PlayerPartyManagerSchema;
+
+  @prop({ type: () => PlayerGamesManagerSchema, immutable: true, default: new PlayerGamesManagerSchema() })
+  public readonly games!: PlayerGamesManagerSchema;
 
   public get netWorth(): number {
     return this.wallet.value + this.bank.value;

@@ -30,7 +30,7 @@ export default class CoinFlipGame extends Game {
       message: await context.respond(this.renderMainContent(context, game, false)),
       componentType: 'BUTTON',
       max: Infinity,
-      time: Common.seconds(60),
+      time: Common.seconds(10),
       filter: async (button) => {
         const contextual = button.user.id === context.command.user.id;
         await button.deferUpdate();
@@ -59,13 +59,14 @@ export default class CoinFlipGame extends Game {
               base: 0.25,
               multiplier: context.db.multiplier.value,
               bet: context.db.bet.value,
-              random: Common.randomNumber(0, 150) / 100
+              random: Math.random() * 1.5,
             });
 
             await context.db
               .run((db) => {
                 db.wallet.addValue(won.final);
-                db.energy.addValue(+!db.energy.isMaxStars());
+                db.energy.addValue();
+                context.win(won.final);
               })
               .save();
 
@@ -74,7 +75,12 @@ export default class CoinFlipGame extends Game {
           }
 
           case game.isLose(): {
-            await context.db.run((db) => db.wallet.subValue(db.bet.value)).save();
+            await context.db
+              .run((db) => {
+                db.wallet.subValue(db.bet.value);
+                context.lose(db.bet.value);
+              })
+              .save();
             await edit(ctx.interaction, this.renderMainContent(context, game, true));
             break;
           }
@@ -100,18 +106,18 @@ export default class CoinFlipGame extends Game {
               !game.hasPicked()
                 ? !ended
                   ? Common.join(
-                      'Guess what side of the coin it would flip up to.',
-                      `You bet for ${bold(context.db.bet.value.toLocaleString())} coins.`
-                    )
-                  : Common.join(
-                      "You didn't respond in time. You lost your bet.\n",
-                      `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}`
-                    )
-                : Common.join(
-                    `${game.isWin() ? 'Nice' : 'Sad'}. It was ${bold(game.opponent.value)}!`,
-                    `You ${game.isWin() ? 'won' : 'lost'} ${bold((game.isWin() ? won : context.db.bet.value).toLocaleString())} coins.\n`,
-                    `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}.`
+                    'Guess what side of the coin it would flip up to.',
+                    `You placed ${bold(context.db.bet.value.toLocaleString())} coins.`
                   )
+                  : Common.join(
+                    "You didn't respond in time. You lost your bet.\n",
+                    `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}`
+                  )
+                : Common.join(
+                  `It was ${bold(game.opponent.value)}${game.isWin() ? '!' : '.'} You ${game.isWin() ? 'won' : 'lost'} ${bold((game.isWin() ? won : context.db.bet.value).toLocaleString())} coins.\n`,
+                  game.isWin() ? `${bold('Percent Won:')} ${percent(won, context.db.bet.value)}` : '',
+                  `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}.`
+                )
             )
           )
           .setColor(
@@ -120,10 +126,16 @@ export default class CoinFlipGame extends Game {
                 ? Constants.Colors.BLURPLE
                 : Constants.Colors.NOT_QUITE_BLACK
               : game.isWin()
-              ? Constants.Colors.GREEN
-              : Constants.Colors.RED
+                ? Constants.Colors.GREEN
+                : Constants.Colors.RED
           )
-          .setFooter(!game.hasPicked() || game.isLose() ? null : { text: `Percent Won: ${percent(won, context.db.bet.value)}` })
+          .setFooter(
+            !game.hasPicked()
+              ? null 
+              : context.dbGame.wins.onStreak() || context.dbGame.loses.onStreak()
+                ? { text: `${game.isWin() ? 'Win' : 'Lose'} Streak: ${Reflect.get(context.dbGame, game.isWin() ? 'wins' : 'loses').displayStreak}` }
+                : null
+          )
       )
       .addRow((row) =>
         Object.values(Coinflip.Side).reduce(
@@ -138,10 +150,10 @@ export default class CoinFlipGame extends Game {
                     ? Constants.MessageButtonStyles.PRIMARY
                     : (game.player.value === Coinflip.Side.HEADS && customId === Coinflip.Side.HEADS) ||
                       (game.player.value === Coinflip.Side.TAILS && customId === Coinflip.Side.TAILS)
-                    ? game.isWin()
-                      ? Constants.MessageButtonStyles.SUCCESS
-                      : Constants.MessageButtonStyles.DANGER
-                    : Constants.MessageButtonStyles.SECONDARY
+                      ? game.isWin()
+                        ? Constants.MessageButtonStyles.SUCCESS
+                        : Constants.MessageButtonStyles.DANGER
+                      : Constants.MessageButtonStyles.SECONDARY
                 )
             ),
           row

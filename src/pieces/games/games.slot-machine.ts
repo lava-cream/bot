@@ -75,7 +75,7 @@ export default class SlotMachineGame extends Game {
 
     switch (true) {
       case !ended: {
-        description.push(`You placed ${bold(ctx.db.bet.value.toLocaleString())} coins.`, `Click ${bold(revealButton.label!)} to reveal the outcome.`);
+        description.push(`You placed ${bold(ctx.db.bet.value.toLocaleString())} coins.`, `Click ${bold(revealButton.label!)} for the outcome.`);
         embed.setColor(Constants.Colors.BLURPLE);
         break;
       }
@@ -90,7 +90,8 @@ export default class SlotMachineGame extends Game {
 
         ctx.db.run((db) => {
           db.wallet.addValue(final);
-          db.energy.addValue(+!db.energy.isMaxStars());
+          db.energy.addValue();
+          ctx.win(final);
         });
 
         description.push(
@@ -105,6 +106,7 @@ export default class SlotMachineGame extends Game {
       }
 
       default: {
+        ctx.lose(ctx.db.bet.value);
         ctx.db.run((db) => db.wallet.subValue(db.bet.value));
         description.push(
           `You lost ${bold(ctx.db.bet.value.toLocaleString())} coins.`,

@@ -9,13 +9,13 @@ export default class ClientReadyListener extends Listener<typeof Events.ClientRe
   }
 
   public async run(client: SapphireClient<true>) {
-    const { whiteBright, greenBright } = chalk;
+    const { whiteBright } = chalk;
 
     client.user.presence.set(ClientReadyListener.getPresenceData(client));
-    client.logger.info(whiteBright('[CLIENT]'), greenBright(`Logged in as ${client.user.tag}`));
+    client.logger.info(whiteBright('[CLIENT]'), chalk`{whiteBright Logged in as greenBright ${client.user.tag}}}`);
     client.logger.info(
       whiteBright('[CLIENT]'),
-      greenBright(`Loaded ${client.stores.reduce((acc, s) => acc + s.size, 0).toLocaleString()} pieces from ${client.stores.size} stores.`)
+      chalk`{whiteBright Loaded {greenBright ${client.stores.reduce((acc, s) => acc + s.size, 0).toLocaleString()}} pieces from {greenBright ${client.stores.size}} stores.}`
     );
   }
 

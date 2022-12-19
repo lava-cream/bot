@@ -80,8 +80,15 @@ export function CreateSubSchemaManager<TSchema extends SubSchema, Args extends u
     /**
      * The entries of this manager.
      */
-    @prop({ type: () => [SubSchema], immutable: true, default: [] })
+    @prop({ type: () => [SubSchema], default: [] })
     public readonly entries!: TSchema[];
+
+    /**
+     * The manager's constructor.
+     */
+    public constructor() {
+      this.entries = [];
+    }
 
     /**
      * The "keys" of this manager are all entry ids.

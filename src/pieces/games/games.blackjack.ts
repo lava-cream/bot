@@ -30,11 +30,10 @@ declare module '#lib/framework/structures/game/game.types' {
 })
 export default class BlackjackGame extends Game {
   public async play(context: Game.Context) {
-    const game = new Blackjack.Logic(context.command.user, context.command.client!.user!);
+    const game = new Blackjack.Logic(context.command.user, context.command.client!.user!).start();
     const collector = new Collector({
       message: await context.respond(BlackjackGame.renderMainContent(context, game)),
       time: seconds(10),
-      idle: seconds(10),
       componentType: 'BUTTON',
       max: Infinity,
       filter: async (button) => {
@@ -65,7 +64,7 @@ export default class BlackjackGame extends Game {
           await context.db
             .run((db) => {
               db.wallet.addValue(final);
-              db.energy.addValue(+!+db.energy.isMaxStars());
+              db.energy.addValue();
             })
             .save();
           game.outcome.extra = `You won ${bold(final.toLocaleString())} coins. You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`;

@@ -1,5 +1,5 @@
 import type { FirstArgument } from '@sapphire/utilities';
-import { type Snowflake, Collection } from 'discord.js';
+import { Collection } from 'discord.js';
 
 /**
  * Resolves an element inside an array.
@@ -63,10 +63,10 @@ export function getCommonItemsLength<T>(array: T[], item: T): number {
  * ```
  * @since 4.2.0
  */
-export function toCollection<T extends { id: Snowflake | string }>(
+export function toCollection<Id extends string, T extends { id: Id }>(
   array: T[],
-  collection = new Collection<Snowflake, T>()
-): Collection<Snowflake, T> {
+  collection = new Collection<Id, T>()
+): Collection<Id, T> {
   return array.reduce((coll, elem) => coll.set(elem.id, elem), collection);
 }
 

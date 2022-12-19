@@ -6,11 +6,12 @@ export class GameStore extends Store<Game> {
   public constructor() {
     super(Game, { name: 'games' });
   }
-}
 
-export declare interface GameStore {
-  get<T extends Games.Keys>(key: T): Game;
-  get(key: string): undefined;
+  public override get<T extends Games.Keys>(key: T): Game;
+  public override get(key: string): undefined;
+  public override get(key: string) {
+    return super.find(g => g.id === key);
+  }
 }
 
 declare module '@sapphire/pieces' {

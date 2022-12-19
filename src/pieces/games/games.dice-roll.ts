@@ -1,5 +1,5 @@
 import { Game } from '#lib/framework';
-import { Collector, percent, getUserAvatarURL, join, seconds, checkClientReadyStatus, randomNumber } from '#lib/utilities';
+import { Collector, percent, getUserAvatarURL, join, seconds, checkClientReadyStatus } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
 import { ApplyOptions } from '@sapphire/decorators';
 import { WebhookEditMessageOptions, Constants, MessageEmbed, MessageButton, MessageActionRow } from 'discord.js';
@@ -23,7 +23,7 @@ export class DiceRollGame extends Game {
   public async play(context: Game.Context) {
     checkClientReadyStatus(context.command.client);
 
-    const game = new DiceRoll.Logic(context.command.client.user, context.command.user);
+    const game = new DiceRoll.Logic(context.command.user, context.command.client.user);
     const response = await Result.fromAsync(this.awaitResponse(context, game));
 
     await context.end(response.isErr());
@@ -59,12 +59,13 @@ export class DiceRollGame extends Game {
           base: 0.5,
           multiplier: ctx.db.multiplier.value,
           bet: ctx.db.bet.value,
-          random: randomNumber(0, 100) / 100
+          random: Math.random()
         });
 
         ctx.db.run((db) => {
           db.wallet.addValue(final);
-          db.energy.addValue(+!db.energy.isMaxStars());
+          db.energy.addValue();
+          ctx.win(final);
         });
 
         button.setLabel('Winner Winner').setStyle(Constants.MessageButtonStyles.SUCCESS);
@@ -84,12 +85,14 @@ export class DiceRollGame extends Game {
       case game.isTie(): {
         button.setLabel('LMAO').setStyle(Constants.MessageButtonStyles.SECONDARY);
         embed.setColor(Constants.Colors.YELLOW).setDescription(`Tie! You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`);
+        ctx.tie(ctx.db.bet.value);
 
         break;
       }
 
       case game.isLose(): {
         ctx.db.run((db) => db.wallet.subValue(db.bet.value));
+        ctx.lose(ctx.db.bet.value);
 
         button.setLabel('Sucks to Suck').setStyle(Constants.MessageButtonStyles.DANGER);
         embed
@@ -102,11 +105,12 @@ export class DiceRollGame extends Game {
       }
 
       default: {
+        ctx.lose(ctx.db.bet.value);
         ctx.db.run((db) => db.wallet.subValue(db.bet.value));
         button.setLabel('Timed Out').setStyle(Constants.MessageButtonStyles.SECONDARY).setDisabled(true);
         embed
           .setColor(Constants.Colors.NOT_QUITE_BLACK)
-          .setDescription(join(`You didn't respond in time. You lost your bet.`, `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`));
+          .setDescription(join(`You didn't respond in time. You lost your bet.\n`, `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`));
 
         break;
       }

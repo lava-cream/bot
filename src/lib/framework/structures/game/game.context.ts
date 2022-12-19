@@ -1,6 +1,7 @@
 import type { PlayerSchema } from '#lib/database';
 import { ComponentId, InteractionMessageContentBuilder, isCommandInteractionExpired } from '#lib/utilities';
 import { Result } from '@sapphire/result';
+import { isNullOrUndefined } from '@sapphire/utilities';
 import { CommandInteraction, Constants, InteractionReplyOptions, WebhookEditMessageOptions } from 'discord.js';
 import type { Game } from './game.piece.js';
 
@@ -29,6 +30,10 @@ export class GameContext {
    * @since 6.0.0
    */
   public customId: ComponentId;
+  /**
+   * The last message id.
+   */
+  private messageId: string | null = null;
 
   /**
    * The constructor.
@@ -39,6 +44,13 @@ export class GameContext {
     this.db = options.db;
     this.command = options.command;
     this.customId = new ComponentId(options.command.createdAt);
+  }
+
+  /**
+   * The game's statistics from the player's db entry.
+   */
+  public get dbGame() {
+    return this.db.games.resolve(this.game.id) ?? this.db.games.create(this.game.id);
   }
 
   /**
@@ -54,8 +66,10 @@ export class GameContext {
    * @param content Options to reply to the interaction.
    * @returns The message interaction.
    */
-  public respond(content: string | InteractionReplyOptions) {
-    return this.command.followUp(content);
+  public async respond(content: string | InteractionReplyOptions) {
+    const message = await this.command.followUp(content);
+    this.messageId = message.id;
+    return message;
   }
 
   /**
@@ -63,8 +77,55 @@ export class GameContext {
    * @param content Options to reply to the interaction.
    * @returns The message interaction.
    */
-  public edit(content: string | WebhookEditMessageOptions) {
-    return this.command.editReply(content);
+  public async edit(content: string | WebhookEditMessageOptions): Promise<void> {
+    if (isNullOrUndefined(this.messageId)) {
+      await this.command.editReply(content);
+      return;
+    }
+
+    this.messageId = (await this.command.webhook.editMessage(this.messageId, content)).id; 
+  }
+
+  /**
+   * Updates the game's statistics.
+   * @param coins The coins to add.
+   * @returns This context.
+   */
+  public win(coins: number): this {
+    this.dbGame.wins.addValue(1).addStreak(1);
+    this.dbGame.wins.coins.addValue(coins);
+    this.dbGame.loses.resetStreak();
+    this.dbGame.ties.resetStreak();
+
+    return this;
+  }
+
+  /**
+   * Updates the game's statistics.
+   * @param coins The coins to add.
+   * @returns This context.
+   */
+  public lose(coins: number): this {
+    this.dbGame.loses.addValue(1).addStreak(1);
+    this.dbGame.loses.coins.addValue(coins);
+    this.dbGame.wins.resetStreak();
+    this.dbGame.ties.resetStreak();
+
+    return this;
+  }
+
+  /**
+   * Updates the game's statistics.
+   * @param coins The coins to add.
+   * @returns This context.
+   */
+  public tie(coins: number): this {
+    this.dbGame.ties.addValue(1).addStreak(1);
+    this.dbGame.ties.coins.addValue(coins);
+    this.dbGame.loses.resetStreak();
+    this.dbGame.wins.resetStreak();
+
+    return this;
   }
 
   /**
@@ -96,7 +157,7 @@ export class GameContext {
    */
   protected check(force: boolean): void {
     if (force) throw 'This session has ended.';
-    if (this.interactions >= GameContext.MaximumInteractions) throw 'You have reached the maximum interactions for this session.';
+    if (this.interactions >= this.game.interactionsLimit) throw 'You have reached the maximum interactions for this session.';
     if (this.db.energy.isExpired()) throw 'Your energy just expired!';
     if (this.db.bet.value > this.db.wallet.value) throw "You don't have enough coins to play anymore.";
     if (this.db.wallet.isMaxValue(this.db.upgrades.mastery)) throw 'Your wallet just reached its maximum capacity.';
@@ -110,11 +171,6 @@ export class GameContext {
       embed.setTitle('Game Ended').setColor(Constants.Colors.RED).setDescription(message)
     );
   }
-
-  /**
-   * The maximum amount of interactions a game context could only take.
-   */
-  private static MaximumInteractions = 60;
 }
 
 /**

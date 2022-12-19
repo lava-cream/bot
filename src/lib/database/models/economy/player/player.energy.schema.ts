@@ -14,11 +14,15 @@ export class PlayerEnergySchema extends CreateNumberValueSchema(PlayerDefaults.S
   }
 
   public isMaxEnergy(tier: number) {
-    return this.energy >= PlayerLimits.Energy + PlayerTierAddedLimits.Energy * tier;
+    return this.energy >= (PlayerLimits.Star / PlayerEnergy.StarRatio) + PlayerTierAddedLimits.Energy * tier;
   }
 
   public isExpired() {
     return Date.now() > this.expire;
+  }
+
+  public override addValue(): this {
+    return super.addValue(PlayerEnergy.StarGain);
   }
 
   public getDefaultDuration(tier: number) {

@@ -1,6 +1,6 @@
 import type { HexColorString } from 'discord.js';
 import { DiscordSnowflake } from '@sapphire/snowflake';
-import { isNullOrUndefined } from '@sapphire/utilities';
+import { filterNullishAndEmpty, isNullOrUndefined } from '@sapphire/utilities';
 
 /**
  * Transforms a numerical value into something humans could easily read.
@@ -216,7 +216,13 @@ function isSingleParamArray(strings: unknown[]): strings is [string[]] {
 export function join(strings: string[]): string;
 export function join(...strings: string[]): string;
 export function join(...strings: [string[]] | string[]): string {
-  return isSingleParamArray(strings) ? (!isNullOrUndefined(strings.at(0)) ? strings.at(0)!.join('\n') : '') : strings.join('\n');
+  return isSingleParamArray(strings)
+    ? (
+      !isNullOrUndefined(strings.at(0))
+        ? strings.at(0)!.filter(filterNullishAndEmpty).join('\n')
+        : ''
+    )
+    : strings.filter(filterNullishAndEmpty).join('\n');
 }
 
 /**

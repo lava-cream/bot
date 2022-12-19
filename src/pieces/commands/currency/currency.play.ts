@@ -15,7 +15,7 @@ import {
   getUserAvatarURL,
   DeferCommandInteraction
 } from '#lib/utilities';
-import { type Game, GameContext } from '#lib/framework';
+import { type Game, GameContext, Games } from '#lib/framework';
 import { isNullish, isNullOrUndefined } from '@sapphire/utilities';
 import type { PlayerSchema } from '#lib/database';
 import type { MessageSelectOptionData } from 'discord.js';
@@ -40,7 +40,7 @@ export default class PlayCommand extends Command {
   @DeferCommandInteraction()
   public override async chatInputRun(command: CommandInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
-    const game = await Result.fromAsync(this.chooseGame(command, Reflect.construct(ComponentId, [new Date(command.createdTimestamp)])));
+    const game = await Result.fromAsync(this.chooseGame(command, db, Reflect.construct(ComponentId, [new Date(command.createdTimestamp)])));
 
     return game.inspectAsync(async (game) => {
       if (isNullOrUndefined(game)) return;
@@ -101,12 +101,12 @@ export default class PlayCommand extends Command {
       );
   }
 
-  private async chooseGame(command: CommandInteraction<'cached'>, componentId: ComponentId): Promise<Game | null> {
+  private async chooseGame(command: CommandInteraction<'cached'>, db: PlayerSchema.Document, componentId: ComponentId): Promise<Game | null> {
     return new Promise(async (resolve) => {
       const gamesStore = this.container.stores.get('games');
       const selection = new Map<string, Game>();
       const collector = new Collector({
-        message: await edit(command, this.renderGamePickerContent(command, componentId, null)),
+        message: await edit(command, this.renderGamePickerContent(command, componentId, !isNullOrUndefined(db.games.lastGamePlayed) ? gamesStore.get(db.games.lastGamePlayed.id) : null)),
         max: Infinity,
         time: seconds(60),
         filter: async (component) => {
@@ -117,15 +117,19 @@ export default class PlayCommand extends Command {
         end: (ctx) => (ctx.wasInternallyStopped() ? resolve(null) : void 0)
       });
 
+      if (!isNullOrUndefined(db.games.lastGamePlayed)) {
+        selection.set(command.user.id, gamesStore.get(db.games.lastGamePlayed.id));
+      }
+
       for (const customId of Object.values(PickerControl)) {
         collector.actions.add(componentId.create(customId).id, async (ctx) => {
           if (ctx.interaction.isSelectMenu()) {
-            const gameId = ctx.interaction.values.at(0) ?? null;
-            const game = !isNullOrUndefined(gameId) ? gamesStore.find((g) => g.id === gameId) : null;
+            const gameId = ctx.interaction.values.at(0) as Games.Keys ?? null;
+            const game = !isNullOrUndefined(gameId) ? gamesStore.get(gameId) : null;
 
             if (!isNullOrUndefined(game)) {
               await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, game));
-              selection.set(command.id, game);
+              selection.set(command.user.id, game);
               ctx.collector.resetTimer();
               return;
             }
@@ -134,7 +138,10 @@ export default class PlayCommand extends Command {
           if (ctx.interaction.isButton()) {
             switch (ctx.interaction.customId) {
               case componentId.create(PickerControl.Proceed).id: {
-                const game = selection.get(command.id)!;
+                const game = selection.get(command.user.id);
+                if (isNullOrUndefined(game)) return;
+
+                await db.run(db => db.games.setLastPlayed(game.id, command.createdAt)).save();
                 await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, game, true));
                 ctx.collector.stop(ctx.interaction.customId);
                 return resolve(game);
