@@ -12,7 +12,7 @@ export default class ClientReadyListener extends Listener<typeof Events.ClientRe
     const { whiteBright } = chalk;
 
     client.user.presence.set(ClientReadyListener.getPresenceData(client));
-    client.logger.info(whiteBright('[CLIENT]'), chalk`{whiteBright Logged in as greenBright ${client.user.tag}}}`);
+    client.logger.info(whiteBright('[CLIENT]'), chalk`{whiteBright Logged in as {greenBright ${client.user.tag}}}`);
     client.logger.info(
       whiteBright('[CLIENT]'),
       chalk`{whiteBright Loaded {greenBright ${client.stores.reduce((acc, s) => acc + s.size, 0).toLocaleString()}} pieces from {greenBright ${client.stores.size}} stores.}`

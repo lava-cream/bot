@@ -55,11 +55,10 @@ export default class EvalCommand extends Command {
     const customId = new ComponentId(new Date(command.createdTimestamp));
     const session = {
       watch: new Stopwatch(),
-      evaled: '',
-      evalTime: 0
+      evaled: ''
     };
 
-    await edit(command, (content) => content.addEmbed((embed) => embed.setTitle('Evaluating...').setColor(Constants.Colors.NOT_QUITE_BLACK)));
+    await edit(command, (content) => content.addEmbed((embed) => embed.setTitle('Please wait...').setColor(Constants.Colors.NOT_QUITE_BLACK)));
     session.watch.start();
 
     const evaluate = async () => {
@@ -69,14 +68,16 @@ export default class EvalCommand extends Command {
         const inspected = inspect(await eval(this.getCode(code)), {
           breakLength: 1900,
           depth: 0,
-          compact: false
+          compact: false,
         });
 
         return this.sanitise(inspected);
       });
 
+      evaled.inspectErr(err => Reflect.set(session, 'evaled', err.message));
+      evaled.inspect(evaled => Reflect.set(session, 'evaled', evaled));
       session.watch.stop();
-      Reflect.set(session, 'evaled', evaled.isOk() ? evaled.unwrap() : evaled.unwrapErr().message);
+
       return session.evaled;
     };
 
@@ -105,7 +106,7 @@ export default class EvalCommand extends Command {
 
     const renderEvaluatedCodeMessage = () => {
       return new MessageContentBuilder().addEmbed((embed) =>
-        embed.setTitle('Evaluated Code').setColor(Constants.Colors.BLURPLE).setDescription(codeBlock('js', code))
+        embed.setTitle('Evaluated Code').setColor(Constants.Colors.BLURPLE).setDescription(codeBlock('js', inspect(code, { depth: 0 })))
       );
     };
 
@@ -114,7 +115,7 @@ export default class EvalCommand extends Command {
     const collector = new Collector({
       message: await edit(command, renderContent(false)),
       componentType: 'BUTTON',
-      time: seconds(60),
+      time: seconds(10),
       max: Infinity,
       actions: {
         [customId.create(EvalControls.Repeat).id]: async (ctx) => {
