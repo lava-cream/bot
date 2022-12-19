@@ -3,6 +3,29 @@ import type { Games } from '#lib/framework';
 
 export class PlayerGamesStatisticCoinsSchema extends CreateNumberValueSchema(0) {}
 
+export class PlayerGamesStatisticStreakSchema extends CreateNumberValueSchema(0) {
+  @prop({ type: Number })
+  public highest!: number;
+
+  public constructor() {
+    super();
+    this.highest = 0;
+  }
+
+  public get display() {
+    return this.isActive() ? this.value - 1 : 0;
+  }
+
+  public isActive() {
+    return this.value > 1;
+  }
+
+  public override addValue(): this {
+    Reflect.set(this, 'highest', Math.max(this.highest, this.value + 1));
+    return super.addValue(1);
+  }
+}
+
 export class PlayerGamesStatisticSchema extends CreateNumberValueSchema(0) {
   /**
    * The statistic.
@@ -15,32 +38,14 @@ export class PlayerGamesStatisticSchema extends CreateNumberValueSchema(0) {
   @prop({ type: () => PlayerGamesStatisticCoinsSchema, immutable: true })
   public readonly coins!: PlayerGamesStatisticCoinsSchema;
 
-  @prop({ type: Number })
-  public streak!: number;
+  @prop({ type: () => PlayerGamesStatisticStreakSchema, immutable: true })
+  public readonly streak!: PlayerGamesStatisticStreakSchema;
 
   public constructor() {
     super();
     this.coins = new PlayerGamesStatisticCoinsSchema();
-    this.streak = 0;
+    this.streak = new PlayerGamesStatisticStreakSchema();
   } 
-
-  public get displayStreak(): number {
-    return this.onStreak() ? this.streak - 1 : 0;
-  }
-
-  public onStreak(): boolean {
-    return this.streak > 1;
-  }
-
-  public addStreak(value = 1): this {
-    this.streak += value;
-    return this;
-  }
-
-  public resetStreak(): this {
-    this.streak = 0;
-    return this;
-  }
 }
 
 export class PlayerGamesSchema extends SubSchema {

@@ -132,8 +132,8 @@ export default class CoinFlipGame extends Game {
           .setFooter(
             !game.hasPicked()
               ? null 
-              : context.dbGame.wins.onStreak() || context.dbGame.loses.onStreak()
-                ? { text: `${game.isWin() ? 'Win' : 'Lose'} Streak: ${Reflect.get(context.dbGame, game.isWin() ? 'wins' : 'loses').displayStreak}` }
+              : context.dbGame.wins.streak.isActive() || context.dbGame.loses.streak.isActive()
+                ? { text: `${game.isWin() ? 'Win' : 'Lose'} Streak: ${Reflect.get(context.dbGame, game.isWin() ? 'wins' : 'loses').streak.display}` }
                 : null
           )
       )

@@ -92,10 +92,10 @@ export class GameContext {
    * @returns This context.
    */
   public win(coins: number): this {
-    this.dbGame.wins.addValue(1).addStreak(1);
+    this.dbGame.wins.addValue(1).streak.addValue();
     this.dbGame.wins.coins.addValue(coins);
-    this.dbGame.loses.resetStreak();
-    this.dbGame.ties.resetStreak();
+    this.dbGame.loses.streak.resetValue();
+    this.dbGame.ties.streak.resetValue();
 
     return this;
   }
@@ -106,10 +106,10 @@ export class GameContext {
    * @returns This context.
    */
   public lose(coins: number): this {
-    this.dbGame.loses.addValue(1).addStreak(1);
+    this.dbGame.loses.addValue(1).streak.addValue();
     this.dbGame.loses.coins.addValue(coins);
-    this.dbGame.wins.resetStreak();
-    this.dbGame.ties.resetStreak();
+    this.dbGame.wins.streak.resetValue();
+    this.dbGame.ties.streak.resetValue();
 
     return this;
   }
@@ -120,10 +120,10 @@ export class GameContext {
    * @returns This context.
    */
   public tie(coins: number): this {
-    this.dbGame.ties.addValue(1).addStreak(1);
+    this.dbGame.ties.addValue(1).streak.addValue();
     this.dbGame.ties.coins.addValue(coins);
-    this.dbGame.loses.resetStreak();
-    this.dbGame.wins.resetStreak();
+    this.dbGame.loses.streak.resetValue();
+    this.dbGame.wins.streak.resetValue();
 
     return this;
   }
