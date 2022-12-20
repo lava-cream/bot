@@ -1,6 +1,6 @@
 import type DatabaseClient from '#lib/database/client/client.js';
 import { Manager } from '#lib/database/structures/manager.js';
-import { createComponentId, join, MessageContentBuilder, type SelectMenuBuilder } from '#lib/utilities';
+import { CustomId, join, MessageContentBuilder, type SelectMenuBuilder } from '#lib/utilities';
 import { bold } from '@discordjs/builders';
 import { Resolvers } from '@sapphire/framework';
 import { isNullOrUndefined } from '@sapphire/utilities';
@@ -35,7 +35,7 @@ export class DonationDeskManager extends Manager<DonationDeskSchema> {
       .addRow((row) =>
         row.addSelectMenuComponent((menu) =>
           menu
-            .setCustomId(createComponentId('menu').toString())
+            .setCustomId(new CustomId(command.createdAt).create('menu'))
             .setPlaceholder('Select a donation category')
             .setOptions(
               db.entries.entries.map(

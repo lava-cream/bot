@@ -27,7 +27,7 @@ export default class CoinFlipGame extends Game {
 
     const game = new Coinflip.Logic(context.command.user, context.command.client.user);
     const collector = new Discord.Collector({
-      message: await context.respond(this.renderMainContent(context, game, false)),
+      message: await context.respond(CoinFlipGame.renderContent(context, game, false)),
       componentType: 'BUTTON',
       max: Infinity,
       time: Common.seconds(10),
@@ -39,7 +39,7 @@ export default class CoinFlipGame extends Game {
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
           await context.db.run((db) => db.wallet.subValue(context.db.bet.value)).save();
-          await context.edit(this.renderMainContent(context, game, true));
+          await context.edit(CoinFlipGame.renderContent(context, game, true));
           await context.end(true);
           return;
         }
@@ -49,12 +49,12 @@ export default class CoinFlipGame extends Game {
     });
 
     for (const side of Object.values(Coinflip.Side)) {
-      collector.actions.add(context.customId.create(side).id, async (ctx) => {
+      collector.actions.add(context.customId.create(side), async (ctx) => {
         game.pick.call(game, side);
 
         switch (true) {
           case game.isWin(): {
-            // 25% (0.25) to 175% (1.5+0.25)
+            // 25% (0.25) to 175% (1.5+0.25=1.75)
             const won = Game.calculateWinnings({
               base: 0.25,
               multiplier: context.db.multiplier.value,
@@ -64,24 +64,25 @@ export default class CoinFlipGame extends Game {
 
             await context.db
               .run((db) => {
+                context.win(won.final);
                 db.wallet.addValue(won.final);
                 db.energy.addValue();
-                context.win(won.final);
               })
               .save();
 
-            await edit(ctx.interaction, this.renderMainContent(context, game, true, won.final));
+            await edit(ctx.interaction, CoinFlipGame.renderContent(context, game, true, won.final));
             break;
           }
 
           case game.isLose(): {
             await context.db
               .run((db) => {
-                db.wallet.subValue(db.bet.value);
                 context.lose(db.bet.value);
+                db.wallet.subValue(db.bet.value);
+                db.energy.subValue();
               })
               .save();
-            await edit(ctx.interaction, this.renderMainContent(context, game, true));
+            await edit(ctx.interaction, CoinFlipGame.renderContent(context, game, true));
             break;
           }
         }
@@ -93,7 +94,7 @@ export default class CoinFlipGame extends Game {
     await collector.start();
   }
 
-  private renderMainContent(context: Game.Context, game: Coinflip.Logic, ended: boolean, won = 0) {
+  private static renderContent(context: Game.Context, game: Coinflip.Logic, ended: boolean, won = 0) {
     return new InteractionMessageContentBuilder()
       .addEmbed((embed) =>
         embed
@@ -142,7 +143,7 @@ export default class CoinFlipGame extends Game {
           (row, customId) =>
             row.addButtonComponent((btn) =>
               btn
-                .setCustomId(context.customId.create(customId).id)
+                .setCustomId(context.customId.create(customId))
                 .setLabel(toTitleCase(customId))
                 .setDisabled(ended)
                 .setStyle(

@@ -1,6 +1,6 @@
 import type { PlayerSchema } from '#lib/database';
 import type { PlayerGamesStatisticSchema } from '#lib/database/models/economy/player/player.game.schema.js';
-import { ComponentId, InteractionMessageContentBuilder, isCommandInteractionExpired } from '#lib/utilities';
+import { CustomId, InteractionMessageContentBuilder, isCommandInteractionExpired } from '#lib/utilities';
 import { Result } from '@sapphire/result';
 import { isNullOrUndefined } from '@sapphire/utilities';
 import { CommandInteraction, Constants, InteractionReplyOptions, WebhookEditMessageOptions } from 'discord.js';
@@ -30,7 +30,7 @@ export class GameContext {
    * The custom id utility based on this context's attached command interaction.
    * @since 6.0.0
    */
-  public customId: ComponentId;
+  public customId: CustomId;
   /**
    * The last message id.
    */
@@ -44,7 +44,7 @@ export class GameContext {
     this.game = options.game;
     this.db = options.db;
     this.command = options.command;
-    this.customId = new ComponentId(options.command.createdAt);
+    this.customId = new CustomId(options.command.createdAt);
   }
 
   /**

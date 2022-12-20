@@ -34,18 +34,18 @@ export function checkClientReadyStatus<T extends SapphireClient>(client: T): ass
 }
 
 /**
- * Represents the util for creating custom message component IDs. 
+ * Create a unique message component custom identifier. 
  * @since 6.0.0
  */
-export class ComponentId {
+export class CustomId {
   /**
-   * The constant ID.
+   * The auto-generated snowflake. Generated on instance creation.
    */
   public snowflake: bigint;
 
   /**
-   * The util's constructor.
-   * @param date The date to base on.
+   * The utility's constructor.
+   * @param date The date. This is the basis of the snowflake.
    */
   public constructor(public date = new Date()) {
     this.snowflake = DiscordSnowflake.generate({ timestamp: date.getTime() });
@@ -64,21 +64,10 @@ export class ComponentId {
   /**
    * Creates an ID with a snowflake assigned in it.
    * @param id The id to create.
-   * @returns A {@link CustomId} object.
+   * @returns A {@link CustomIdentifier} string.
    */
-  public create<Id extends string>(id: Id): CustomId<Id> {
-    return {
-      parts: { 
-        id, 
-        snowflake: this.snowflake
-      },
-      get id() { 
-        return `${this.parts.snowflake}:${this.parts.id}` as const; 
-      },
-      toString() {
-        return this.id;
-      }
-    };
+  public create<Id extends string>(id: Id): CustomIdentifier<Id> {
+    return `${this.snowflake}:${id}`;
   }
 }
 
@@ -136,27 +125,10 @@ export function commandHasOption<Cached extends CacheType>(
 }
 
 /**
- * Creates a unique component custom id that uses the `snowflake:customId` format.
- * @param id The value of the component id.
- * @param date The date to create the snowflake from.
+ * A unique customId for a message component.
  * @since 6.0.0
  */
-export function createComponentId<Id extends string = string>(id: Id, date = new Date()): CustomId<Id> {
-  return new ComponentId(date).create(id);
-}
-
-/**
- * The returned value of the {@link createComponentId} function.
- * @since 6.0.0
- */
-export interface CustomId<out Id extends string> {
-  parts: {
-    id: Id;
-    snowflake: bigint;
-  };
-  readonly id: `${bigint}:${Id}`;
-  toString(): `${bigint}:${Id}`;
-}
+export type CustomIdentifier<Id extends string> = `${bigint}:${Id}`;
 
 /**
  * Creates an attachment based from the attachment or url of the attachment provided.

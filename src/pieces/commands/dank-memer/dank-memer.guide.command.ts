@@ -14,7 +14,7 @@ import {
   send,
   edit,
   parseNumber,
-  modalActionRow
+  createModalActionRow
 } from '#lib/utilities';
 import { type TextChannel, Constants, Modal } from 'discord.js';
 import { toTitleCase, isNullOrUndefined, chunk } from '@sapphire/utilities';
@@ -262,7 +262,7 @@ export default class GuideCommand extends Command {
                       .setTitle(`New Item's ${toTitleCase(click2.customId)}`)
                       .setCustomId(click2.customId)
                       .addComponents(
-                        modalActionRow((row) =>
+                        createModalActionRow((row) =>
                           row.addTextInputComponent((txtInp) =>
                             txtInp
                               .setCustomId(click2.customId)

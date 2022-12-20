@@ -17,7 +17,7 @@ import { MessageEmbed } from 'discord.js';
  * @returns A {@link TextInputComponentBuilder} instance.
  * @since 6.0.0
  */
-export function textInputComponent(fn: BuilderCallback<TextInputComponentBuilder>): TextInputComponentBuilder {
+export function createTextInputComponent(fn: BuilderCallback<TextInputComponentBuilder>): TextInputComponentBuilder {
   return Builder.build(new TextInputComponentBuilder(), fn);
 }
 
@@ -28,7 +28,7 @@ export function textInputComponent(fn: BuilderCallback<TextInputComponentBuilder
  * @version 6.0.0 - Use custom builders.
  * @since 5.0.0
  */
-export function modalActionRow<T extends ModalActionRowBuilderComponents>(fn: BuilderCallback<ModalActionRowBuilder<T>>): ModalActionRowBuilder<T> {
+export function createModalActionRow<T extends ModalActionRowBuilderComponents>(fn: BuilderCallback<ModalActionRowBuilder<T>>): ModalActionRowBuilder<T> {
   return Builder.build(new ModalActionRowBuilder<T>(), fn);
 }
 
@@ -39,7 +39,7 @@ export function modalActionRow<T extends ModalActionRowBuilderComponents>(fn: Bu
  * @version 6.0.0 - Use custom builders.
  * @since 5.0.0
  */
-export function selectMenu(fn: BuilderCallback<SelectMenuBuilder>): SelectMenuBuilder {
+export function createSelectMenu(fn: BuilderCallback<SelectMenuBuilder>): SelectMenuBuilder {
   return Builder.build(new SelectMenuBuilder(), fn);
 }
 
@@ -50,7 +50,7 @@ export function selectMenu(fn: BuilderCallback<SelectMenuBuilder>): SelectMenuBu
  * @version 6.0.0 - Use custom builders.
  * @since 5.0.0
  */
-export function button(fn: BuilderCallback<ButtonBuilder>): ButtonBuilder {
+export function createButton(fn: BuilderCallback<ButtonBuilder>): ButtonBuilder {
   return Builder.build(new ButtonBuilder(), fn);
 }
 
@@ -61,7 +61,7 @@ export function button(fn: BuilderCallback<ButtonBuilder>): ButtonBuilder {
  * @version 6.0.0 - Use custom builders.
  * @since 5.0.0
  */
-export function messageActionRow<T extends MessageActionRowBuilderComponents>(
+export function createMessageActionRow<T extends MessageActionRowBuilderComponents>(
   fn: BuilderCallback<MessageActionRowBuilder<T>>
 ): MessageActionRowBuilder<T> {
   return Builder.build(new MessageActionRowBuilder<T>(), fn);
@@ -74,6 +74,6 @@ export function messageActionRow<T extends MessageActionRowBuilderComponents>(
  * @version 6.0.0 - Use custom builders.
  * @since 5.0.0
  */
-export function embed(fn: BuilderCallback<MessageEmbed>): MessageEmbed {
+export function createEmbed(fn: BuilderCallback<MessageEmbed>): MessageEmbed {
   return Builder.build(new MessageEmbed(), fn);
 }

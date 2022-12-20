@@ -7,14 +7,15 @@ import type { MessageSelectOptionData } from 'discord.js';
 import {
   randomColor,
   join,
-  createComponentId,
   Collector,
   seconds,
   InteractionMessageContentBuilder,
   DeferCommandInteraction,
   edit,
+  CustomIdentifier,
+  pluralise,
   CustomId,
-  pluralise
+  getGuildIconURL
 } from '#lib/utilities';
 import { inlineCode, bold } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
@@ -46,16 +47,16 @@ export default class TopCommand extends Command {
     let activeType: PageType = PageType.Wallet;
 
     const dbs = await this.container.db.players.fetchAll(true);
-    const componentId = createComponentId(ComponentIdentifiers.Paginator, new Date(command.createdTimestamp));
+    const customId = new CustomId(command.createdAt).create(ComponentIdentifiers.Paginator);
     const collector = new Collector({
-      message: await edit(command, this.renderContent(command, activeType, dbs, componentId)),
+      message: await edit(command, this.renderContent(command, activeType, dbs, customId)),
       componentType: 'SELECT_MENU',
-      time: seconds(30),
+      time: seconds(10),
       max: Infinity,
       actions: {
-        [componentId.id]: async (ctx) => {
+        [customId]: async (ctx) => {
           activeType = ctx.interaction.values.at(0) as PageType;
-          await edit(ctx.interaction, this.renderContent(command, activeType, dbs, componentId));
+          await edit(ctx.interaction, this.renderContent(command, activeType, dbs, customId));
         }
       },
       filter: async (menu) => {
@@ -64,7 +65,7 @@ export default class TopCommand extends Command {
         return context;
       },
       end: async () => {
-        await edit(command, this.renderContent(command, activeType, dbs, componentId));
+        await edit(command, this.renderContent(command, activeType, dbs, customId));
         return;
       }
     });
@@ -72,9 +73,9 @@ export default class TopCommand extends Command {
     await collector.start();
   }
 
-  protected renderContent(command: CommandInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], componentId: CustomId<ComponentIdentifiers>) {
+  protected renderContent(command: CommandInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>) {
     const leaderboard = dbs
-      .map((db) => ({ db, value: leaderboards[page](db) }))
+      .map((db) => ({ db, value: Reflect.apply(Reflect.get(leaderboards, page), null, [db]) }))
       .filter(({ value }) => value > 0)
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
@@ -92,12 +93,12 @@ export default class TopCommand extends Command {
               })
             )
           )
-          .setFooter({ text: `Requested By: ${command.user.tag}` })
+          .setFooter({ text: command.guild.name, iconURL: getGuildIconURL(command.guild) ?? void 0 })
       )
       .addRow((row) =>
         row.addSelectMenuComponent((menu) =>
           menu
-            .setCustomId(componentId.id)
+            .setCustomId(customId)
             .setPlaceholder(toTitleCase(page))
             .setMaxValues(1)
             .setOptions(

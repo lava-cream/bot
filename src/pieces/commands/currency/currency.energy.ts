@@ -3,7 +3,7 @@ import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '
 import { ApplyOptions } from '@sapphire/decorators';
 
 import { bold, time, TimestampStyles } from '@discordjs/builders';
-import { join, edit, DeferCommandInteraction, InteractionMessageContentBuilder, ComponentId, Collector, seconds, minutes } from '#lib/utilities';
+import { join, edit, DeferCommandInteraction, InteractionMessageContentBuilder, CustomId, Collector, seconds, minutes } from '#lib/utilities';
 import { Constants } from 'discord.js';
 import type { PlayerSchema } from '#lib/database';
 
@@ -16,7 +16,7 @@ export default class EnergyCommand extends Command {
   @DeferCommandInteraction()
   public override async chatInputRun(command: CommandInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
-    const componentId = new ComponentId(new Date(command.createdTimestamp));
+    const componentId = new CustomId(new Date(command.createdTimestamp));
 
     if (!db.energy.isExpired()) {
       await edit(command, EnergyCommand.renderContent(command, db, componentId, true, true));
@@ -29,7 +29,7 @@ export default class EnergyCommand extends Command {
       max: Infinity,
       time: seconds(10),
       actions: {
-        [componentId.create('energize').id]: async (ctx) => {
+        [componentId.create('energize')]: async (ctx) => {
           await db.run((db) => db.energy.subEnergy(1).setExpire(Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)))).save();
           await edit(ctx.interaction, EnergyCommand.renderContent(command, db, componentId, true, true));
           return ctx.collector.stop(ctx.interaction.customId);
@@ -51,7 +51,7 @@ export default class EnergyCommand extends Command {
     await collector.start();
   }
 
-  public static renderContent(command: CommandInteraction<'cached'>, db: PlayerSchema, componentId: ComponentId, energized: boolean, ended: boolean) {
+  public static renderContent(command: CommandInteraction<'cached'>, db: PlayerSchema, componentId: CustomId, energized: boolean, ended: boolean) {
     return new InteractionMessageContentBuilder()
       .addEmbed((embed) =>
         embed
@@ -68,7 +68,7 @@ export default class EnergyCommand extends Command {
       .addRow((row) =>
         row.addButtonComponent((btn) =>
           btn
-            .setCustomId(componentId.create('energize').id)
+            .setCustomId(componentId.create('energize'))
             .setStyle(energized && ended ? Constants.MessageButtonStyles.SECONDARY : Constants.MessageButtonStyles.PRIMARY)
             .setLabel(energized && ended ? 'Active' : 'Energize')
             .setEmoji(energized && ended ? '✅' : '⚡')

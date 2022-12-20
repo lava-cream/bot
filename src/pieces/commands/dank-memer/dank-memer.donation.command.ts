@@ -9,7 +9,7 @@ import {
   DeferCommandInteraction,
   ButtonBuilder,
   Collector,
-  ComponentId,
+  CustomId,
   edit,
   getUserAvatarURL,
   InteractionMessageContentBuilder,
@@ -315,7 +315,7 @@ export default class DonationCommand extends Subcommand {
   @DeferCommandInteraction()
   public async chatInputDefault(command: CommandInteraction<'cached'>) {
     const db = await this.container.db.trackers.fetch(command.guildId);
-    const componentId = new ComponentId(new Date(command.createdTimestamp));
+    const componentId = new CustomId(new Date(command.createdTimestamp));
 
     const renderContent = (selected: DonationTrackerCategorySchema | null) => {
       return new InteractionMessageContentBuilder<ButtonBuilder>()
@@ -335,7 +335,7 @@ export default class DonationCommand extends Subcommand {
               (row, category) =>
                 row.addButtonComponent((btn) =>
                   btn
-                    .setCustomId(componentId.create(category.id).id)
+                    .setCustomId(componentId.create(category.id))
                     .setStyle(category.id === selected?.id ? Constants.MessageButtonStyles.PRIMARY : Constants.MessageButtonStyles.SECONDARY)
                     .setLabel(category.name)
                     .setDisabled(!isNullOrUndefined(selected))
@@ -358,7 +358,7 @@ export default class DonationCommand extends Subcommand {
     });
 
     for (const category of db.categories.entries) {
-      collector.actions.add(componentId.create(category.id).id, async (ctx) => {
+      collector.actions.add(componentId.create(category.id), async (ctx) => {
         ctx.collector.stop(ctx.interaction.customId);
         await edit(ctx.interaction, () => renderContent(category));
         await send(ctx.interaction, (builder) =>
@@ -507,7 +507,7 @@ export default class DonationCommand extends Subcommand {
     const category = command.options.getString('category', true);
     const member = command.options.getMember('user') ?? command.member;
     const db = await this.container.db.trackers.fetch(command.guildId);
-    const componentId = new ComponentId(new Date(command.createdTimestamp));
+    const componentId = new CustomId(new Date(command.createdTimestamp));
 
     const resolvedCategory = DonationCommand.resolveCategory(category, db);
     if (isNullOrUndefined(resolvedCategory))
@@ -539,7 +539,7 @@ export default class DonationCommand extends Subcommand {
         .addRow((row) =>
           row.addSelectMenuComponent((menu) =>
             menu
-              .setCustomId(componentId.create('categories').id)
+              .setCustomId(componentId.create('categories'))
               .setMaxValues(1)
               .setMinValues(1)
               .setDisabled(ended)
@@ -562,20 +562,21 @@ export default class DonationCommand extends Subcommand {
       componentType: 'SELECT_MENU',
       max: Infinity,
       time: seconds(60),
+      actions: {
+        [componentId.create('categories')]: async (ctx) => {
+          const selected = ctx.interaction.values.at(0);
+          const selectedCategory = !isNullOrUndefined(selected) ? db.categories.resolve(selected) : null;
+          if (isNullOrUndefined(selectedCategory)) return;
+
+          await edit(ctx.interaction, () => renderContent(selectedCategory, false));
+          return ctx.collector.resetTimer({ time: seconds(30) });
+        }
+      },
       filter: async (menu) => {
         const contextual = menu.user.id === command.user.id;
         await menu.deferUpdate();
         return contextual;
       }
-    });
-
-    collector.actions.add(componentId.create('categories').id, async (ctx) => {
-      const selected = ctx.interaction.values.at(0);
-      const selectedCategory = !isNullOrUndefined(selected) ? db.categories.resolve(selected) : null;
-      if (isNullOrUndefined(selectedCategory)) return;
-
-      await edit(ctx.interaction, () => renderContent(selectedCategory, false));
-      return ctx.collector.resetTimer({ time: seconds(30) });
     });
 
     await collector.start();

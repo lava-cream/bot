@@ -1,12 +1,11 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Game } from '#lib/framework/index.js';
 
-import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, ButtonBuilder, edit } from '#lib/utilities';
-import { Constants, MessageEmbed } from 'discord.js';
+import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, createEmbed, createButton } from '#lib/utilities';
+import { Constants } from 'discord.js';
 import { bold, inlineCode } from '@discordjs/builders';
 
 import * as SlotMachine from '#lib/utilities/games/slot-machine/index.js';
-import { Result } from '@sapphire/result';
 
 declare module '#lib/framework/structures/game/game.types' {
   interface Games {
@@ -23,60 +22,65 @@ declare module '#lib/framework/structures/game/game.types' {
 export default class SlotMachineGame extends Game {
   public async play(context: Game.Context) {
     const machine = new SlotMachine.Logic(SlotMachineGame.emojis);
-    const result = await Result.fromAsync(SlotMachineGame.runCollector(machine, context));
+    const collector = new Collector({
+      message: await context.respond(SlotMachineGame.renderContentAndUpdate(machine, context, false)),
+      componentType: 'BUTTON',
+      time: seconds(10),
+      max: Infinity,
+      actions: {
+        [context.customId.create('spin')]: async (ctx) => {
+          await edit(ctx.interaction, SlotMachineGame.renderContentAndUpdate(machine.reveal(), context, true));
+          await context.db.save();
+          ctx.collector.stop(ctx.interaction.customId);
+        }
+      },
+      filter: async (button) => {
+        const contextual = button.user.id === context.command.user.id;
+        await button.deferUpdate();
+        return contextual;
+      },
+      end: async (ctx) => {
+        if (ctx.wasInternallyStopped()) {
+          await context.edit(SlotMachineGame.renderContentAndUpdate(machine, context, true));
+          await context.db.save();
+          await context.end();
+          return;
+        }
 
-    return context.end(result.isErr());
-  }
-
-  private static runCollector(machine: SlotMachine.Logic, context: Game.Context): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      const collector = new Collector({
-        message: await context.respond(SlotMachineGame.renderContentAndUpdate(machine, context, false)),
-        componentType: 'BUTTON',
-        time: seconds(60),
-        max: Infinity,
-        actions: {
-          [context.customId.create('reveal').id]: async (ctx) => {
-            await edit(ctx.interaction, SlotMachineGame.renderContentAndUpdate(machine.reveal(), context, true));
-            await context.db.save();
-            ctx.collector.stop(ctx.interaction.customId);
-          }
-        },
-        filter: async (button) => {
-          const contextual = button.user.id === context.command.user.id;
-          await button.deferUpdate();
-          return contextual;
-        },
-        end: (ctx) => (!ctx.wasInternallyStopped() ? resolve() : reject())
-      });
-
-      await collector.start();
+        await context.end();
+      }
     });
+
+    await collector.start();
   }
 
   private static renderContentAndUpdate(machine: SlotMachine.Logic, ctx: Game.Context, ended: boolean) {
-    const embed = new MessageEmbed();
-    const builder = new InteractionMessageContentBuilder<ButtonBuilder>().addEmbed(() => embed);
+    const embed = createEmbed(embed => embed.setAuthor({ name: `${ctx.command.user.username}'s slot machine`, iconURL: getUserAvatarURL(ctx.command.user) }));
+    const button = createButton(button => button.setCustomId(ctx.customId.create('spin')).setDisabled(machine.revealed || ended));
     const description: string[] = [];
 
-    const revealButton = new ButtonBuilder({
-      customId: ctx.customId.create('reveal').id,
-      style: Constants.MessageButtonStyles.PRIMARY,
-      disabled: ended,
-      label: 'Reveal'
-    });
-
-    embed.setAuthor({
-      name: `${ctx.command.user.username}'s slot machine`,
-      iconURL: getUserAvatarURL(ctx.command.user)
-    });
-
-    description.push(`${bold('>')} ${machine.slots.map((s) => (ended ? s.emoji : ':question:')).join('    ')} ${bold('<')}\n`);
+    description.push(`${bold('>')} ${machine.slots.map((s) => (ended && machine.revealed ? s.emoji : '❓')).join('    ')} ${bold('<')}\n`);
 
     switch (true) {
-      case !ended: {
-        description.push(`You placed ${bold(ctx.db.bet.value.toLocaleString())} coins.`, `Click ${bold(revealButton.label!)} for the outcome.`);
+      case !machine.revealed && !ended: {
+        description.push(`You placed ${bold(ctx.db.bet.value.toLocaleString())} coins.`, 'Spin to reveal the outcome.');
+        
         embed.setColor(Constants.Colors.BLURPLE);
+        button.setLabel('Spin').setStyle(Constants.MessageButtonStyles.PRIMARY);
+        break;
+      }
+
+      case !machine.revealed && ended: {
+        ctx.db.run(db => {
+          db.wallet.subValue(db.bet.value);
+          db.energy.subValue();
+          ctx.lose(db.bet.value);
+        });
+
+        description.push('Your time ran out. You lost your bet.', `You now have ${bold(ctx.db.wallet.value.toLocaleString())}`);
+
+        embed.setColor(Constants.Colors.NOT_QUITE_BLACK);
+        button.setLabel('Timed Out').setStyle(Constants.MessageButtonStyles.SECONDARY);
         break;
       }
 
@@ -88,7 +92,7 @@ export default class SlotMachineGame extends Game {
           random: 0
         });
 
-        ctx.db.run((db) => {
+        ctx.db.run(db => {
           db.wallet.addValue(final);
           db.energy.addValue();
           ctx.win(final);
@@ -101,36 +105,42 @@ export default class SlotMachineGame extends Game {
         );
 
         embed.setColor(machine.isJackpot() ? Constants.Colors.GOLD : Constants.Colors.GREEN);
-        revealButton.setLabel('Winner Winner').setStyle(Constants.MessageButtonStyles.SUCCESS);
+        button.setLabel('Winner Winner').setStyle(Constants.MessageButtonStyles.SUCCESS);
         break;
       }
 
-      default: {
-        ctx.lose(ctx.db.bet.value);
-        ctx.db.run((db) => db.wallet.subValue(db.bet.value));
+      case machine.isLose(): {
+        ctx.db.run(db => {
+          db.wallet.subValue(db.bet.value);
+          db.energy.subValue();
+          ctx.lose(db.bet.value);
+        });
+
         description.push(
           `You lost ${bold(ctx.db.bet.value.toLocaleString())} coins.`,
           `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`
         );
+
         embed.setColor(Constants.Colors.RED);
-        revealButton.setLabel('Loser Loser').setStyle(Constants.MessageButtonStyles.DANGER);
+        button.setLabel('Loser Loser').setStyle(Constants.MessageButtonStyles.DANGER);
         break;
       }
     }
 
-    embed.setDescription(join(description));
-    return builder.addRow((row) => row.addButtonComponent(() => revealButton));
+    return new InteractionMessageContentBuilder()
+      .addEmbed(embed => embed.setDescription(join(description)))
+      .addRow(row => row.addButtonComponent(() => button));
   }
 
   private static get emojis(): SlotMachine.Emoji[] {
     return [
-      { emoji: '9️⃣', multiplier: 1.5 },
-      { emoji: '8️⃣', multiplier: 1.5 },
-      { emoji: '7️⃣', multiplier: 1.0 },
+      { emoji: '9️⃣', multiplier: 3.0 },
+      { emoji: '8️⃣', multiplier: 2.0 },
+      { emoji: '7️⃣', multiplier: 2.0 },
       { emoji: '6️⃣', multiplier: 1.0 },
       { emoji: '5️⃣', multiplier: 1.0 },
-      { emoji: '4️⃣', multiplier: 1.0 },
-      { emoji: '3️⃣', multiplier: 0.5 },
+      { emoji: '4️⃣', multiplier: 0.75 },
+      { emoji: '3️⃣', multiplier: 0.75 },
       { emoji: '2️⃣', multiplier: 0.5 },
       { emoji: '1️⃣', multiplier: 0.5 }
     ];

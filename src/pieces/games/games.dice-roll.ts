@@ -1,11 +1,10 @@
 import { Game } from '#lib/framework';
-import { Collector, percent, getUserAvatarURL, join, seconds, checkClientReadyStatus } from '#lib/utilities';
+import { Collector, percent, getUserAvatarURL, join, seconds, checkClientReadyStatus, createEmbed, createButton, InteractionMessageContentBuilder } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
 import { ApplyOptions } from '@sapphire/decorators';
-import { WebhookEditMessageOptions, Constants, MessageEmbed, MessageButton, MessageActionRow } from 'discord.js';
+import { Constants } from 'discord.js';
 
 import * as DiceRoll from '#lib/utilities/games/dice-roll/index.js';
-import { Result } from '@sapphire/result';
 
 declare module '#lib/framework/structures/game/game.types' {
   interface Games {
@@ -19,27 +18,52 @@ declare module '#lib/framework/structures/game/game.types' {
   description: 'Roll a dice to win coins!',
   detailedDescription: 'Roll a dice to win coins. Whoever gets the highest rolled value wins.'
 })
-export class DiceRollGame extends Game {
+export default class DiceRollGame extends Game {
   public async play(context: Game.Context) {
     checkClientReadyStatus(context.command.client);
 
     const game = new DiceRoll.Logic(context.command.user, context.command.client.user);
-    const response = await Result.fromAsync(this.awaitResponse(context, game));
+    const collector = new Collector({
+      message: await context.respond(DiceRollGame.renderContentAndUpdate(context, game, false)),
+      componentType: 'BUTTON',
+      max: Infinity,
+      time: seconds(10),
+      actions: {
+        [context.customId.create('roll')]: async (ctx) => {
+          game.roll.call(game);
 
-    await context.end(response.isErr());
+          await ctx.interaction.editReply(DiceRollGame.renderContentAndUpdate(context, game, true));
+          await context.db.save();
+          ctx.collector.stop(ctx.interaction.customId);
+        }
+      },
+      filter: async (button) => {
+        const contextual = button.user.id === context.command.user.id;
+        await button.deferUpdate();
+        return contextual;
+      },
+      end: async (ctx) => {
+        if (ctx.wasInternallyStopped()) {
+          await context.db.run(db => db.wallet.subValue(db.bet.value)).save();
+          await context.edit(DiceRollGame.renderContentAndUpdate(context, game, false));
+          await context.end(true);
+          return;
+        }
+
+        await context.end();
+      }
+    });
+
+    await collector.start();
   }
 
-  public renderContentAndUpdate(ctx: Game.Context, game: DiceRoll.Logic): WebhookEditMessageOptions {
-    const embed = new MessageEmbed().setAuthor({
-      name: `${ctx.command.user.username}'s dice roll game`,
-      iconURL: getUserAvatarURL(ctx.command.user)
-    });
-    const button = new MessageButton().setCustomId(ctx.customId.create('reveal').id).setDisabled(game.hasBothRolled());
-    const row = new MessageActionRow().setComponents([button]);
+  private static renderContentAndUpdate(ctx: Game.Context, game: DiceRoll.Logic, ended: boolean) {
+    const embed = createEmbed(embed => embed.setAuthor({ name: `${ctx.command.user.username}'s dice roll game`, iconURL: getUserAvatarURL(ctx.command.user) }));
+    const button = createButton(button => button.setCustomId(ctx.customId.create('roll')).setDisabled(game.hasBothRolled() || ended));
 
     for (const user of [game.player.user, game.opponent.user]) {
       embed.addFields({
-        name: user.username,
+        name: `${user.username} (${user.id === game.player.user.id ? 'Player' : 'Opponent'})`,
         value: `Rolled a ${inlineCode(
           game.hasBothRolled() ? (user.id === ctx.command.user.id ? game.player.value : game.opponent.value).toString() : '?'
         )}`,
@@ -48,9 +72,32 @@ export class DiceRollGame extends Game {
     }
 
     switch (true) {
-      case !game.hasBothRolled() && game.outcome === DiceRoll.Outcome.NONE: {
-        button.setLabel('Reveal').setStyle(Constants.MessageButtonStyles.PRIMARY);
-        embed.setColor(Constants.Colors.BLURPLE).setDescription(`Your bet is ${bold(ctx.db.bet.value.toLocaleString())} coins.`);
+      case !game.hasBothRolled() && !game.isNone() && !ended: {
+        button
+          .setLabel('Roll')
+          .setStyle(Constants.MessageButtonStyles.PRIMARY);
+        embed
+          .setColor(Constants.Colors.BLURPLE)
+          .setDescription(`Your bet is ${bold(ctx.db.bet.value.toLocaleString())} coins.`);
+        break;
+      }
+
+      case !game.hasBothRolled() && game.isNone() && ended: {
+        ctx.db.run(db => {
+          ctx.lose(db.bet.value);
+          db.wallet.subValue(db.bet.value);
+          db.energy.subValue();
+        });
+
+        button
+          .setLabel('Timed Out')
+          .setStyle(Constants.MessageButtonStyles.SECONDARY)
+          .setDisabled(true);
+        embed
+          .setColor(Constants.Colors.NOT_QUITE_BLACK)
+          .setDescription(join(`You didn't respond in time. You lost your bet.\n`, `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`))
+          .setFooter(ctx.dbGame.loses.streak.isActive() ? { text: `Lose Streak: ${ctx.dbGame.loses.streak.display}` } : null);
+
         break;
       }
 
@@ -63,12 +110,14 @@ export class DiceRollGame extends Game {
         });
 
         ctx.db.run((db) => {
+          ctx.win(final);
           db.wallet.addValue(final);
           db.energy.addValue();
-          ctx.win(final);
         });
 
-        button.setLabel('Winner Winner').setStyle(Constants.MessageButtonStyles.SUCCESS);
+        button
+          .setLabel('Winner Winner')
+          .setStyle(Constants.MessageButtonStyles.SUCCESS);
         embed
           .setColor(Constants.Colors.GREEN)
           .setDescription(
@@ -77,81 +126,52 @@ export class DiceRollGame extends Game {
               `${bold('Percent Won:')} ${percent(final, ctx.db.bet.value)}`,
               `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`
             )
+          )
+          .setFooter(
+            ctx.dbGame.wins.streak.isActive()
+              ? { text: `Win Streak: ${ctx.dbGame.wins.streak.display}` }
+              : null
           );
 
         break;
       }
 
       case game.isTie(): {
-        button.setLabel('LMAO').setStyle(Constants.MessageButtonStyles.SECONDARY);
-        embed.setColor(Constants.Colors.YELLOW).setDescription(`Tie! You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`);
         ctx.tie(ctx.db.bet.value);
+        button
+          .setLabel('You Tied')
+          .setStyle(Constants.MessageButtonStyles.SECONDARY);
+        embed
+          .setColor(Constants.Colors.YELLOW)
+          .setDescription(`Tie! You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`)
+          .setFooter(ctx.dbGame.ties.streak.isActive() ? { text: `Tie Streak: ${ctx.dbGame.ties.streak.display}` } : null);
 
         break;
       }
 
       case game.isLose(): {
-        ctx.db.run((db) => db.wallet.subValue(db.bet.value));
-        ctx.lose(ctx.db.bet.value);
+        ctx.db.run(db => {
+          ctx.lose(db.bet.value);
+          db.wallet.subValue(db.bet.value);
+          db.energy.subValue();
+        });
 
-        button.setLabel('Sucks to Suck').setStyle(Constants.MessageButtonStyles.DANGER);
+        button
+          .setLabel('Sucks to Suck')
+          .setStyle(Constants.MessageButtonStyles.DANGER);
         embed
           .setColor(Constants.Colors.RED)
           .setDescription(
             join(`You lost ${bold(ctx.db.bet.value.toLocaleString())} coins.\n`, `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`)
-          );
-
-        break;
-      }
-
-      default: {
-        ctx.lose(ctx.db.bet.value);
-        ctx.db.run((db) => db.wallet.subValue(db.bet.value));
-        button.setLabel('Timed Out').setStyle(Constants.MessageButtonStyles.SECONDARY).setDisabled(true);
-        embed
-          .setColor(Constants.Colors.NOT_QUITE_BLACK)
-          .setDescription(join(`You didn't respond in time. You lost your bet.\n`, `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`));
+          )
+          .setFooter(ctx.dbGame.loses.streak.isActive() ? { text: `Lose Streak: ${ctx.dbGame.loses.streak.display}` } : null);
 
         break;
       }
     }
 
-    return { embeds: [embed], components: [row] };
-  }
-
-  protected async awaitResponse(context: Game.Context, game: DiceRoll.Logic): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      const collector = new Collector({
-        message: await context.respond(this.renderContentAndUpdate(context, game)),
-        componentType: 'BUTTON',
-        max: Infinity,
-        time: seconds(10),
-        actions: {
-          [context.customId.create('reveal').id]: async (ctx) => {
-            game.roll();
-
-            await ctx.interaction.editReply(this.renderContentAndUpdate(context, game));
-            await context.db.save();
-            ctx.collector.stop(ctx.interaction.customId);
-          }
-        },
-        filter: async (button) => {
-          const contextual = button.user.id === context.command.user.id;
-          await button.deferUpdate();
-          return contextual;
-        },
-        end: async (ctx) => {
-          if (ctx.wasInternallyStopped()) {
-            await context.db.run(db => db.wallet.subValue(db.bet.value)).save();
-            await context.edit(this.renderContentAndUpdate(context, game));
-            return reject();
-          }
-
-          return resolve();
-        }
-      });
-
-      await collector.start();
-    });
+    return new InteractionMessageContentBuilder()
+      .addEmbed(() => embed)
+      .addRow(row => row.addButtonComponent(() => button));
   }
 }

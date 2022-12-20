@@ -25,6 +25,10 @@ export class PlayerEnergySchema extends CreateNumberValueSchema(PlayerDefaults.S
     return super.addValue(PlayerEnergy.StarGain);
   }
 
+  public override subValue(): this {
+    return super.subValue(PlayerEnergy.StarGain);
+  }
+
   public getDefaultDuration(tier: number) {
     return Math.round(PlayerEnergy.DefaultDuration + PlayerEnergy.TierAddedDefaultDuration * tier);
   }
