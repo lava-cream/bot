@@ -102,7 +102,6 @@ export default class BlackjackGame extends Game {
         }
 
         case Blackjack.Outcome.TIE: {
-          context.tie(context.db.bet.value);
           game.outcome.extra = `Your wallet hasn't changed! You have ${bold(context.db.wallet.value.toLocaleString())} still.`;
           break;
         }

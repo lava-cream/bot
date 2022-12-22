@@ -29,10 +29,10 @@ export default class EnergyCommand extends Command {
       max: Infinity,
       time: seconds(10),
       actions: {
-        [componentId.create('energize')]: async (ctx) => {
+        [componentId.create('energize')]: async ctx => {
           await db.run((db) => db.energy.subEnergy(1).setExpire(Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)))).save();
           await edit(ctx.interaction, EnergyCommand.renderContent(command, db, componentId, true, true));
-          return ctx.collector.stop(ctx.interaction.customId);
+          return ctx.stop();
         }
       },
       filter: async (btn) => {
@@ -47,7 +47,7 @@ export default class EnergyCommand extends Command {
         }
       }
     });
-
+    
     await collector.start();
   }
 

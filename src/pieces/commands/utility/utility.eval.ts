@@ -116,14 +116,14 @@ export default class EvalCommand extends Command {
       max: Infinity,
       actions: {
         [customId.create(EvalControls.Repeat)]: async (ctx) => {
-          ctx.collector.resetTimer();
           await evaluate();
           await edit(ctx.interaction, renderContent(false));
+          return ctx.collector.resetTimer();
         },
         [customId.create(EvalControls.Delete)]: async (ctx) => {
           await unsend(command).catch(noop);
           await unsend(ctx.interaction).catch(noop);
-          ctx.collector.stop(ctx.interaction.customId);
+          return ctx.stop();
         }
       },
       filter: async (button) => {

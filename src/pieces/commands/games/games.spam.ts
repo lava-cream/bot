@@ -242,7 +242,8 @@ export default class SpamCommand extends Command {
       const collector = message.createMessageComponentCollector({
         componentType: 'BUTTON',
         max: Infinity,
-        time: seconds(60)
+        time: seconds(60),
+        dispose: true
       });
 
       collector.on('collect', async (button) => {

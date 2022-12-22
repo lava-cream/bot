@@ -72,7 +72,7 @@ export default class DiceRollGame extends Game {
     }
 
     switch (true) {
-      case !game.hasBothRolled() && !game.isNone() && !ended: {
+      case !game.hasBothRolled() && !ended: {
         button
           .setLabel('Roll')
           .setStyle(Constants.MessageButtonStyles.PRIMARY);
@@ -82,7 +82,7 @@ export default class DiceRollGame extends Game {
         break;
       }
 
-      case !game.hasBothRolled() && game.isNone() && ended: {
+      case !game.hasBothRolled() && ended: {
         ctx.db.run(db => {
           ctx.lose(db.bet.value);
           db.wallet.subValue(db.bet.value);
@@ -137,14 +137,12 @@ export default class DiceRollGame extends Game {
       }
 
       case game.isTie(): {
-        ctx.tie(ctx.db.bet.value);
         button
           .setLabel('You Tied')
           .setStyle(Constants.MessageButtonStyles.SECONDARY);
         embed
           .setColor(Constants.Colors.YELLOW)
           .setDescription(`Tie! You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`)
-          .setFooter(ctx.dbGame.ties.streak.isActive() ? { text: `Tie Streak: ${ctx.dbGame.ties.streak.display}` } : null);
 
         break;
       }

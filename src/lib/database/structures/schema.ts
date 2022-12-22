@@ -63,6 +63,10 @@ export class SubSchema {
   @prop({ type: String, immutable: true })
   public readonly id!: string;
 
+  /**
+   * The sub-schema's constructor.
+   * @param id The id of this sub-schema.
+   */
   public constructor(id: string) {
     this.id = id;
   }
@@ -234,6 +238,23 @@ export function CreateNumberValueSchema(defaultValue?: number) {
      */
     public shortenValue(fractionDigits = 0) {
       return toNearestReadable(this.value, fractionDigits);
+    }
+
+    /**
+     * Defines the number's toString() behavior. In this case, it only transforms the value as string.
+     * @returns The value as a string primitive.
+     */
+    public override toString() {
+      return this.value.toString();
+    }
+
+    /**
+     * Defines the number's toLocaleString() behavior. In this case, it transforms the value to string and formatting it based from the locale.
+     * @param args The method's core arguments.
+     * @returns The value as a string primitive, formatted.
+     */
+    public override toLocaleString(...args: Parameters<number['toLocaleString']>) {
+      return this.value.toLocaleString(...args);
     }
   }
 

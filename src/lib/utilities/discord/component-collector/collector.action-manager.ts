@@ -20,12 +20,22 @@ export class CollectorActionManager<in out T extends ComponentType, Cached exten
   public constructor(public collector: Collector<T, Cached>) { }
 
   /**
+   * Constructs a {@link CollectorAction}.
+   * @param id The id of the action.
+   * @param logic The action's logic.
+   * @returns A {@link CollectorAction}.
+   */
+  public construct(id: string, logic: CollectorActionLogic<T, Cached>) {
+    return Reflect.construct(CollectorAction, [id, logic]);
+  }
+
+  /**
    * Registeres a collector action into this manager.
    * @param args The parameters to construct a {@link CollectorAction}.
    * @returns A {@link CollectorAction} instance.
    */
   public add(id: string, logic: CollectorActionLogic<T, Cached>): CollectorAction<T, Cached> {
-    return this.actions.ensure(id, () => Reflect.construct(CollectorAction, [id, logic]));
+    return this.actions.ensure(id, () => this.construct(id, logic));
   }
 
   /**

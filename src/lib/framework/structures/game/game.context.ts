@@ -79,12 +79,11 @@ export class GameContext {
    * @returns The message interaction.
    */
   public async edit(content: string | WebhookEditMessageOptions): Promise<void> {
-    if (isNullOrUndefined(this.messageId)) {
-      await this.command.editReply(content);
-      return;
-    }
+    const message = isNullOrUndefined(this.messageId)
+      ? await this.command.editReply(content)
+      : await this.command.webhook.editMessage(this.messageId, content);
 
-    this.messageId = (await this.command.webhook.editMessage(this.messageId, content)).id; 
+    this.messageId = message.id;
   }
 
   /**
@@ -93,7 +92,7 @@ export class GameContext {
    * @returns This context.
    */
   public win(coins: number): this {
-    return this.updateStats(this.dbGame.wins, coins, [this.dbGame.loses, this.dbGame.ties]);
+    return this.updateStats(this.dbGame.wins, coins, [this.dbGame.loses]);
   }
 
   /**
@@ -102,16 +101,7 @@ export class GameContext {
    * @returns This context.
    */
   public lose(coins: number): this {
-    return this.updateStats(this.dbGame.loses, coins, [this.dbGame.wins, this.dbGame.ties]);
-  }
-
-  /**
-   * Updates the game's statistics.
-   * @param coins The coins to add.
-   * @returns This context.
-   */
-  public tie(coins: number): this {
-    return this.updateStats(this.dbGame.ties, coins, [this.dbGame.loses, this.dbGame.wins]);
+    return this.updateStats(this.dbGame.loses, coins, [this.dbGame.wins]);
   }
 
   /**
@@ -122,9 +112,9 @@ export class GameContext {
     if (isCommandInteractionExpired(this.command)) return;
 
     const checked = Result.from<void, string>(() => this.check(force));
-    if (checked.isErr()) return this.respond(this.renderMessage(checked.unwrapErr()));
+    await checked.inspectErrAsync(err => this.respond(this.renderMessage(err)));
 
-    return this.setInteractions(this.interactions + 1).play();
+    return checked.isOk() && this.setInteractions(this.interactions + 1).play();
   }
 
   /**

@@ -1,5 +1,7 @@
-import type { InteractionCollector, MappedInteractionTypes, Message, MessageComponentTypeResolvable as ComponentType } from 'discord.js';
+import type { Awaitable, CollectorFilter, InteractionCollector, MappedInteractionTypes, MessageComponentTypeResolvable as ComponentType, MessageComponentTypeResolvable, User } from 'discord.js';
 import type { TFunction } from '#lib/utilities/common/common.types';
+import { isNullOrUndefined } from '@sapphire/utilities';
+import { isMessageInstance } from '../discord.common.js';
 
 /**
  * Represents the main context of an action.
@@ -20,9 +22,10 @@ export interface CollectorActionContext<in out T extends ComponentType, Cached e
    */
   readonly interaction: MappedInteractionTypes<Cached>[T];
   /**
-   * The interaction as a discord message.
+   * Stops the attached interaction collector from running.
+   * @param reason The reason why you want to stop the collector from running. Defaults to the interaction's custom id.
    */
-  readonly message: Message<Cached>;
+  stop(reason?: string): void;
 }
 
 /**
@@ -36,6 +39,38 @@ export type CollectorActionLogic<T extends ComponentType, Cached extends boolean
   boolean,
   CollectorAction<T, Cached>
 >;
+
+/**
+ * The collector's filter.
+ * @template T The component's type.
+ * @template Cached The cache status.
+ */
+export type CollectorFilterAction<T extends MessageComponentTypeResolvable, Cached extends boolean> = CollectorFilter<[MappedInteractionTypes<Cached>[T]]>;
+
+/**
+ * The function to call when the collector ends.
+ * @template T The component's type.
+ * @template Cached The cache status.
+ */
+export type CollectorEndAction<T extends MessageComponentTypeResolvable, Cached extends boolean> = (
+  /**
+   * The context for this predicate.
+   */
+  context: Omit<CollectorActionContext<T, Cached>, 'action' | 'interaction' | 'stop'> & Readonly<{
+    /**
+     * The last collected interaction, if there were any.
+     */
+    interaction: MappedInteractionTypes<Cached>[T] | null;
+    /**
+     * The reason why the collector stopped.
+     */
+    reason: string;
+    /**
+     * A function to check if the attached InteractionCollector stopped itself or not.
+     */
+    wasInternallyStopped(): boolean
+  }>
+) => Awaitable<void>;
 
 /**
  * Represents a collector action. Actions
@@ -75,5 +110,37 @@ export class CollectorAction<in out T extends ComponentType, Cached extends bool
   public setLogic(logic: CollectorActionLogic<T, Cached>) {
     this.logic = logic.bind(this);
     return this;
+  }
+
+  /**
+   * Creates a defauly filter action for a collector.
+   * @param user The user who owns this collector.
+   * @returns A {@link Function}.
+   */
+  public static getDefaultFilterAction<T extends ComponentType, Cached extends boolean>(user?: User): CollectorFilterAction<T, Cached> {
+    return async (component) => {
+      const contextual = !isNullOrUndefined(user) ? component.user.id === user.id : true;
+      await component.deferUpdate();
+      return contextual;
+    };
+  }
+
+  /**
+   * Creates a default end action for a collector.
+   * @template T The component type.
+   * @template Cached The cache status.
+   * @returns A {@link Function}.
+   */
+  public static getDefaultEndAction<T extends ComponentType, Cached extends boolean>(): CollectorEndAction<T, Cached> {
+    return async (context) => {
+      if (
+        isNullOrUndefined(context.interaction) || 
+        isNullOrUndefined(context.interaction.message) || 
+        !isMessageInstance(context.interaction.message)
+      ) return;
+
+      const components = context.interaction.message.components.map(row => row.setComponents(row.components.map(component => component.setDisabled(true))));
+      await context.interaction.message.edit({ components });
+    };
   }
 }

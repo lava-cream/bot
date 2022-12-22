@@ -46,7 +46,7 @@ export abstract class Game extends Piece<GameOptions> implements GameOptions {
   /**
    * The default interactions limit.
    */
-  public static DefaultInteractionsLimit = 60;
+  public static DefaultInteractionsLimit = 30;
 
   public constructor(context: PieceContext, options: GameOptions) {
     super(context, options);

@@ -43,7 +43,7 @@ export default class SlotMachineGame extends Game {
         if (ctx.wasInternallyStopped()) {
           await context.edit(SlotMachineGame.renderContentAndUpdate(machine, context, true));
           await context.db.save();
-          await context.end();
+          await context.end(true);
           return;
         }
 
@@ -128,7 +128,7 @@ export default class SlotMachineGame extends Game {
     }
 
     return new InteractionMessageContentBuilder()
-      .addEmbed(embed => embed.setDescription(join(description)))
+      .addEmbed(() => embed.setDescription(join(description)))
       .addRow(row => row.addButtonComponent(() => button));
   }
 
