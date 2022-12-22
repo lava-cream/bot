@@ -225,7 +225,7 @@ export async function getReferencedUser(message: Message, args: Args): Promise<U
  * @returns The guild icon or `null` if none.
  */
 export function getGuildIconURL(guild: Guild, ...args: Parameters<Guild['iconURL']>): string | null {
-  return guild.iconURL({ dynamic: true, ...args[0] }) ?? null;
+  return guild.iconURL({ dynamic: true, ...args.at(0) }) ?? null;
 }
 
 /**
@@ -271,5 +271,5 @@ export function disableMessageComponents(rows: MessageActionRow[]): MessageActio
  * @returns The user's avatar URL.
  */
 export function getUserAvatarURL(user: User, ...args: Parameters<User['avatarURL']>): string {
-  return user.avatarURL({ dynamic: true, ...args[0] }) ?? user.defaultAvatarURL;
+  return user.avatarURL({ dynamic: true, ...args.at(0) }) ?? user.defaultAvatarURL;
 }
