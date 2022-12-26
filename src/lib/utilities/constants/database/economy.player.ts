@@ -10,8 +10,8 @@ export const enum PlayerLimits {
 }
 
 export const enum PlayerDefaults {
-  Wallet = PlayerLimits.Wallet / 100,
-  Bet = PlayerLimits.Bet,
+  Wallet = PlayerLimits.Bet * 0.1,
+  Bet = Wallet * 0.1,
   Bank = 0,
   Star = PlayerLimits.Star * 0.1,
   Multiplier = 0,
