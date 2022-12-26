@@ -1,7 +1,7 @@
 import { Game } from '#lib/framework/index.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { join, percent, seconds, getUserAvatarURL, Collector, InteractionMessageContentBuilder, ButtonBuilder, edit } from '#lib/utilities';
+import { join, seconds, getUserAvatarURL, Collector, InteractionMessageContentBuilder, ButtonBuilder, edit } from '#lib/utilities';
 import * as Highlow from '#lib/utilities/games/highlow/index.js';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
@@ -29,7 +29,7 @@ export default class HighlowGame extends Game {
   public async play(context: Game.Context) {
     const logic = new Highlow.Logic(1, 10);
     const collector = new Collector({
-      message: await context.respond(HighlowGame.renderContent(context, logic, null)),
+      message: await context.responder.send(() => HighlowGame.renderContent(context, logic, null)),
       componentType: 'BUTTON',
       max: Infinity,
       time: seconds(10),
@@ -41,7 +41,7 @@ export default class HighlowGame extends Game {
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
           await context.db.run((db) => db.wallet.subValue(db.bet.value)).save();
-          await context.edit(HighlowGame.renderContent(context, logic, null, true));
+          await context.responder.edit(() => HighlowGame.renderContent(context, logic, null, true));
           await context.end(true);
           return;
         }
@@ -88,7 +88,7 @@ export default class HighlowGame extends Game {
           case logic.isWin(): {
             await context.db
               .run(db => {
-                context.win(winnings.final);
+                context.schema.win(winnings.final);
                 db.wallet.addValue(winnings.final);
                 db.energy.addValue();
               })
@@ -99,9 +99,9 @@ export default class HighlowGame extends Game {
           case logic.isLose(): {
             await context.db
               .run(db => {
+                context.schema.lose(db.bet.value);
                 db.wallet.subValue(db.bet.value);
                 db.energy.subValue();
-                context.lose(db.bet.value);
               })
               .save();
             break;
@@ -133,7 +133,9 @@ export default class HighlowGame extends Game {
           .setFooter(
             !logic.hasGuessed() || !ended
               ? null
-              : { text: logic.isWin() || logic.isJackpot() ? `Percent Won: ${percent(winnings?.final ?? 0, context.db.bet.value)}` : 'loser loser' }
+              : context.schema.wins.streak.isActive() || context.schema.loses.streak.isActive()
+                ? { text: `${logic.isWin() || logic.isJackpot() ? 'Win' : 'Lose'} Streak: ${Reflect.get(context.schema, logic.isWin() || logic.isJackpot() ? 'wins' : 'loses').streak.display}` }
+                : null
           )
           .setDescription(
             !logic.hasGuessed()

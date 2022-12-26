@@ -34,7 +34,7 @@ export default class BlackjackGame extends Game {
 
     const game = new Blackjack.Logic(context.command.user, context.command.client.user).start();
     const collector = new Collector({
-      message: await context.respond(BlackjackGame.renderContent(context, game)),
+      message: await context.responder.send(() => BlackjackGame.renderContent(context, game)),
       time: seconds(10),
       componentType: 'BUTTON',
       max: Infinity,
@@ -46,7 +46,7 @@ export default class BlackjackGame extends Game {
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
           game.setOutcome(Blackjack.Outcome.OTHER, "You didn't respond in time.");
-          await context.edit(BlackjackGame.renderContent(context, game));
+          await context.responder.edit(() => BlackjackGame.renderContent(context, game));
           await context.end(true);
         }
       }
@@ -65,7 +65,7 @@ export default class BlackjackGame extends Game {
 
           await context.db
             .run((db) => {
-              context.win(final);
+              context.schema.win(final);
               db.wallet.addValue(final);
               db.energy.addValue();
             })
@@ -78,7 +78,7 @@ export default class BlackjackGame extends Game {
         case Blackjack.Outcome.OTHER: {
           await context.db
             .run((db) => {
-              context.lose(db.bet.value);
+              context.schema.lose(db.bet.value);
               db.wallet.subValue(db.bet.value);
               db.energy.subValue();
             })
@@ -90,7 +90,7 @@ export default class BlackjackGame extends Game {
         case Blackjack.Outcome.LOSS: {
           await context.db
             .run((db) => {
-              context.lose(db.bet.value);
+              context.schema.lose(db.bet.value);
               db.wallet.subValue(db.bet.value);
               db.energy.subValue();
             })
@@ -190,7 +190,13 @@ export default class BlackjackGame extends Game {
             }
           )
           .setFooter({
-            text: isNullOrUndefined(game.outcome) ? 'K, Q, J = 10  |  A = 1 OR 11' : ''
+            text: isNullOrUndefined(game.outcome) 
+              ? 'K, Q, J = 10  |  A = 1 OR 11' 
+              : game.outcome.outcome === Blackjack.Outcome.WIN && context.schema.wins.streak.isActive()
+                ? `Win Streak: ${context.schema.wins.streak.display}`
+                : game.outcome.outcome === Blackjack.Outcome.LOSS && context.schema.loses.streak.isActive()
+                  ? `Lose Streak: ${context.schema.loses.streak.display}`
+                  : ''
           })
       )
       .addRow((row) =>

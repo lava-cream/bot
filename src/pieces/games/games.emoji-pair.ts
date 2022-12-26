@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, percent, randomItem, createEmbed, createButton } from '#lib/utilities';
+import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, randomItem, createEmbed, createButton, toNearestReadable } from '#lib/utilities';
 import { Game } from '#lib/framework/index.js';
 import { Constants } from 'discord.js';
 import { bold } from '@discordjs/builders';
@@ -23,7 +23,7 @@ export default class EmojiPairGame extends Game {
     const logic = new EmojiPair.Logic(EmojiPairGame.pairs);
     const collector = new Collector({
       componentType: 'BUTTON',
-      message: await context.respond(EmojiPairGame.renderContentAndUpdate(logic, context, false)),
+      message: await context.responder.send(() => EmojiPairGame.renderContentAndUpdate(logic, context, false)),
       time: seconds(10),
       max: Infinity,
       actions: {
@@ -39,7 +39,7 @@ export default class EmojiPairGame extends Game {
       },
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
-          await context.edit(EmojiPairGame.renderContentAndUpdate(logic, context, true));
+          await context.responder.edit(() => EmojiPairGame.renderContentAndUpdate(logic, context, true));
           await context.end(true);
           return;
         }
@@ -69,7 +69,7 @@ export default class EmojiPairGame extends Game {
       
       case !logic.revealed && ended: {
         ctx.db.run(db => {
-          ctx.lose(db.bet.value);
+          ctx.schema.lose(db.bet.value);
           db.wallet.subValue(db.bet.value);
           db.energy.subValue();
         });
@@ -90,21 +90,21 @@ export default class EmojiPairGame extends Game {
         });
 
         ctx.db.run((db) => {
-          ctx.win(final);
+          ctx.schema.win(final);
           db.wallet.addValue(final);
           db.energy.addValue();
         });
 
         description.push(`${bold('PAIRED!')} You won ${bold(final.toLocaleString())} coins.`, `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
 
-        embed.setColor(Constants.Colors.GREEN).setFooter({ text: `Percent Won: ${percent(final, ctx.db.bet.value)}` });
+        embed.setColor(Constants.Colors.GREEN).setFooter(ctx.schema.wins.coins.highest > 0 ? { text: `Highest Coins Won: ${toNearestReadable(ctx.schema.wins.coins.highest, 2)}` } : null);
         button.setLabel('Winner Winner').setStyle(Constants.MessageButtonStyles.SUCCESS);
         break;
       }
 
       case logic.isLose(): {
         ctx.db.run(db => {
-          ctx.lose(db.bet.value);
+          ctx.schema.lose(db.bet.value);
           db.wallet.subValue(db.bet.value);
           db.energy.subValue();
         });
@@ -129,8 +129,7 @@ export default class EmojiPairGame extends Game {
     return [
       { emoji: '💰', multiplier: 5 },
       { emoji: '💶', multiplier: 4 },
-      { emoji: '💵', multiplier: 3 },
-      { emoji: '💸', multiplier: 2 },
+      { emoji: '💵', multiplier: 2 },
       { emoji: '🪙', multiplier: 1 }
     ];
   }

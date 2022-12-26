@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Game } from '#lib/framework/index.js';
 
-import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, createEmbed, createButton } from '#lib/utilities';
+import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, createEmbed, createButton, toNearestReadable } from '#lib/utilities';
 import { Constants } from 'discord.js';
 import { bold, inlineCode } from '@discordjs/builders';
 
@@ -23,7 +23,7 @@ export default class SlotMachineGame extends Game {
   public async play(context: Game.Context) {
     const machine = new SlotMachine.Logic(SlotMachineGame.emojis);
     const collector = new Collector({
-      message: await context.respond(SlotMachineGame.renderContentAndUpdate(machine, context, false)),
+      message: await context.responder.send(() => SlotMachineGame.renderContentAndUpdate(machine, context, false)),
       componentType: 'BUTTON',
       time: seconds(10),
       max: Infinity,
@@ -41,7 +41,7 @@ export default class SlotMachineGame extends Game {
       },
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
-          await context.edit(SlotMachineGame.renderContentAndUpdate(machine, context, true));
+          await context.responder.edit(() => SlotMachineGame.renderContentAndUpdate(machine, context, true));
           await context.db.save();
           await context.end(true);
           return;
@@ -72,9 +72,9 @@ export default class SlotMachineGame extends Game {
 
       case !machine.revealed && ended: {
         ctx.db.run(db => {
+          ctx.schema.lose(db.bet.value);
           db.wallet.subValue(db.bet.value);
           db.energy.subValue();
-          ctx.lose(db.bet.value);
         });
 
         description.push('Your time ran out. You lost your bet.', `You now have ${bold(ctx.db.wallet.value.toLocaleString())}`);
@@ -93,9 +93,9 @@ export default class SlotMachineGame extends Game {
         });
 
         ctx.db.run(db => {
+          ctx.schema.win(final);
           db.wallet.addValue(final);
           db.energy.addValue();
-          ctx.win(final);
         });
 
         description.push(
@@ -104,16 +104,18 @@ export default class SlotMachineGame extends Game {
           `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`
         );
 
-        embed.setColor(machine.isJackpot() ? Constants.Colors.GOLD : Constants.Colors.GREEN);
+        embed
+          .setColor(machine.isJackpot() ? Constants.Colors.GOLD : Constants.Colors.GREEN)
+          .setFooter(ctx.schema.wins.coins.highest > 0 ? { text: `Highest Coins Won: ${toNearestReadable(ctx.schema.wins.coins.highest, 2)}` } : null);
         button.setLabel('Winner Winner').setStyle(Constants.MessageButtonStyles.SUCCESS);
         break;
       }
 
       case machine.isLose(): {
         ctx.db.run(db => {
+          ctx.schema.lose(db.bet.value);
           db.wallet.subValue(db.bet.value);
           db.energy.subValue();
-          ctx.lose(db.bet.value);
         });
 
         description.push(
@@ -134,15 +136,16 @@ export default class SlotMachineGame extends Game {
 
   private static get emojis(): SlotMachine.Emoji[] {
     return [
-      { emoji: '9️⃣', multiplier: 3.0 },
-      { emoji: '8️⃣', multiplier: 2.0 },
-      { emoji: '7️⃣', multiplier: 2.0 },
-      { emoji: '6️⃣', multiplier: 1.0 },
-      { emoji: '5️⃣', multiplier: 1.0 },
-      { emoji: '4️⃣', multiplier: 0.75 },
-      { emoji: '3️⃣', multiplier: 0.75 },
-      { emoji: '2️⃣', multiplier: 0.5 },
-      { emoji: '1️⃣', multiplier: 0.5 }
+      { emoji: '💲', multiplier: { jackpot: 100, win: 10 } },
+      { emoji: '💰', multiplier: { jackpot: 90, win: 9 } },
+      { emoji: '💵', multiplier: { jackpot: 80, win: 8 } },
+      { emoji: '👑', multiplier: { jackpot: 70, win: 7 } },
+      { emoji: '🔱', multiplier: { jackpot: 60, win: 6 } },
+      { emoji: '💍', multiplier: { jackpot: 50, win: 5 } },
+      { emoji: '🍔', multiplier: { jackpot: 40, win: 4 } },
+      { emoji: '🧀', multiplier: { jackpot: 30, win: 3 } },
+      { emoji: '🍞', multiplier: { jackpot: 20, win: 2 } },
+      { emoji: '🤡', multiplier: { jackpot: 10, win: 1 } },
     ];
   }
 }

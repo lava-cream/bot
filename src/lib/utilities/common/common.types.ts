@@ -3,6 +3,12 @@ import type { PickByValue, Ctor } from '@sapphire/utilities';
 import type { Awaitable } from 'discord.js';
 
 /**
+ * Omits the first argument of a function.
+ * @template T The function.
+ */
+export type OmitFirstArgument<T> = T extends (arg1: unknown, ...args: infer U) => infer R ? (...args: U) => R : never;
+
+/**
  * Creates a callback function type.
  * @template A The arguments of the function.
  * @template R The return type.

@@ -1,7 +1,7 @@
 import type { Awaitable, CollectorFilter, InteractionCollector, MappedInteractionTypes, MessageComponentTypeResolvable as ComponentType, MessageComponentTypeResolvable, User } from 'discord.js';
 import type { TFunction } from '#lib/utilities/common/common.types';
 import { isNullOrUndefined } from '@sapphire/utilities';
-import { isMessageInstance } from '../discord.common.js';
+import { disableMessageComponents, isMessageInstance } from '../discord.common.js';
 
 /**
  * Represents the main context of an action.
@@ -139,8 +139,9 @@ export class CollectorAction<in out T extends ComponentType, Cached extends bool
         !isMessageInstance(context.interaction.message)
       ) return;
 
-      const components = context.interaction.message.components.map(row => row.setComponents(row.components.map(component => component.setDisabled(true))));
-      await context.interaction.message.edit({ components });
+      await context.interaction.message.edit({ 
+        components: disableMessageComponents(context.interaction.message.components) 
+      });
     };
   }
 }

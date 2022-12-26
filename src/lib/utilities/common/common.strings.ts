@@ -6,14 +6,13 @@ import { filterNullishAndEmpty, isNullOrUndefined } from '@sapphire/utilities';
  * Transforms a numerical value into something humans could easily read.
  * The original {@link toReadable} util will be depreciated after the next minor release.
  * This makes use of the internal {@link Intl} global namespace. Credits to Fireship.
- * @param x The number to transform.
+ * @param x The number to format.
  * @param maximumFractionDigits The possible amount of decimals to show.
  * @returns A shorthand number string.
  * @since 6.0.0
  */
 export function toNearestReadable(x: number, maximumFractionDigits = 2): string {
-  const formatter = Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits });
-  return formatter.format(x);
+  return Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits }).format(x);
 }
 
 /**

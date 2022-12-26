@@ -27,7 +27,7 @@ export default class CoinFlipGame extends Game {
 
     const game = new Coinflip.Logic(context.command.user, context.command.client.user);
     const collector = new Discord.Collector({
-      message: await context.respond(CoinFlipGame.renderContent(context, game, false)),
+      message: await context.responder.send(() => CoinFlipGame.renderContent(context, game, false)),
       componentType: 'BUTTON',
       max: Infinity,
       time: Common.seconds(10),
@@ -39,7 +39,7 @@ export default class CoinFlipGame extends Game {
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
           await context.db.run((db) => db.wallet.subValue(context.db.bet.value)).save();
-          await context.edit(CoinFlipGame.renderContent(context, game, true));
+          await context.responder.edit(() => CoinFlipGame.renderContent(context, game, true));
           await context.end(true);
           return;
         }
@@ -64,7 +64,7 @@ export default class CoinFlipGame extends Game {
 
             await context.db
               .run((db) => {
-                context.win(won.final);
+                context.schema.win(won.final);
                 db.wallet.addValue(won.final);
                 db.energy.addValue();
               })
@@ -77,7 +77,7 @@ export default class CoinFlipGame extends Game {
           case game.isLose(): {
             await context.db
               .run((db) => {
-                context.lose(db.bet.value);
+                context.schema.lose(db.bet.value);
                 db.wallet.subValue(db.bet.value);
                 db.energy.subValue();
               })
@@ -133,8 +133,8 @@ export default class CoinFlipGame extends Game {
           .setFooter(
             !game.hasPicked()
               ? null 
-              : context.dbGame.wins.streak.isActive() || context.dbGame.loses.streak.isActive()
-                ? { text: `${game.isWin() ? 'Win' : 'Lose'} Streak: ${Reflect.get(context.dbGame, game.isWin() ? 'wins' : 'loses').streak.display}` }
+              : context.schema.wins.streak.isActive() || context.schema.loses.streak.isActive()
+                ? { text: `${game.isWin() ? 'Win' : 'Lose'} Streak: ${Reflect.get(context.schema, game.isWin() ? 'wins' : 'loses').streak.display}` }
                 : null
           )
       )

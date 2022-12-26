@@ -39,16 +39,16 @@ export function checkClientReadyStatus<T extends SapphireClient>(client: T): ass
  */
 export class CustomId {
   /**
-   * The auto-generated snowflake. Generated on instance creation.
-   */
-  public snowflake: bigint;
-
-  /**
    * The utility's constructor.
    * @param date The date. This is the basis of the snowflake.
    */
-  public constructor(public date = new Date()) {
-    this.snowflake = DiscordSnowflake.generate({ timestamp: date.getTime() });
+  public constructor(public date = new Date()) { }
+  
+  /**
+   * The discord snowflake to use for the custom ID.
+   */
+  public get snowflake(): bigint {
+    return DiscordSnowflake.generate({ timestamp: this.date.getTime() });
   }
 
   /**
@@ -151,7 +151,8 @@ export async function fromAttachment(attachmentOrUrl: MessageAttachment | string
 export function fromGuildResolvable(resolvable: GuildResolvable): string {
   if (typeof resolvable === 'string') return resolvable;
   if (resolvable instanceof Guild) return resolvable.id;
-  return resolvable.guild!.id;
+  if (isNullOrUndefined(resolvable.guild)) throw new Error();
+  return resolvable.guild.id;
 }
 
 /**

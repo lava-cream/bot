@@ -24,7 +24,7 @@ export default class DiceRollGame extends Game {
 
     const game = new DiceRoll.Logic(context.command.user, context.command.client.user);
     const collector = new Collector({
-      message: await context.respond(DiceRollGame.renderContentAndUpdate(context, game, false)),
+      message: await context.responder.send(() => DiceRollGame.renderContentAndUpdate(context, game, false)),
       componentType: 'BUTTON',
       max: Infinity,
       time: seconds(10),
@@ -45,7 +45,7 @@ export default class DiceRollGame extends Game {
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
           await context.db.run(db => db.wallet.subValue(db.bet.value)).save();
-          await context.edit(DiceRollGame.renderContentAndUpdate(context, game, false));
+          await context.responder.edit(() => DiceRollGame.renderContentAndUpdate(context, game, false));
           await context.end(true);
           return;
         }
@@ -84,7 +84,7 @@ export default class DiceRollGame extends Game {
 
       case !game.hasBothRolled() && ended: {
         ctx.db.run(db => {
-          ctx.lose(db.bet.value);
+          ctx.schema.lose(db.bet.value);
           db.wallet.subValue(db.bet.value);
           db.energy.subValue();
         });
@@ -96,7 +96,7 @@ export default class DiceRollGame extends Game {
         embed
           .setColor(Constants.Colors.NOT_QUITE_BLACK)
           .setDescription(join(`You didn't respond in time. You lost your bet.\n`, `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`))
-          .setFooter(ctx.dbGame.loses.streak.isActive() ? { text: `Lose Streak: ${ctx.dbGame.loses.streak.display}` } : null);
+          .setFooter(ctx.schema.loses.streak.isActive() ? { text: `Lose Streak: ${ctx.schema.loses.streak.display}` } : null);
 
         break;
       }
@@ -110,7 +110,7 @@ export default class DiceRollGame extends Game {
         });
 
         ctx.db.run((db) => {
-          ctx.win(final);
+          ctx.schema.win(final);
           db.wallet.addValue(final);
           db.energy.addValue();
         });
@@ -128,8 +128,8 @@ export default class DiceRollGame extends Game {
             )
           )
           .setFooter(
-            ctx.dbGame.wins.streak.isActive()
-              ? { text: `Win Streak: ${ctx.dbGame.wins.streak.display}` }
+            ctx.schema.wins.streak.isActive()
+              ? { text: `Win Streak: ${ctx.schema.wins.streak.display}` }
               : null
           );
 
@@ -149,7 +149,7 @@ export default class DiceRollGame extends Game {
 
       case game.isLose(): {
         ctx.db.run(db => {
-          ctx.lose(db.bet.value);
+          ctx.schema.lose(db.bet.value);
           db.wallet.subValue(db.bet.value);
           db.energy.subValue();
         });
@@ -162,7 +162,7 @@ export default class DiceRollGame extends Game {
           .setDescription(
             join(`You lost ${bold(ctx.db.bet.value.toLocaleString())} coins.\n`, `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`)
           )
-          .setFooter(ctx.dbGame.loses.streak.isActive() ? { text: `Lose Streak: ${ctx.dbGame.loses.streak.display}` } : null);
+          .setFooter(ctx.schema.loses.streak.isActive() ? { text: `Lose Streak: ${ctx.schema.loses.streak.display}` } : null);
 
         break;
       }

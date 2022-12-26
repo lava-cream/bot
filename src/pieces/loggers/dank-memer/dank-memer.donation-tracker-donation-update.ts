@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 
 import type { DonationTrackerCategorySchema } from '#lib/database/models/dank-memer/donation-tracker/donation-tracker.category.schema.js';
-import { BaseLoggerPayload, LoggerType } from '#lib/framework/structures/logger/resources/logger.entries.js';
+import type { BaseLoggerPayload } from '#lib/framework/structures/logger/resources/logger.entries.js';
 import { Logger } from '#lib/framework/structures/logger/resources/logger.piece.js';
 import { getUserAvatarURL, MessageContentBuilder } from '#lib/utilities';
 import { inlineCode } from '@discordjs/builders';
@@ -11,7 +11,7 @@ import { Constants, Guild, GuildMember, Message, User } from 'discord.js';
 
 declare module '#lib/framework/structures/logger/resources/logger.entries' {
   interface Loggers {
-    [LoggerType.DonationUpdate]: DonationUpdateLoggerPayload;
+    donationUpdate: DonationUpdateLoggerPayload;
   }
 }
 
@@ -31,12 +31,12 @@ export enum DonationUpdateMethod {
   Decrement = 2
 }
 
-@ApplyOptions<Logger.Options<LoggerType.DonationUpdate>>({
-  id: LoggerType.DonationUpdate,
+@ApplyOptions<Logger.Options<'donationUpdate'>>({
+  id: 'donationUpdate',
   name: 'Donation Update'
 })
-export class DonationUpdateLogger extends Logger<LoggerType.DonationUpdate> {
-  public async sync(guild: Guild) {
+export class DonationUpdateLogger extends Logger<'donationUpdate'> {
+  public async syncLogChannel(guild: Guild) {
     const tracker = await this.container.db.trackers.fetch(guild.id);
 
     for (const entry of tracker.categories.entries.values()) {
@@ -48,7 +48,7 @@ export class DonationUpdateLogger extends Logger<LoggerType.DonationUpdate> {
     }
   }
 
-  public renderContent({ context, amount, method }: DonationUpdateLoggerPayload, builder: MessageContentBuilder) {
+  public buildMessageContent({ context, amount, method }: DonationUpdateLoggerPayload, builder: MessageContentBuilder) {
     builder.addEmbed((embed) => {
       embed
         .setTitle(`${context.donation.name} Donation`)

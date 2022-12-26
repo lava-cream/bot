@@ -5,7 +5,6 @@ import { Manager } from '#lib/database/structures/manager.js';
 import { DonationTrackerSchema } from './donation-tracker.schema.js';
 import { isNullOrUndefined } from '@sapphire/utilities';
 import { container, Resolvers } from '@sapphire/framework';
-import { LoggerType } from '#lib/framework';
 import { Result } from '@sapphire/result';
 import type { GuildMember, Role } from 'discord.js';
 import { toCollection } from '#lib/utilities';
@@ -63,7 +62,7 @@ export class DonationTrackerManager extends Manager<DonationTrackerSchema> {
       const channel = Resolvers.resolveGuildChannel(category.logs.id, options.guild);
       if (!channel.isOk() || !channel.unwrap().isText()) throw false;
 
-      return void (await container.stores.get('loggers').get(LoggerType.DonationUpdate).log(options));
+      return void (await container.stores.get('loggers').get('donationUpdate').createLog(options));
     });
 
     return logged.isOk();

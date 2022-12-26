@@ -2,7 +2,12 @@ import { getCommonItemsLength, randomItems } from '#lib/utilities';
 
 export interface Emoji {
   emoji: string;
-  multiplier: number;
+  multiplier: EmojiMultiplier;
+}
+
+export interface EmojiMultiplier {
+  win: number;
+  jackpot: number;
 }
 
 export class Logic {
@@ -18,7 +23,8 @@ export class Logic {
   }
 
   public get multiplier() {
-    return this.common.reduce((n, emoji) => n + emoji.multiplier, 0);
+    const winningEmoji = this.common.at(0);
+    return winningEmoji ? Reflect.get(winningEmoji.multiplier, this.isJackpot() ? 'jackpot' : 'win') : 0;
   }
 
   public isJackpot() {

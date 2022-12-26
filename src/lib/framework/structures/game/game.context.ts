@@ -1,56 +1,76 @@
 import type { PlayerSchema } from '#lib/database';
-import type { PlayerGamesStatisticSchema } from '#lib/database/models/economy/player/player.game.schema.js';
-import { CustomId, InteractionMessageContentBuilder, isCommandInteractionExpired } from '#lib/utilities';
+import { BuilderCallback, CustomId, InteractionMessageContentBuilder, isMessageInstance, Responder } from '#lib/utilities';
 import { Result } from '@sapphire/result';
 import { isNullOrUndefined } from '@sapphire/utilities';
-import { CommandInteraction, Constants, InteractionReplyOptions, WebhookEditMessageOptions } from 'discord.js';
+import { CommandInteraction, Constants, GuildCacheMessage } from 'discord.js';
 import type { Game } from './game.piece.js';
 
 /**
+ * Represents the game's responder utility.
+ */
+export class GameResponder extends Responder<'cached'> {
+  private messageId: string | null = null;
+
+  public override async send(builder: BuilderCallback<InteractionMessageContentBuilder>) {
+    const message = await super.send(builder);
+    this.messageId = message.id;
+    return message;
+  }
+
+  public override async edit(builder: BuilderCallback<InteractionMessageContentBuilder>): Promise<GuildCacheMessage<'cached'>> {
+    const message = isNullOrUndefined(this.messageId)
+      ? await super.edit(builder)
+      : await this.target.webhook.editMessage(this.messageId, this.content.apply(builder))
+
+    if (!isMessageInstance(message) || !message.inGuild()) throw new Error();
+
+    this.messageId = message.id;
+    return message;
+  }
+}
+
+/**
  * Represents a game context.
+ * @since 6.0.0
  */
 export class GameContext {
   /**
-   * The current game playing.
+   * The command interaction object.
+  */
+  public command: CommandInteraction<'cached'>;
+  /**
+   * A {@link CustomId} instance to easily create unique message component custom IDs.
    */
-  public game: Game;
+  public customId: CustomId;
   /**
    * The user's database entry.
    */
   public db: PlayerSchema.Document;
   /**
-   * The command interaction object.
+   * The current game playing.
    */
-  public command: CommandInteraction<'cached'>;
+  public game: Game;
   /**
-   * The amount of user interactions this context has spent.
+   * A {@link Responder} instance. 
    */
-  public interactions = 1;
-  /**
-   * The custom id utility based on this context's attached command interaction.
-   * @since 6.0.0
-   */
-  public customId: CustomId;
-  /**
-   * The last message id.
-   */
-  private messageId: string | null = null;
+  public responder: GameResponder;
 
   /**
    * The constructor.
    * @param options Options to construct.
    */
-  public constructor(public options: GameSessionOptions) {
-    this.game = options.game;
-    this.db = options.db;
+  public constructor(public options: GameContextOptions) {
     this.command = options.command;
     this.customId = new CustomId(options.command.createdAt);
+    this.db = options.db;
+    this.game = options.game;
+    this.responder = new GameResponder(options.command);
   }
 
   /**
-   * The game's statistics from the player's db entry.
+   * The game's database schema from the player's db entry.
    */
-  public get dbGame() {
+  public get schema() {
     return this.db.games.resolve(this.game.id) ?? this.db.games.create(this.game.id);
   }
 
@@ -63,84 +83,14 @@ export class GameContext {
   }
 
   /**
-   * Creates a follow-up response to the command interaction.
-   * @param content Options to reply to the interaction.
-   * @returns The message interaction.
-   */
-  public async respond(content: string | InteractionReplyOptions) {
-    const message = await this.command.followUp(content);
-    this.messageId = message.id;
-    return message;
-  }
-
-  /**
-   * Edits the most recent response of the command interaction.
-   * @param content Options to reply to the interaction.
-   * @returns The message interaction.
-   */
-  public async edit(content: string | WebhookEditMessageOptions): Promise<void> {
-    const message = isNullOrUndefined(this.messageId)
-      ? await this.command.editReply(content)
-      : await this.command.webhook.editMessage(this.messageId, content);
-
-    this.messageId = message.id;
-  }
-
-  /**
-   * Updates the game's statistics.
-   * @param coins The coins to add.
-   * @returns This context.
-   */
-  public win(coins: number): this {
-    return this.updateStats(this.dbGame.wins, coins, [this.dbGame.loses]);
-  }
-
-  /**
-   * Updates the game's statistics.
-   * @param coins The coins to add.
-   * @returns This context.
-   */
-  public lose(coins: number): this {
-    return this.updateStats(this.dbGame.loses, coins, [this.dbGame.wins]);
-  }
-
-  /**
    * Ends the current session. Calls {@link GameContext#play()} again if necessary.
    * @param force Whether the game should not call {@link GameContext#play} again or not.
    */
   public async end(force = false): Promise<unknown> {
-    if (isCommandInteractionExpired(this.command)) return;
-
     const checked = Result.from<void, string>(() => this.check(force));
-    await checked.inspectErrAsync(err => this.respond(this.renderMessage(err)));
+    await checked.inspectErrAsync(err => this.responder.send(() => this.renderMessage(err)));
 
-    return checked.isOk() && this.setInteractions(this.interactions + 1).play();
-  }
-
-  /**
-   * Updates a statistic.
-   * @param stat The stats to update.
-   * @param coins The coins to add to the stat.
-   * @param statsToResetStreak The stats to reset its respective streaks.
-   * @returns This context.
-   */
-  protected updateStats(stat: PlayerGamesStatisticSchema, coins: number, statsToResetStreak: PlayerGamesStatisticSchema[]) {
-    for (const stat of statsToResetStreak.values()) stat.streak.resetValue();
-
-    stat.addValue(1).streak.addValue();
-    stat.coins.addValue(coins);
-
-    return this;
-  }
-
-  /**
-   * Sets the interactions amount of this context.
-   * @param value The value to set.
-   * @returns This context.
-   */
-  protected setInteractions(value: number): this {
-    this.interactions = value;
-    return this;
+    return checked.isOk() && this.play();
   }
 
   /**
@@ -149,7 +99,6 @@ export class GameContext {
    */
   protected check(force: boolean): void {
     if (force) throw 'This session has ended.';
-    if (this.interactions >= this.game.interactionsLimit) throw 'You have reached the maximum interactions for this session.';
     if (this.db.energy.isExpired()) throw 'Your energy just expired!';
     if (this.db.bet.value > this.db.wallet.value) throw "You don't have enough coins to play anymore.";
     if (this.db.wallet.isMaxValue(this.db.upgrades.mastery)) throw 'Your wallet just reached its maximum capacity.';
@@ -166,19 +115,19 @@ export class GameContext {
 }
 
 /**
- * Options to construct a game session.
+ * Options to construct a {@link GameContext}.
  */
-export interface GameSessionOptions {
+export interface GameContextOptions {
+  /**
+   * The command interaction.
+   */
+  readonly command: CommandInteraction<'cached'>;
+  /**
+   * The user's database entry.
+   */
+  readonly db: PlayerSchema.Document;
   /**
    * The game to play.
    */
   readonly game: Game;
-  /**
-   * The user's economic shitfuckery.
-   */
-  readonly db: PlayerSchema.Document;
-  /**
-   * The command interaction from the `/play` (or whatever that is) command.
-   */
-  readonly command: CommandInteraction<'cached'>;
 }

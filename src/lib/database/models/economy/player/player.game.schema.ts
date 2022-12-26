@@ -147,14 +147,14 @@ export class PlayerGamesSchema extends SubSchema {
    * The player's winning rate.
    */
   public get winRate() {
-    return this.wins.value / (this.wins.value + this.loses.value);
+    return (this.wins.value / (this.wins.value + this.loses.value)) || 0;
   }
 
   /**
    * The player's losing rate.
    */
   public get loseRate() {
-    return this.loses.value / (this.loses.value + this.wins.value);
+    return (this.loses.value / (this.loses.value + this.wins.value)) || 0;
   }
 
   /**
@@ -171,6 +171,30 @@ export class PlayerGamesSchema extends SubSchema {
    */
   public setLastPlayed(date: Date | number): this {
     this.lastPlayedTimestamp = date instanceof Date ? date.getTime() : date;
+    return this;
+  }
+
+  /**
+   * Updates the {@link PlayerGamesSchema#wins} stats.
+   * @param coins The coins to add towards the coin stats.
+   * @returns This schema.
+   */
+  public win(coins: number) {
+    this.wins.addValue(1).coins.addValue(coins);
+    this.wins.streak.addValue();
+    this.loses.streak.resetValue();
+    return this;
+  }
+
+  /**
+   * Updates the {@link PlayerGamesSchema#loses} stats.
+   * @param coins The coins to add towards the coin stats.
+   * @returns This schema.
+   */
+  public lose(coins: number) {
+    this.loses.addValue(1).coins.addValue(coins);
+    this.loses.streak.addValue();
+    this.wins.streak.resetValue();
     return this;
   }
 }

@@ -315,7 +315,7 @@ export default class DonationCommand extends Subcommand {
   @DeferCommandInteraction()
   public async chatInputDefault(command: CommandInteraction<'cached'>) {
     const db = await this.container.db.trackers.fetch(command.guildId);
-    const componentId = new CustomId(new Date(command.createdTimestamp));
+    const componentId = new CustomId(command.createdAt);
 
     const renderContent = (selected: DonationTrackerCategorySchema | null) => {
       return new InteractionMessageContentBuilder<ButtonBuilder>()

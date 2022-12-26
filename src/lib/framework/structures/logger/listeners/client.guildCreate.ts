@@ -14,7 +14,7 @@ export class ClientReadyListener extends Listener<typeof Events.GuildCreate> {
 
     for (const logger of loggers.values()) {
       try {
-        await logger.sync(guild);
+        await logger.syncLogChannel(guild);
         this.container.logger.info(whiteBright('[LOGGER]'), greenBright(`Re-synced "${logger.name}" for guild "${guild.name}"`));
       } catch (error) {
         this.container.logger.error(whiteBright('[LOGGER]'), redBright(`Unable to sync logger "${logger.name}" for guild "${guild.name}".`), error);

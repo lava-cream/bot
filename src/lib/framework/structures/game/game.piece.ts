@@ -9,7 +9,6 @@ export interface GameOptions extends PieceOptions {
   id: string;
   description?: string | null;
   detailedDescription?: string | null;
-  interactionsLimit?: number;
 }
 
 export interface GameCalculateWinningsOptions {
@@ -38,22 +37,12 @@ export abstract class Game extends Piece<GameOptions> implements GameOptions {
    * A more in-depth description of what this game does.
    */
   public readonly detailedDescription: string | null;
-  /**
-   * This limit represents the amount of times the player could only undergo a game loop.
-   */
-  public readonly interactionsLimit: number;
-  
-  /**
-   * The default interactions limit.
-   */
-  public static DefaultInteractionsLimit = 30;
 
   public constructor(context: PieceContext, options: GameOptions) {
     super(context, options);
     this.id = options.id;
     this.description = options.description ?? null;
     this.detailedDescription = options.detailedDescription ?? null;
-    this.interactionsLimit = options.interactionsLimit ?? Game.DefaultInteractionsLimit;
   }
 
   /**
