@@ -1,5 +1,6 @@
 import { PlayerDefaults, PlayerLimits, PlayerMasteryAddedLimits } from '#lib/utilities/constants/index.js';
 import { prop, CreateNumberValueSchema } from '#lib/database/structures/schema.js';
+import { roundZero } from '#lib/utilities';
 
 /**
  * Represents the player's bank space.
@@ -7,12 +8,35 @@ import { prop, CreateNumberValueSchema } from '#lib/database/structures/schema.j
  */
 export class PlayerBankSpaceSchema extends CreateNumberValueSchema(0) {
   /**
+   * The bank space's value-adding convertion rate.
+   */
+  @prop({ type: Number })
+  public rate!: number;
+
+  /**
+   * The bank space's constructor.
+   */
+  public constructor() {
+    super();
+    this.rate = 0;
+  }
+
+  /**
    * Checks if the bank space is already limited.
    * @param mastery The mastery level.
    * @returns This schema.
    */
   public isMaxValue(mastery: number) {
     return this.value >= Math.round(PlayerLimits.Bank + PlayerMasteryAddedLimits.Bank * mastery);
+  }
+
+  /**
+   * Increments the bank space's value with the product of the specified value and the bank space's rate.
+   * @param value The value to add.
+   * @returns This schema.
+   */
+  public override addValue(value: number): this {
+    return super.addValue(roundZero(value * (this.rate / 100)));
   }
 }
 

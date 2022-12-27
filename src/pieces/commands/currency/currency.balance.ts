@@ -2,7 +2,7 @@ import type { CommandInteraction } from 'discord.js';
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { getHighestRoleColor, join, percent, edit, DeferCommandInteraction, getUserAvatarURL } from '#lib/utilities';
+import { getHighestRoleColor, join, percent, edit, DeferCommandInteraction, getUserAvatarURL, toNearestReadable } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
 
 @ApplyOptions<Command.Options>({
@@ -21,16 +21,16 @@ export default class BalanceCommand extends Command {
         embed
           .setAuthor({ name: `${member.user.username}'s balance`, iconURL: getUserAvatarURL(member.user) })
           .setColor(getHighestRoleColor(member))
-          .setTimestamp(command.createdAt)
           .setDescription(
             join(
               `${bold('Wallet:')} ${db.wallet.value.toLocaleString()}`,
               `${bold('Bank:')} ${db.bank.value.toLocaleString()}/${db.bank.space.value.toLocaleString()} ${inlineCode(
                 percent(db.bank.value, db.bank.space.value, 1)
-              )}`,
-              `${bold('Net Worth:')} ${db.netWorth.toLocaleString()}`
+              )}`
             )
           )
+          .setFooter({ text: `Net Worth: ${toNearestReadable(db.netWorth)}` })
+          .setTimestamp(command.createdAt)
       )
     );
   }

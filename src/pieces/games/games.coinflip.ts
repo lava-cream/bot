@@ -66,6 +66,7 @@ export default class CoinFlipGame extends Game {
               .run((db) => {
                 context.schema.win(won.final);
                 db.wallet.addValue(won.final);
+                db.bank.space.addValue(won.final);
                 db.energy.addValue();
               })
               .save();

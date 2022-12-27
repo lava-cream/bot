@@ -20,6 +20,21 @@ export const enum PlayerDefaults {
   Mastery = 0
 }
 
+export const enum PlayerBank {
+  DefaultValue = PlayerDefaults.Bank,
+  MaximumLimit = PlayerLimits.Bank,
+  DefaultBanKSpaceValue = 0,
+  MaximumBankSpaceLimit = PlayerLimits.Bank,
+  DefaultBankSpaceMultiplier = 1,
+  MaximumBankSpaceMultiplier = 20,
+}
+
+export const enum PlayerBet {
+  DefaultValue = PlayerDefaults.Bet,
+  MaximumLimit = PlayerLimits.Bet,
+  MinimumLimit = MaximumLimit * 0.001,
+}
+
 export const enum PlayerEnergy {
   StarRatio = 100, // X Stars = 1 Energy
   StarGain = 10, // X Stars added per win

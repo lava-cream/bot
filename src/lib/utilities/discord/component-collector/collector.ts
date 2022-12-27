@@ -55,7 +55,7 @@ export class Collector<in out T extends MessageComponentTypeResolvable, Cached e
     return new Promise(async (resolve, reject) => {
       const collector = this.createCollector(message);
       if (!collector) return reject('Missing "options.message"');
-
+      
       collector
         .on('collect', (interaction) => Reflect.apply(this.onCollect, this, [interaction, collector]))
         .on('end', (collected, reason) => Reflect.apply(this.onEnd, this, [collected, reason, collector]))
@@ -80,7 +80,7 @@ export class Collector<in out T extends MessageComponentTypeResolvable, Cached e
   private async onCollect(interaction: MappedInteractionTypes<Cached>[T], collector: InteractionCollector<MappedInteractionTypes<Cached>[T]>): Promise<void> {
     const action = this.actions.resolve(interaction.customId);
     if (isNullOrUndefined(action)) return;
-
+    
     const context: CollectorActionContext<T, Cached> = { 
       action, 
       collector, 
@@ -89,6 +89,7 @@ export class Collector<in out T extends MessageComponentTypeResolvable, Cached e
         return this.collector.stop(reason ?? this.interaction.customId);
       }, 
     };
+
 
     return Reflect.apply(action.run, action, [context]);
   }

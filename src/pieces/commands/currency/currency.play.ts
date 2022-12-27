@@ -149,7 +149,7 @@ export default class PlayCommand extends Command {
               }
 
               case componentId.create(PickerControl.Cancel): {
-                await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, null, true));
+                await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, selection.get(command.user.id) ?? null, true));
                 ctx.collector.stop(ctx.interaction.customId);
                 return resolve(null);
               }

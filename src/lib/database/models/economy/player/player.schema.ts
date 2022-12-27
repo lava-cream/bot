@@ -1,5 +1,5 @@
 import { Schema, CastDocument, CastJSON, prop, CreateResolvableSchemaType } from '#lib/database/structures/schema.js';
-import { PlayerDefaults, PlayerMasteryAddedLimits } from '#lib/utilities/constants/index.js';
+import { PlayerBet, PlayerMasteryAddedLimits } from '#lib/utilities/constants/index.js';
 import { PlayerWalletSchema } from './player.wallet.schema.js';
 import { PlayerBankSchema } from './player.bank.schema.js';
 import { PlayerEnergySchema } from './player.energy.schema.js';
@@ -48,11 +48,11 @@ export class PlayerSchema extends Schema {
   }
 
   public get maxBet(): number {
-    return Math.round(PlayerDefaults.Bet + PlayerMasteryAddedLimits.Bet * this.upgrades.mastery);
+    return Math.round(PlayerBet.MaximumLimit + PlayerMasteryAddedLimits.Bet * this.upgrades.mastery);
   }
 
   public get minBet(): number {
-    return Math.round(this.maxBet / 1_000);
+    return PlayerBet.MinimumLimit;
   }
 
   public async calculateMultiplier() {

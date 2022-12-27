@@ -45,7 +45,7 @@ export default class DiceRollGame extends Game {
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
           await context.db.run(db => db.wallet.subValue(db.bet.value)).save();
-          await context.responder.edit(() => DiceRollGame.renderContentAndUpdate(context, game, false));
+          await context.responder.edit(() => DiceRollGame.renderContentAndUpdate(context, game, true));
           await context.end(true);
           return;
         }
@@ -112,6 +112,7 @@ export default class DiceRollGame extends Game {
         ctx.db.run((db) => {
           ctx.schema.win(final);
           db.wallet.addValue(final);
+          db.bank.space.addValue(final);
           db.energy.addValue();
         });
 

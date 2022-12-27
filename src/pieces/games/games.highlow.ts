@@ -90,6 +90,7 @@ export default class HighlowGame extends Game {
               .run(db => {
                 context.schema.win(winnings.final);
                 db.wallet.addValue(winnings.final);
+                db.bank.space.addValue(winnings.final);
                 db.energy.addValue();
               })
               .save();

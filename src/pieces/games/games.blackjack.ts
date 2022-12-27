@@ -67,6 +67,7 @@ export default class BlackjackGame extends Game {
             .run((db) => {
               context.schema.win(final);
               db.wallet.addValue(final);
+              db.bank.space.addValue(final);
               db.energy.addValue();
             })
             .save();

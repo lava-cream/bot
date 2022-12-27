@@ -1,6 +1,6 @@
 import type { GuildCacheMessage, CacheType, CommandInteraction, ButtonInteraction, SelectMenuInteraction } from 'discord.js';
 import { type BuilderCallback, InteractionMessageContentBuilder, CustomId } from '#lib/utilities';
-import { isFunction } from '@sapphire/utilities';
+import { isFunction, isNullOrUndefined } from '@sapphire/utilities';
 import { Result } from '@sapphire/result';
 
 /**
@@ -82,7 +82,7 @@ export async function unsend<Cached extends CacheType, Target extends ResponderT
  * @template Target The target interaction's type.
  * @since 6.0.0
  */
-export class Responder<Cached extends CacheType> {
+export class Responder<Cached extends CacheType, Target extends ResponderTarget<Cached>> {
   /**
    * The content builder.
    */
@@ -96,24 +96,26 @@ export class Responder<Cached extends CacheType> {
    * The responder's constructor.
    * @param target The target interaction.
    */
-  public constructor(public target: ResponderTarget<Cached>) {
+  public constructor(public target: Target) {
     this.customId = new CustomId(this.target.createdAt);
   }
 
   /**
    * Sends a message through the interaction with the current built content.
+   * @param builder The message content builder.
    * @returns A message object.
    */
-  public send(builder: BuilderCallback<InteractionMessageContentBuilder>): Promise<GuildCacheMessage<Cached>> {
-    return send(this.target, this.content.apply(builder));
+  public send(builder?: BuilderCallback<InteractionMessageContentBuilder>): Promise<GuildCacheMessage<Cached>> {
+    return send(this.target, isNullOrUndefined(builder) ? this.content : this.content.apply(builder));
   }
 
   /**
    * Edits the target interaction with the current built content.
+   * @param builder The message content builder.
    * @returns A message object.
    */
-  public edit(builder: BuilderCallback<InteractionMessageContentBuilder>): Promise<GuildCacheMessage<Cached>> {
-    return edit(this.target, this.content.apply(builder));
+  public edit(builder?: BuilderCallback<InteractionMessageContentBuilder>): Promise<GuildCacheMessage<Cached>> {
+    return edit(this.target, isNullOrUndefined(builder) ? this.content : this.content.apply(builder));
   }
 
   /**

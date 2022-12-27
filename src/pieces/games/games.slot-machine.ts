@@ -95,6 +95,7 @@ export default class SlotMachineGame extends Game {
         ctx.db.run(db => {
           ctx.schema.win(final);
           db.wallet.addValue(final);
+          db.bank.space.addValue(final);
           db.energy.addValue();
         });
 
