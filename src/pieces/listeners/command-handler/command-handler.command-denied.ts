@@ -1,9 +1,9 @@
 import { PreconditionNames } from '#lib/framework';
-import { joinAnd, send } from '#lib/utilities';
-import { bold } from '@discordjs/builders';
+import { createEmbed, send } from '#lib/utilities';
+import { time, TimestampStyles } from '@discordjs/builders';
 import type { ChatInputCommandDeniedPayload, Preconditions, UserError } from '@sapphire/framework';
 import { Events, Identifiers, Listener } from '@sapphire/framework';
-import { Constants, MessageEmbed } from 'discord.js';
+import { Constants, Permissions } from 'discord.js';
 
 export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatInputCommandDenied> {
   public constructor(context: Listener.Context) {
@@ -11,99 +11,108 @@ export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatI
   }
 
   public async run(error: UserError, payload: ChatInputCommandDeniedPayload) {
-    const embed = new MessageEmbed({ color: Constants.Colors.RED });
+    const embed = createEmbed(embed => embed.setColor(Constants.Colors.DARK_BUT_NOT_BLACK));
 
-    this.renderEmbedBasedOnThePreconditionSapphireHasThrownErrorTo(embed, error, payload);
+    if (this.isUserMissingStaffPermissions(error)) {
+      embed.setDescription('You need to be a server staff to use this command.');
+    } else if (this.isOwnerOnly(error)) {
+      embed.setDescription('This command is not available for you.');
+    } else if (this.isUserStatusBlocked(error)) {
+      embed.setDescription("You're currently blocked for using this bot.");
+    } else if (this.isUserAccountYoung(error)) {
+      embed.setDescription('Your account is too young to use this bot!');
+    } else if (this.isGuildStatusBlocked(error)) {
+      embed.setDescription("This server is currently blocked from using this bot.");
+    } else if (this.isClientMissingPermissions(error, error.context)) {
+      embed;
+    } else if (this.isClientPermissionsNoClient(error)) {
+      embed.setDescription("The bot can't check its permission from this channel.");
+    } else if (this.isClientHasZeroPermissions(error)) {
+      embed.setDescription("The bot does not have any of the required permissions to run the command in this channel.");
+    } else if (this.isCooldown(error, error.context)) {
+      embed.setDescription(`You're in cooldown. You can use this command again ${time(new Date().getTime() + error.context.delay, TimestampStyles.RelativeTime)}.`);
+    } else if (this.isChannelTypeMismatched(error)) {
+      embed.setDescription("This command should not be ran on text channels like this.");
+    } else if (this.isMissingCommandHandler(error)) {
+      embed.setDescription("This command exists, but it doesn't run. Why?");
+    } else if (this.isNSFW(error)) {
+      embed.setDescription('You cannot run this command outside NSFW channels.');
+    } else if (this.isThreadOnly(error)) {
+      embed.setDescription('You cannot run this command outside threads.');
+    } else if (this.isUserPermissions(error, error.context)) {
+      embed;
+    } else {
+      embed.setDescription('You cannot run this command. I wonder why.');
+      this.container.logger.error(`"${payload.interaction.user.tag} (${payload.interaction.user.id})" was blocked from using "${payload.context.commandName}" for an unknown reason`, { error, payload });
+    }
+
     await send(payload.interaction, (builder) => builder.addEmbed(() => embed));
   }
 
-  private renderEmbedBasedOnThePreconditionSapphireHasThrownErrorTo(
-    embed: MessageEmbed,
-    error: UserError,
-    _payload: ChatInputCommandDeniedPayload
-  ): void {
-    switch (error.identifier as Identifiers & PreconditionNames) {
-      case PreconditionNames.UserStaffPermissions: {
-        embed.setTitle('Missing Staff Permissions').setDescription(`You need to have the configured staff role to run this command!`);
-        break;
-      }
+  public isUserMissingStaffPermissions(error: UserError): boolean {
+    return Reflect.get(error, 'identifier') === PreconditionNames.UserStaffPermissions;
+  }
 
-      case PreconditionNames.UserOwnerOnly: {
-        embed.setTitle('Missing Owner Privileges').setDescription('You must be the bot owner to run this command.');
-        break;
-      }
+  public isOwnerOnly(error: UserError): boolean {
+    return Reflect.get(error, 'identifier') === PreconditionNames.UserOwnerOnly;
+  }
 
-      case PreconditionNames.UserStatus: {
-        embed.setTitle('User Blocked').setDescription("You're currently blocked from using this bot.");
-        break;
-      }
+  public isUserStatusBlocked(error: UserError): boolean {
+    return Reflect.get(error, 'identifier') === PreconditionNames.UserStatus;
+  }
 
-      case PreconditionNames.UserAccountAge: {
-        embed.setTitle('Account Too New').setDescription('Your account is too young to use this bot.');
-        break;
-      }
+  public isUserAccountYoung(error: UserError): boolean {
+    return Reflect.get(error, 'identifier') === PreconditionNames.UserAccountAge;
+  }
 
-      case PreconditionNames.GuildStatus: {
-        embed.setTitle('Server Blocked').setDescription(error.message);
-        break;
-      }
+  public isGuildStatusBlocked(error: UserError): boolean {
+    return Reflect.get(error, 'identifier') === PreconditionNames.GuildStatus;
+  }
 
-      case Identifiers.PreconditionClientPermissions: {
-        const context = <Preconditions['ClientPermissions']>error.context;
-        embed.setTitle('Missing Bot Permissions').setDescription(`I'm missing the ${bold(joinAnd(context.permissions.toArray()))} permissions.`);
-        break;
-      }
+  public isClientMissingPermissions(error: UserError, context: unknown): context is Preconditions['ClientPermissions'] {
+    return Reflect.get(error, 'identifier') === Identifiers.PreconditionClientPermissions && Reflect.get(context as object, 'permissions') instanceof Permissions;
+  }
 
-      case Identifiers.PreconditionClientPermissionsNoClient: {
-        embed.setTitle('Missing Bot Identity').setDescription(error.message);
-        break;
-      }
+  public isClientPermissionsNoClient(error: UserError): boolean {
+    return Reflect.get(error, 'identifier') === Identifiers.PreconditionClientPermissionsNoClient;
+  }
 
-      case Identifiers.PreconditionClientPermissionsNoPermissions: {
-        embed.setTitle('Missing Bot Permissions').setDescription(error.message);
-        break;
-      }
+  public isClientHasZeroPermissions(error: UserError): boolean {
+    return Reflect.get(error, 'identifier') === Identifiers.PreconditionClientPermissionsNoPermissions;
+  }
 
-      case Identifiers.PreconditionCooldown: {
-        embed.setTitle('On Cooldown').setDescription(error.message);
-        break;
-      }
+  public isCooldown(error: UserError, context: unknown): context is Preconditions['Cooldown'] {
+    const cooldownContextKeys = ['scope', 'delay', 'limit', 'filteredUsers']satisfies (keyof Preconditions['Cooldown'])[];
+    return Reflect.get(error, 'identifier') === Identifiers.PreconditionCooldown && cooldownContextKeys.some(key => Reflect.has(context as object, key));
+  }
 
-      case Identifiers.PreconditionDMOnly:
-      case Identifiers.PreconditionGuildNewsOnly:
-      case Identifiers.PreconditionGuildNewsThreadOnly:
-      case Identifiers.PreconditionGuildOnly:
-      case Identifiers.PreconditionGuildPrivateThreadOnly:
-      case Identifiers.PreconditionGuildPublicThreadOnly:
-      case Identifiers.PreconditionGuildTextOnly: {
-        embed.setTitle('Channel Blocked').setDescription('Oops! This command does not in this channel.');
-        break;
-      }
+  public isChannelTypeMismatched(error: UserError): boolean {
+    return [
+      Identifiers.PreconditionDMOnly,
+      Identifiers.PreconditionGuildNewsOnly,
+      Identifiers.PreconditionGuildNewsThreadOnly,
+      Identifiers.PreconditionGuildOnly,
+      Identifiers.PreconditionGuildPrivateThreadOnly,
+      Identifiers.PreconditionGuildPublicThreadOnly,
+      Identifiers.PreconditionGuildTextOnly
+    ].includes(error.identifier as Identifiers);
+  }
 
-      case Identifiers.PreconditionMissingChatInputHandler:
-      case Identifiers.PreconditionMissingContextMenuHandler:
-      case Identifiers.PreconditionMissingMessageHandler: {
-        embed.setTitle("I'm Clueless").setDescription('IDK but this command does not run from this command type anymore.');
-        break;
-      }
+  public isMissingCommandHandler(error: UserError): boolean {
+    return [Identifiers.PreconditionMissingChatInputHandler, Identifiers.PreconditionMissingContextMenuHandler, Identifiers.PreconditionMissingMessageHandler].includes(error.identifier as Identifiers);
+  }
 
-      case Identifiers.PreconditionNSFW: {
-        embed.setTitle('NSFW Only').setDescription('This command is for NSFW channels only.');
-        break;
-      }
+  public isNSFW(error: UserError): boolean {
+    return Reflect.get(error, 'identifier') === Identifiers.PreconditionNSFW;
+  }
 
-      case Identifiers.PreconditionThreadOnly: {
-        embed.setTitle('Threads Only').setDescription('You cannot use this command outside threads.');
-        break;
-      }
+  public isThreadOnly(error: UserError): boolean {
+    return Reflect.get(error, 'identifier') === Identifiers.PreconditionThreadOnly;
+  }
 
-      case Identifiers.PreconditionUserPermissions: {
-        const context = <Preconditions['UserPermissions']>error.context;
-        embed
-          .setTitle('Missing User Permissions')
-          .setDescription(`You don't have the ${bold(joinAnd(context.permissions.toArray()))} permissions to run this command!`);
-        break;
-      }
-    }
+  public isUserPermissions(error: UserError, context: unknown): context is Preconditions['UserPermissions'] {
+    return Reflect.get(error, 'identifier') === Identifiers.PreconditionUserPermissions &&
+      Reflect.has(context as object, 'permissions') &&
+      Reflect.get(context as object, 'permissions') instanceof Permissions;
   }
 }

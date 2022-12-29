@@ -10,8 +10,8 @@ export class ChatInputCommandFinishListener extends Listener<typeof Events.ChatI
 
   public async run(interaction: CommandInteraction, command: ChatInputCommand) {
     this.container.logger.info(
-      chalk.whiteBright('[LISTENER]'),
-      chalk`{whiteBright ${interaction.user.tag} (ID: ${interaction.user.id}) used the command "${command.name}" in ${interaction.channelId}}`
+      chalk`{whiteBright [LISTENER]}`,
+      chalk`{whiteBright "${interaction.user.tag} (${interaction.user.id})" used the command "${command.name}" in channel ${interaction.channelId}}`
     );
   }
 }
