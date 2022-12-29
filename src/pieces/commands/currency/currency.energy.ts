@@ -69,8 +69,8 @@ export default class EnergyCommand extends Command {
         row.addButtonComponent((btn) =>
           btn
             .setCustomId(componentId.create('energize'))
-            .setStyle(energized && ended ? Constants.MessageButtonStyles.SECONDARY : Constants.MessageButtonStyles.PRIMARY)
-            .setEmoji(energized && ended ? '✅' : '⚡')
+            .setStyle(Constants.MessageButtonStyles.SECONDARY)
+            .setEmoji('⚡')
             .setDisabled(ended)
         )
       );
