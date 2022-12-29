@@ -5,12 +5,13 @@ import { Constants } from 'discord.js';
 import { createEmbed, Responder } from '#lib/utilities';
 import { isCommandError, isCommandOptionError } from '#lib/framework';
 
-export class ChatInputCommandErrorListener extends Listener<typeof Events.ChatInputCommandError> {
+export default class ChatInputCommandErrorListener extends Listener<typeof Events.ChatInputCommandError> {
   public constructor(context: Listener.Context) {
-    super(context, { name: Events.ChatInputCommandError, event: Events.ChatInputCommandError });
+    super(context, { event: Events.ChatInputCommandError });
   }
 
   public async run(error: UserError, payload: ChatInputCommandErrorPayload): Promise<void> {
+    console.log({ error });
     const responder = new Responder(payload.interaction);
     const embed = createEmbed(embed => embed.setColor(Constants.Colors.RED).setDescription('An unknown error occured.'));
 

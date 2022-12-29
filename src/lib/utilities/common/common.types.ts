@@ -15,7 +15,7 @@ export type OmitFirstArgument<T> = T extends (arg1: unknown, ...args: infer U) =
  * @template This The `this` type.
  * @since 6.0.0
  */
-export type Callback<A extends unknown[], R, This> = (this: This, ...args: A) => R;
+export type Callback<A extends unknown[], R> = (...args: A) => R;
 
 /**
  * Extracts the piece's type from a store.

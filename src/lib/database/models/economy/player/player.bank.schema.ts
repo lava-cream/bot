@@ -1,4 +1,4 @@
-import { PlayerDefaults, PlayerLimits, PlayerMasteryAddedLimits } from '#lib/utilities/constants/index.js';
+import { PlayerBank, PlayerMasteryAddedLimits } from '#lib/utilities/constants/index.js';
 import { prop, CreateNumberValueSchema } from '#lib/database/structures/schema.js';
 import { roundZero } from '#lib/utilities';
 
@@ -6,7 +6,7 @@ import { roundZero } from '#lib/utilities';
  * Represents the player's bank space.
  * @since 6.0.0
  */
-export class PlayerBankSpaceSchema extends CreateNumberValueSchema(0) {
+export class PlayerBankSpaceSchema extends CreateNumberValueSchema(PlayerBank.Default) {
   /**
    * The bank space's value-adding convertion rate.
    */
@@ -18,7 +18,7 @@ export class PlayerBankSpaceSchema extends CreateNumberValueSchema(0) {
    */
   public constructor() {
     super();
-    this.rate = 0;
+    this.rate = PlayerBank.DefaultSpaceMultiplier;
   }
 
   /**
@@ -27,7 +27,7 @@ export class PlayerBankSpaceSchema extends CreateNumberValueSchema(0) {
    * @returns This schema.
    */
   public isMaxValue(mastery: number) {
-    return this.value >= Math.round(PlayerLimits.Bank + PlayerMasteryAddedLimits.Bank * mastery);
+    return this.value >= Math.round(PlayerBank.MaxLimit + PlayerMasteryAddedLimits.Bank * mastery);
   }
 
   /**
@@ -44,7 +44,7 @@ export class PlayerBankSpaceSchema extends CreateNumberValueSchema(0) {
  * Represents the player's bank.
  * @since 6.0.0
  */
-export class PlayerBankSchema extends CreateNumberValueSchema(PlayerDefaults.Bank) {
+export class PlayerBankSchema extends CreateNumberValueSchema(PlayerBank.Default) {
   /**
    * The player's bank space.
    */
@@ -57,6 +57,13 @@ export class PlayerBankSchema extends CreateNumberValueSchema(PlayerDefaults.Ban
   public constructor() {
     super();
     this.space = new PlayerBankSpaceSchema();
+  }
+
+  /**
+   * The difference between the bank space and the bank's value.
+   */
+  public get difference() {
+    return this.space.value - this.value;
   }
 
   /**

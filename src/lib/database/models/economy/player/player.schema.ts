@@ -48,11 +48,11 @@ export class PlayerSchema extends Schema {
   }
 
   public get maxBet(): number {
-    return Math.round(PlayerBet.MaximumLimit + PlayerMasteryAddedLimits.Bet * this.upgrades.mastery);
+    return Math.round(PlayerBet.MinLimit + PlayerMasteryAddedLimits.Bet * this.upgrades.mastery);
   }
 
   public get minBet(): number {
-    return PlayerBet.MinimumLimit;
+    return PlayerBet.MaxLimit;
   }
 
   public async calculateMultiplier() {

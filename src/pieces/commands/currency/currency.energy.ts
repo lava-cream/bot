@@ -14,7 +14,7 @@ import type { PlayerSchema } from '#lib/database';
 })
 export default class EnergyCommand extends Command {
   @DeferCommandInteraction()
-  public override async chatInputRun(command: CommandInteraction<'cached'>) {
+  public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
     const componentId = new CustomId(new Date(command.createdTimestamp));
 
@@ -47,7 +47,7 @@ export default class EnergyCommand extends Command {
         }
       }
     });
-    
+
     await collector.start();
   }
 
@@ -70,7 +70,6 @@ export default class EnergyCommand extends Command {
           btn
             .setCustomId(componentId.create('energize'))
             .setStyle(energized && ended ? Constants.MessageButtonStyles.SECONDARY : Constants.MessageButtonStyles.PRIMARY)
-            .setLabel(energized && ended ? 'Active' : 'Energize')
             .setEmoji(energized && ended ? '✅' : '⚡')
             .setDisabled(ended)
         )
@@ -78,6 +77,12 @@ export default class EnergyCommand extends Command {
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
-    registry.registerChatInputCommand((builder) => builder.setName(this.name).setDescription(this.description));
+    registry.registerChatInputCommand((builder) =>
+      builder
+        .setName(this.name)
+        .setDescription(this.description)
+      , {
+        idHints: ['1050341971127959582']
+    });
   }
 }

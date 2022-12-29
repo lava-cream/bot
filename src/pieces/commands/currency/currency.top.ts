@@ -27,13 +27,15 @@ enum ComponentIdentifiers {
 enum PageType {
   Wallet = 'wallet',
   Bank = 'bank',
-  Star = 'star'
+  Star = 'star',
+  Energy = 'energy'
 }
 
 const leaderboards: Record<PageType, (db: PlayerSchema) => number> = {
   [PageType.Wallet]: (db) => db.wallet.value,
   [PageType.Bank]: (db) => db.bank.value,
-  [PageType.Star]: (db) => db.energy.value
+  [PageType.Star]: (db) => db.energy.value,
+  [PageType.Energy]: (db) => db.energy.energy
 };
 
 @ApplyOptions<Command.Options>({
@@ -49,14 +51,15 @@ export default class TopCommand extends Command {
     const dbs = await this.container.db.players.fetchAll(true);
     const customId = new CustomId(command.createdAt).create(ComponentIdentifiers.Paginator);
     const collector = new Collector({
-      message: await edit(command, this.renderContent(command, activeType, dbs, customId)),
+      message: await edit(command, this.renderContent(command, activeType, dbs, customId, false)),
       componentType: 'SELECT_MENU',
       time: seconds(10),
       max: Infinity,
       actions: {
         [customId]: async (ctx) => {
+          ctx.collector.resetTimer();
           activeType = ctx.interaction.values.at(0) as PageType;
-          await edit(ctx.interaction, this.renderContent(command, activeType, dbs, customId));
+          await edit(ctx.interaction, this.renderContent(command, activeType, dbs, customId, false));
         }
       },
       filter: async (menu) => {
@@ -65,7 +68,7 @@ export default class TopCommand extends Command {
         return context;
       },
       end: async () => {
-        await edit(command, this.renderContent(command, activeType, dbs, customId));
+        await edit(command, this.renderContent(command, activeType, dbs, customId, true));
         return;
       }
     });
@@ -73,7 +76,7 @@ export default class TopCommand extends Command {
     await collector.start();
   }
 
-  protected renderContent(command: CommandInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>) {
+  protected renderContent(command: CommandInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>, ended: boolean) {
     const leaderboard = dbs
       .map((db) => ({ db, value: Reflect.apply(Reflect.get(leaderboards, page), null, [db]) }))
       .filter(({ value }) => value > 0)
@@ -86,12 +89,16 @@ export default class TopCommand extends Command {
           .setTitle(`Top ${leaderboard.length} ${pluralise(toTitleCase(page), leaderboard.length)}`)
           .setColor(randomColor())
           .setDescription(
-            join(
-              ...leaderboard.map(({ db, value }, idx) => {
-                const user = this.container.client.users.resolve(db._id);
-                return `${inlineCode(`#${idx + 1}`)} ${bold(value.toLocaleString())} - ${user?.tag ?? 'Unknown User'}`;
-              })
-            )
+            leaderboard.length > 0
+              ? join(
+                ...leaderboard.map(({ db, value }, idx) => {
+                  const user = this.container.client.users.resolve(db._id);
+                  const emoji = (['🥇', '🥈', '🥉'] as const).at(idx) ?? '👏' as const; 
+
+                  return `${inlineCode(emoji)} ${bold(value.toLocaleString())} - ${user?.tag ?? 'Unknown User'}`;
+                })
+              )
+              : 'No players to show.'
           )
           .setFooter({ text: command.guild.name, iconURL: getGuildIconURL(command.guild) ?? void 0 })
       )
@@ -101,6 +108,7 @@ export default class TopCommand extends Command {
             .setCustomId(customId)
             .setPlaceholder(toTitleCase(page))
             .setMaxValues(1)
+            .setDisabled(ended)
             .setOptions(
               ...Object.values(PageType).map(
                 (id) =>

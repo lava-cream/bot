@@ -33,6 +33,8 @@ export default class BetCommand extends Command {
       );
     }
 
+    command.client.application?.commands.cache;
+
     const parsedAmount = parseNumber(amount, {
       amount: db.bet.value,
       minimum: db.minBet,
@@ -72,6 +74,8 @@ export default class BetCommand extends Command {
         .addStringOption((option) =>
           option.setName('amount').setDescription('Examples: 10k, 2t, 30%, 55.5% (% of max bet), min, max, half, full, 250_000 or 124,000.')
         )
-    );
+      , {
+        idHints: ['1050341969324408902']
+      });
   }
 }

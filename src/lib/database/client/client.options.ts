@@ -10,16 +10,18 @@ export interface ClientOptions {
 }
 
 export const transformOptions = (options: ClientOptions): ConnectOptions => ({
-  dbName: options.databaseName,
-  loggerLevel: 'info',
-  autoCreate: true,
-  connectTimeoutMS: options.connectTimeoutMS ?? seconds(10),
-  retryWrites: true,
-  w: 'majority',
   auth: {
     username: options.username,
     password: options.password
-  }
+  },
+  autoCreate: true,
+  connectTimeoutMS: options.connectTimeoutMS ?? seconds(10),
+  dbName: options.databaseName,
+  loggerLevel: 'info',
+  retryWrites: true,
+  writeConcern: {
+    w: 'majority',
+  },
 });
 
 declare global {

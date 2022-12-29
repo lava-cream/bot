@@ -41,6 +41,8 @@ export default class BalanceCommand extends Command {
         .setName(this.name)
         .setDescription(this.description)
         .addUserOption((option) => option.setName('user').setDescription('The user to check for.'))
-    );
+      , {
+        idHints: ['1050341967051108403']
+      });
   }
 }

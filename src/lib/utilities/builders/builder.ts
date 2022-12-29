@@ -41,4 +41,4 @@ export class Builder {
  * @template R The return type. Defaults to T.
  * @since 6.0.0
  */
-export type BuilderCallback<T, R = T> = Callback<[builder: T], R, T>;
+export type BuilderCallback<T, R = T> = Callback<[this: T, builder: T], R>;

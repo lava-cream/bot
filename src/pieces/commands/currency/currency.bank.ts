@@ -1,6 +1,6 @@
-import { CommandOptionError } from "#lib/framework";
+import { CommandError, CommandOptionError } from "#lib/framework";
 import { DeferCommandInteraction, edit, parseNumber } from "#lib/utilities";
-import { inlineCode } from "@discordjs/builders";
+import { bold, inlineCode } from "@discordjs/builders";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { Subcommand } from "@sapphire/plugin-subcommands";
@@ -25,21 +25,28 @@ export default class BankCommand extends Subcommand {
   @DeferCommandInteraction()
   public async chatInputDeposit(command: Subcommand.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
+    if (db.bank.isMaxValue()) throw new CommandError('Your bank is full.');
+
     const amount = command.options.getString('amount', true);
     const parsedAmount = parseNumber(amount, {
       amount: db.wallet.value,
       minimum: 0,
-      maximum: Math.min(db.wallet.value, db.bank.space.value - db.wallet.value)
+      maximum: Math.min(db.wallet.value, db.bank.difference)
     });
 
     if (isNullOrUndefined(parsedAmount)) {
       throw new CommandOptionError({ option: 'amount', message: 'It should be a valid or actual number.' });
+    } 
+
+    const cleanParsedAmount = Math.trunc(parsedAmount);
+    if (cleanParsedAmount > db.bank.difference) {
+      throw new CommandError(`You can only deposit up to ${bold(db.bank.difference.toLocaleString())} coins right now.`);
     }
 
     await db
       .run(db => {
-        db.wallet.subValue(parsedAmount);
-        db.bank.addValue(parsedAmount);
+        db.wallet.subValue(cleanParsedAmount);
+        db.bank.addValue(cleanParsedAmount);
       })
       .save();
     
@@ -47,13 +54,9 @@ export default class BankCommand extends Subcommand {
       builder  
         .addEmbed(embed => 
           embed  
-            .setTitle('Coins Deposited')
+            .setTitle(`Deposited ${cleanParsedAmount.toLocaleString()} Coins`)
             .setColor(Constants.Colors.GREEN)
             .addFields(
-              {
-                name: 'Deposited',
-                value: parsedAmount.toLocaleString(),
-              },
               {
                 name: 'Wallet',
                 value: inlineCode(db.wallet.toLocaleString()),
@@ -72,6 +75,8 @@ export default class BankCommand extends Subcommand {
   @DeferCommandInteraction()
   public async chatInputWithdraw(command: Subcommand.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
+    if (db.bank.value < 1) throw new CommandError('You have none to withdraw.');
+
     const amount = command.options.getString('amount', true);
     const parsedAmount = parseNumber(amount, {
       amount: db.bank.value,
@@ -83,10 +88,15 @@ export default class BankCommand extends Subcommand {
       throw new CommandOptionError({ option: 'amount', message: 'It should be a valid or actual number.' });
     }
 
+    const cleanParsedAmount = Math.trunc(parsedAmount);
+    if (cleanParsedAmount > db.bank.value) {
+      throw new CommandError(`You only have ${bold(db.bank.toLocaleString())} in your bank lmao.`);
+    }
+
     await db
       .run(db => {
-        db.wallet.addValue(parsedAmount);
-        db.bank.subValue(parsedAmount);
+        db.wallet.addValue(cleanParsedAmount);
+        db.bank.subValue(cleanParsedAmount);
       })
       .save();
     
@@ -94,13 +104,9 @@ export default class BankCommand extends Subcommand {
       builder  
         .addEmbed(embed => 
           embed  
-            .setTitle('Coins Withdrawn')
+            .setTitle(`Withdrawn ${cleanParsedAmount.toLocaleString()} Coins`)
             .setColor(Constants.Colors.GREEN)
             .addFields(
-              {
-                name: 'Withdrew',
-                value: parsedAmount.toLocaleString(),
-              },
               {
                 name: 'Wallet',
                 value: inlineCode(db.wallet.toLocaleString()),

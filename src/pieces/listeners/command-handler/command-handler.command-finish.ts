@@ -5,7 +5,7 @@ import chalk from 'chalk';
 
 export class ChatInputCommandFinishListener extends Listener<typeof Events.ChatInputCommandFinish> {
   public constructor(context: Listener.Context) {
-    super(context, { name: Events.ChatInputCommandFinish, event: Events.ChatInputCommandFinish });
+    super(context, { event: Events.ChatInputCommandFinish });
   }
 
   public async run(interaction: CommandInteraction, command: ChatInputCommand) {

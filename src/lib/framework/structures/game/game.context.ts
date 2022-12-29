@@ -8,7 +8,7 @@ import type { Game } from './game.piece.js';
 /**
  * Represents the game's responder utility.
  */
-export class GameResponder extends Responder<'cached'> {
+export class GameResponder extends Responder<'cached', CommandInteraction<'cached'>> {
   private messageId: string | null = null;
 
   public override async send(builder: BuilderCallback<InteractionMessageContentBuilder>) {
