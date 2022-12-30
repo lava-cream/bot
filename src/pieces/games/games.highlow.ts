@@ -40,7 +40,6 @@ export default class HighlowGame extends Game {
       },
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
-          await context.db.run((db) => db.wallet.subValue(db.bet.value)).save();
           await context.responder.edit(() => HighlowGame.renderContent(context, logic, null, true));
           await context.end(true);
           return;
@@ -110,7 +109,7 @@ export default class HighlowGame extends Game {
         }
 
         await edit(ctx.interaction, HighlowGame.renderContent(context, logic, winnings, true));
-        ctx.collector.stop(ctx.interaction.customId);
+        return ctx.stop();
       });
     }
 
@@ -146,7 +145,7 @@ export default class HighlowGame extends Game {
                   `I just chose a secret number between ${logic.min} and ${logic.max}.`,
                   `Is the secret number ${italic('higher')} or ${italic('lower')} than ${bold(logic.hint.toLocaleString())}?`
                 )
-                : join("You didn't respond in time. You lost your bet.\n", `You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`)
+                : join("You didn't respond in time. You are keeping your money.\n", `You have ${bold(context.db.wallet.value.toLocaleString())} coins still.`)
               : join(
                 bold(`${logic.isJackpot() ? 'JACKPOT! ' : ''}You ${logic.isLose() ? 'lost' : 'won'} ${
                   (logic.isLose() ? context.db.bet.value : (winnings?.final ?? 0)).toLocaleString()

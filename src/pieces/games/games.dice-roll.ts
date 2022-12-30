@@ -34,7 +34,7 @@ export default class DiceRollGame extends Game {
 
           await ctx.interaction.editReply(DiceRollGame.renderContentAndUpdate(context, game, true));
           await context.db.save();
-          ctx.collector.stop(ctx.interaction.customId);
+          return ctx.stop();
         }
       },
       filter: async (button) => {
@@ -44,7 +44,6 @@ export default class DiceRollGame extends Game {
       },
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
-          await context.db.run(db => db.wallet.subValue(db.bet.value)).save();
           await context.responder.edit(() => DiceRollGame.renderContentAndUpdate(context, game, true));
           await context.end(true);
           return;
@@ -83,19 +82,13 @@ export default class DiceRollGame extends Game {
       }
 
       case !game.hasBothRolled() && ended: {
-        ctx.db.run(db => {
-          ctx.schema.lose(db.bet.value);
-          db.wallet.subValue(db.bet.value);
-          db.energy.subValue();
-        });
-
         button
           .setLabel('Timed Out')
           .setStyle(Constants.MessageButtonStyles.SECONDARY)
           .setDisabled(true);
         embed
           .setColor(Constants.Colors.NOT_QUITE_BLACK)
-          .setDescription(join(`You didn't respond in time. You lost your bet.\n`, `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`))
+          .setDescription(join(`You didn't respond in time. You are keeping your money.\n`, `${bold('Your Balance:')} ${ctx.db.wallet.value.toLocaleString()}`))
           .setFooter(ctx.schema.loses.streak.isActive() ? { text: `Lose Streak: ${ctx.schema.loses.streak.display}` } : null);
 
         break;
@@ -103,10 +96,10 @@ export default class DiceRollGame extends Game {
 
       case game.isWin(): {
         const { final } = Game.calculateWinnings({
-          base: 0.5,
+          base: 0.05,
           multiplier: ctx.db.multiplier.value,
           bet: ctx.db.bet.value,
-          random: Math.random()
+          random: Math.random() * 1.9
         });
 
         ctx.db.run((db) => {

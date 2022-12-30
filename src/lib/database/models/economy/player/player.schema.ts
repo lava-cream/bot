@@ -52,7 +52,7 @@ export class PlayerSchema extends Schema {
   }
 
   public get minBet(): number {
-    return PlayerBet.MaxLimit;
+    return PlayerBet.MinLimit;
   }
 
   public async calculateMultiplier() {

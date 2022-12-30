@@ -38,7 +38,6 @@ export default class CoinFlipGame extends Game {
       },
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
-          await context.db.run((db) => db.wallet.subValue(context.db.bet.value)).save();
           await context.responder.edit(() => CoinFlipGame.renderContent(context, game, true));
           await context.end(true);
           return;
@@ -56,10 +55,10 @@ export default class CoinFlipGame extends Game {
           case game.isWin(): {
             // 25% (0.25) to 175% (1.5+0.25=1.75)
             const won = Game.calculateWinnings({
-              base: 0.25,
+              base: 0.9,
               multiplier: context.db.multiplier.value,
               bet: context.db.bet.value,
-              random: Math.random() * 1.5,
+              random: Math.random() * 0.2,
             });
 
             await context.db
@@ -88,7 +87,7 @@ export default class CoinFlipGame extends Game {
           }
         }
 
-        ctx.collector.stop('called');
+        return ctx.stop();
       });
     }
 
@@ -112,8 +111,8 @@ export default class CoinFlipGame extends Game {
                     `You placed ${bold(context.db.bet.value.toLocaleString())} coins.`
                   )
                   : Common.join(
-                    "You didn't respond in time. You lost your bet.\n",
-                    `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}`
+                    "You didn't respond in time. You are keeping your money.\n",
+                    `${bold('Your Balance:')} ${context.db.wallet.value.toLocaleString()}`
                   )
                 : Common.join(
                   `It was ${bold(game.opponent.value)}${game.isWin() ? '!' : '.'} You ${game.isWin() ? 'won' : 'lost'} ${bold((game.isWin() ? won : context.db.bet.value).toLocaleString())} coins.\n`,

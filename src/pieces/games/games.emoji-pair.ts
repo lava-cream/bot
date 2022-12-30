@@ -29,7 +29,7 @@ export default class EmojiPairGame extends Game {
       actions: {
         [context.customId.create('reveal')]: async (ctx) => {
           await edit(ctx.interaction, EmojiPairGame.renderContentAndUpdate(logic.reveal(), context, true));
-          ctx.collector.stop(ctx.interaction.customId);
+          return ctx.stop();
         }
       },
       filter: async (button) => {
@@ -56,7 +56,7 @@ export default class EmojiPairGame extends Game {
     const button = createButton(button => button.setCustomId(ctx.customId.create('reveal')).setDisabled(logic.revealed || ended));
     const description: string[] = [];
 
-    description.push(`${bold('[')} ${logic.pair.map((e, idx) => (ended && logic.revealed ? e.emoji : idx === 1 ? '❓' : e.emoji)).join('    ')} ${bold(']')}\n`)
+    description.push(`${bold('>')} ${logic.pair.map((e, idx) => (ended && logic.revealed ? e.emoji : idx === 1 ? '❓' : e.emoji)).join('    ')} ${bold('<')}\n`)
 
     switch (true) {
       case !logic.revealed && !ended: {
@@ -68,13 +68,7 @@ export default class EmojiPairGame extends Game {
       }
       
       case !logic.revealed && ended: {
-        ctx.db.run(db => {
-          ctx.schema.lose(db.bet.value);
-          db.wallet.subValue(db.bet.value);
-          db.energy.subValue();
-        });
-
-        description.push("You didn't respond in time. You lost your bet.", `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
+        description.push("You didn't respond in time. You are keeping your money.", `You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`);
 
         embed.setColor(Constants.Colors.NOT_QUITE_BLACK);
         button.setLabel('Timed Out').setStyle(Constants.MessageButtonStyles.SECONDARY);
@@ -128,10 +122,10 @@ export default class EmojiPairGame extends Game {
    */
   private static get pairs(): EmojiPair.Emoji[] {
     return [
-      { emoji: '💰', multiplier: 100 },
-      { emoji: '💶', multiplier: 50 },
-      { emoji: '💵', multiplier: 25 },
-      { emoji: '🪙', multiplier: 10 }
+      { emoji: '💰', multiplier: 10 },
+      { emoji: '💶', multiplier: 8 },
+      { emoji: '💵', multiplier: 4 },
+      { emoji: '🪙', multiplier: 2 }
     ];
   }
 }

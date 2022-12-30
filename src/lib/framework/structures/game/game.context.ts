@@ -90,6 +90,9 @@ export class GameContext {
     const checked = Result.from<void, string>(() => this.check(force));
     await checked.inspectErrAsync(err => this.responder.send(() => this.renderMessage(err)));
 
+    this.schema.setLastPlayed(new Date());
+    if (force) await this.db.save();
+
     return checked.isOk() && this.play();
   }
 
@@ -98,7 +101,7 @@ export class GameContext {
    * @param force Whether the game ended forcefully.
    */
   protected check(force: boolean): void {
-    if (force) throw 'This session has ended.';
+    if (force) throw 'This game has ended.';
     if (this.db.energy.isExpired()) throw 'Your energy just expired!';
     if (this.db.bet.value > this.db.wallet.value) throw "You don't have enough coins to play anymore.";
     if (this.db.wallet.isMaxValue(this.db.upgrades.mastery)) throw 'Your wallet just reached its maximum capacity.';

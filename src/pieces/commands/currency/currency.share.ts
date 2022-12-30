@@ -46,7 +46,7 @@ export default class ShareCommand extends Command {
           .setDescription(
             join(
               `Successfully shared ${bold(parsedAmount.toLocaleString())} coins to ${bold(recepient.user.tag)}.`,
-              `You now have ${bold(db.wallet.shortenValue(2))} coins, while they have ${dbRecepient.wallet.shortenValue(2)} coins.`
+              `You now have ${bold(db.wallet.shortenValue(2))} coins, while they have ${bold(dbRecepient.wallet.shortenValue(2))} coins.`
             )
           )
 

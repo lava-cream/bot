@@ -1,12 +1,12 @@
 import { CommandInteraction, Constants } from 'discord.js';
-import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
+import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum, Result } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
 import { hasDecimal, edit, DeferCommandInteraction, parseNumber, join } from '#lib/utilities';
 import { bold } from '@discordjs/builders';
 import { isNullOrUndefined } from '@sapphire/utilities';
-import { CommandError } from '#lib/framework';
 import type { PlayerSchema } from '#lib/database';
+import { CommandError } from '#lib/framework';
 
 @ApplyOptions<Command.Options>({
   name: 'bet',
@@ -33,37 +33,34 @@ export default class BetCommand extends Command {
       );
     }
 
-    command.client.application?.commands.cache;
-
-    const parsedAmount = parseNumber(amount, {
+    const parsedAmount = this.checkAmount(db, parseNumber(amount, {
       amount: db.bet.value,
       minimum: db.minBet,
       maximum: db.maxBet
-    });
+    }));
 
-    this.checkAmount(db, parsedAmount);
+    if (parsedAmount.isErr()) throw new CommandError(parsedAmount.unwrapErr());
 
-    await db.run((db) => db.bet.setValue(parsedAmount)).save();
+    await db.run((db) => db.bet.setValue(parsedAmount.unwrap())).save();
     await edit(command, (builder) =>
       builder.addEmbed((embed) =>
-        embed.setColor(Constants.Colors.GREEN).setDescription(`You're now betting ${bold(parsedAmount.toLocaleString())} coins.`)
+        embed.setColor(Constants.Colors.DARK_BUT_NOT_BLACK).setDescription(`You're now betting ${bold(parsedAmount.unwrap().toLocaleString())} coins.`)
       )
     );
 
     return;
   }
 
-  public checkAmount(db: PlayerSchema.Document, parsedAmount: ReturnType<typeof parseNumber>): asserts parsedAmount is number {
-    try {
+  public checkAmount(db: PlayerSchema.Document, parsedAmount: ReturnType<typeof parseNumber>): Result<number, string> {
+    return Result.from(() => {
       if (isNullOrUndefined(parsedAmount) || hasDecimal(parsedAmount)) throw 'You need to pass an actual number.';
       if (parsedAmount === db.bet.value) throw 'Cannot change your bet to the same one.';
       if (parsedAmount < db.minBet) throw `You can't bet lower than your minimum ${bold(db.minBet.toLocaleString())} limit.`;
       if (parsedAmount > db.maxBet) throw `You can't bet higher than your maximum ${bold(db.maxBet.toLocaleString())} limit.`;
       if (parsedAmount > db.wallet.value) throw `You only have ${bold(db.wallet.value.toLocaleString())} coins.`;
-    } catch (error) {
-      if (typeof error !== 'string') throw error;
-      throw new CommandError(error as string);
-    }
+
+      return parsedAmount;
+    });
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

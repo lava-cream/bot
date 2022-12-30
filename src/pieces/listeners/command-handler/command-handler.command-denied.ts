@@ -13,17 +13,7 @@ export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatI
   public async run(error: UserError, payload: ChatInputCommandDeniedPayload) {
     const embed = createEmbed(embed => embed.setColor(Constants.Colors.DARK_BUT_NOT_BLACK));
 
-    if (this.isUserMissingStaffPermissions(error)) {
-      embed.setDescription('You need to be a server staff to use this command.');
-    } else if (this.isOwnerOnly(error)) {
-      embed.setDescription('This command is not available for you.');
-    } else if (this.isUserStatusBlocked(error)) {
-      embed.setDescription("You're currently blocked for using this bot.");
-    } else if (this.isUserAccountYoung(error)) {
-      embed.setDescription('Your account is too young to use this bot!');
-    } else if (this.isGuildStatusBlocked(error)) {
-      embed.setDescription("This server is currently blocked from using this bot.");
-    } else if (this.isClientMissingPermissions(error, error.context)) {
+    if (this.isClientMissingPermissions(error, error.context)) {
       embed;
     } else if (this.isClientPermissionsNoClient(error)) {
       embed.setDescription("The bot can't check its permission from this channel.");
@@ -41,6 +31,16 @@ export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatI
       embed.setDescription('You cannot run this command outside threads.');
     } else if (this.isUserPermissions(error, error.context)) {
       embed;
+    } else if (this.isUserMissingStaffPermissions(error)) {
+      embed.setDescription('You need to be a server staff to use this command.');
+    } else if (this.isOwnerOnly(error)) {
+      embed.setDescription('This command is not available for you.');
+    } else if (this.isUserStatusBlocked(error)) {
+      embed.setDescription("You're currently blocked for using this bot.");
+    } else if (this.isUserAccountYoung(error)) {
+      embed.setDescription('Your account is too young to use this bot!');
+    } else if (this.isGuildStatusBlocked(error)) {
+      embed.setDescription("This server is currently blocked from using this bot.");
     } else {
       embed.setDescription('You cannot run this command. I wonder why.');
       this.container.logger.error(`"${payload.interaction.user.tag} (${payload.interaction.user.id})" was blocked from using "${payload.context.commandName}" for an unknown reason`, { error, payload });

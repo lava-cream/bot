@@ -31,7 +31,7 @@ export default class SlotMachineGame extends Game {
         [context.customId.create('spin')]: async (ctx) => {
           await edit(ctx.interaction, SlotMachineGame.renderContentAndUpdate(machine.reveal(), context, true));
           await context.db.save();
-          ctx.collector.stop(ctx.interaction.customId);
+          return ctx.stop();
         }
       },
       filter: async (button) => {
@@ -42,7 +42,6 @@ export default class SlotMachineGame extends Game {
       end: async (ctx) => {
         if (ctx.wasInternallyStopped()) {
           await context.responder.edit(() => SlotMachineGame.renderContentAndUpdate(machine, context, true));
-          await context.db.save();
           await context.end(true);
           return;
         }
@@ -71,13 +70,7 @@ export default class SlotMachineGame extends Game {
       }
 
       case !machine.revealed && ended: {
-        ctx.db.run(db => {
-          ctx.schema.lose(db.bet.value);
-          db.wallet.subValue(db.bet.value);
-          db.energy.subValue();
-        });
-
-        description.push('Your time ran out. You lost your bet.', `You now have ${bold(ctx.db.wallet.value.toLocaleString())}`);
+        description.push('Your time ran out. You are keeping your money.', `You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`);
 
         embed.setColor(Constants.Colors.NOT_QUITE_BLACK);
         button.setLabel('Timed Out').setStyle(Constants.MessageButtonStyles.SECONDARY);
@@ -137,12 +130,12 @@ export default class SlotMachineGame extends Game {
 
   private static get emojis(): SlotMachine.Emoji[] {
     return [
-      { emoji: '💲', multiplier: { jackpot: 100, win: 10 } },
-      { emoji: '💰', multiplier: { jackpot: 90, win: 9 } },
+      { emoji: '💰', multiplier: { jackpot: 100, win: 10 } },
+      { emoji: '💶', multiplier: { jackpot: 90, win: 9 } },
       { emoji: '💵', multiplier: { jackpot: 80, win: 8 } },
       { emoji: '👑', multiplier: { jackpot: 70, win: 7 } },
       { emoji: '🔱', multiplier: { jackpot: 60, win: 6 } },
-      { emoji: '💍', multiplier: { jackpot: 50, win: 5 } },
+      { emoji: '💎', multiplier: { jackpot: 50, win: 5 } },
       { emoji: '🍔', multiplier: { jackpot: 40, win: 4 } },
       { emoji: '🧀', multiplier: { jackpot: 30, win: 3 } },
       { emoji: '🍞', multiplier: { jackpot: 20, win: 2 } },

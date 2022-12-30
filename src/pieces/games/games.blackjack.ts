@@ -58,9 +58,10 @@ export default class BlackjackGame extends Game {
       switch (game.outcome?.outcome) {
         case Blackjack.Outcome.WIN: {
           const { final } = Game.calculateWinnings({
-            base: 0.4,
+            base: 0.1,
             bet: context.db.bet.value,
             multiplier: context.db.multiplier.value,
+            random: Math.random() * 1.8
           });
 
           await context.db
@@ -77,14 +78,7 @@ export default class BlackjackGame extends Game {
         }
 
         case Blackjack.Outcome.OTHER: {
-          await context.db
-            .run((db) => {
-              context.schema.lose(db.bet.value);
-              db.wallet.subValue(db.bet.value);
-              db.energy.subValue();
-            })
-            .save();
-          game.outcome.extra = 'The dealer is keeping your money to deal with your bullcrap.';
+          game.outcome.extra = "I won't bother with your stuff. You are keeping your money.";
           break;
         }
 
@@ -134,7 +128,7 @@ export default class BlackjackGame extends Game {
             }
 
             await update(ctx.interaction);
-            ctx.collector.stop('stood');
+            ctx.stop();
             break;
           }
 
@@ -142,7 +136,7 @@ export default class BlackjackGame extends Game {
             game.setOutcome(Blackjack.Outcome.OTHER, 'You ended the game.');
 
             await update(ctx.interaction);
-            ctx.collector.stop('forfeit');
+            ctx.stop();
 
             await context.end(true);
             break;
