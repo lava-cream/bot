@@ -28,7 +28,7 @@ export default class ShareCommand extends Command {
       maximum: db.wallet.value
     });
 
-    if (isNullOrUndefined(parsedAmount)) {
+    if (isNullOrUndefined(parsedAmount) || parsedAmount < 1) {
       throw new CommandError('Must be a valid number.');
     }
     if (parsedAmount > db.wallet.value) {
@@ -46,7 +46,7 @@ export default class ShareCommand extends Command {
           .setDescription(
             join(
               `Successfully shared ${bold(parsedAmount.toLocaleString())} coins to ${bold(recepient.user.tag)}.`,
-              `You now have ${bold(db.wallet.shortenValue(2))} coins, while they have ${bold(dbRecepient.wallet.shortenValue(2))} coins.`
+              `You now have ${bold(db.wallet.toReadable(2))} coins, while they have ${bold(dbRecepient.wallet.toReadable(2))} coins.`
             )
           )
 

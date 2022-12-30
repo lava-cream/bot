@@ -1,6 +1,7 @@
-import { type OmitFunctions, pushElement, resolveElement, removeElement, toNearestReadable } from '#lib/utilities';
+import { type OmitFunctions, pushElement, resolveElement, removeElement, toNearestReadable, toCollection } from '#lib/utilities';
 import typegoose, { types } from '@typegoose/typegoose';
 import { Ctor, FirstArgument, isNullOrUndefined, Primitive } from '@sapphire/utilities';
+import type { Collection } from '@discordjs/collection';
 
 export const {
   prop,
@@ -102,6 +103,13 @@ export function CreateSubSchemaManager<TSchema extends SubSchema, Args extends u
     }
 
     /**
+     * The manager's entries in a collection.
+     */
+    public get collection(): Collection<string, TSchema> {
+      return toCollection(this.entries);
+    }
+
+    /**
      * Creates an entry into this manager.
      * @param args The constructor parameters.
      */
@@ -132,6 +140,14 @@ export function CreateSubSchemaManager<TSchema extends SubSchema, Args extends u
      */
     public delete(id: string): TSchema | null {
       return removeElement(this.entries, (entry) => entry.id === id);
+    }
+
+    /**
+     * The manager's custom iterator.
+     * @returns The entries' iterator.
+     */
+    public [Symbol.iterator]() {
+      return this.entries.values();
     }
   }
 
@@ -232,11 +248,11 @@ export function CreateNumberValueSchema(defaultValue?: number) {
     }
 
     /**
-     * Formats this schema's value to its shorter form.
+     * Formats this schema's value to its shorter and readable form.
      * @param fractionDigits The decimal places to preserve.
-     * @returns The shortened form.
+     * @returns The formatted string.
      */
-    public shortenValue(fractionDigits = 0) {
+    public toReadable(fractionDigits = 0) {
       return toNearestReadable(this.value, fractionDigits);
     }
 

@@ -7,6 +7,7 @@ import { isNullOrUndefined } from '@sapphire/utilities';
 import { container, Resolvers } from '@sapphire/framework';
 import { Result } from '@sapphire/result';
 import type { GuildMember, Role } from 'discord.js';
+import { Collection } from '@discordjs/collection';
 import { toCollection } from '#lib/utilities';
 
 export class DonationTrackerManager extends Manager<DonationTrackerSchema> {
@@ -50,6 +51,7 @@ export class DonationTrackerManager extends Manager<DonationTrackerSchema> {
           .setAmount(donator.amount - removedAmount)
           .season.setValue(donator.season.value - removedAmount)
           .setTotal(donator.season.value);
+        break;
       }
     }
 
@@ -76,7 +78,7 @@ export class DonationTrackerManager extends Manager<DonationTrackerSchema> {
     const donator = await this.resolveOrCreateDonator(db, category, member.user.id);
     if (db.autoroles.entries.length < 1) return [];
 
-    const rolesToSet = toCollection([], member.roles.cache.clone());
+    const rolesToSet = toCollection([], new Collection(member.roles.cache.clone().entries()));
     for (const autorole of db.autoroles.entries.values()) rolesToSet.delete(autorole.id);
 
     const eligibleAutoroles = db.autoroles.entries.sort((a, b) => b.amount - a.amount).filter((e) => donator.amount >= e.amount);
@@ -84,7 +86,7 @@ export class DonationTrackerManager extends Manager<DonationTrackerSchema> {
       .map((ear) => member.guild.roles.resolve(ear.id))
       .filter<Role>((r): r is Role => !isNullOrUndefined(r));
 
-    await member.roles.set(toCollection(mappedEligibleRoles, rolesToSet));
+    await member.roles.set([...toCollection(mappedEligibleRoles, rolesToSet).values()]);
     return mappedEligibleRoles;
   }
 }

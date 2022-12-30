@@ -1,5 +1,5 @@
 import type { FirstArgument } from '@sapphire/utilities';
-import { Collection } from 'discord.js';
+import { Collection } from '@discordjs/collection';
 
 /**
  * Resolves an element inside an array.
