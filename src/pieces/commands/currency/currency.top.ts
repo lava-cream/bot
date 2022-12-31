@@ -1,4 +1,3 @@
-import type { CommandInteraction } from 'discord.js';
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
@@ -17,7 +16,7 @@ import {
   CustomId,
   getGuildIconURL
 } from '#lib/utilities';
-import { inlineCode, bold } from '@discordjs/builders';
+import { bold } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
 
 enum ComponentIdentifiers {
@@ -31,21 +30,21 @@ enum PageType {
   Energy = 'energy'
 }
 
-const leaderboards: Record<PageType, (db: PlayerSchema) => number> = {
-  [PageType.Wallet]: (db) => db.wallet.value,
-  [PageType.Bank]: (db) => db.bank.value,
-  [PageType.Star]: (db) => db.energy.value,
-  [PageType.Energy]: (db) => db.energy.energy
-};
-
 @ApplyOptions<Command.Options>({
   name: 'top',
-  description: 'View the leading players of the currency.',
+  description: 'View the player leaderboards.',
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class TopCommand extends Command {
+  private static leaderboards: Record<PageType, (db: PlayerSchema) => number> = {
+    [PageType.Wallet]: (db) => db.wallet.value,
+    [PageType.Bank]: (db) => db.bank.value,
+    [PageType.Star]: (db) => db.energy.value,
+    [PageType.Energy]: (db) => db.energy.energy
+  };
+
   @DeferCommandInteraction()
-  public override async chatInputRun(command: CommandInteraction<'cached'>) {
+  public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     let activeType: PageType = PageType.Wallet;
 
     const dbs = await this.container.db.players.fetchAll(true);
@@ -76,9 +75,9 @@ export default class TopCommand extends Command {
     await collector.start();
   }
 
-  protected renderContent(command: CommandInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>, ended: boolean) {
+  protected renderContent(command: Command.ChatInputInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>, ended: boolean) {
     const leaderboard = dbs
-      .map((db) => ({ db, value: Reflect.apply(Reflect.get(leaderboards, page), null, [db]) }))
+      .map((db) => ({ db, value: Reflect.apply(Reflect.get(TopCommand.leaderboards, page), null, [db]) }))
       .filter(({ value }) => value > 0)
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
@@ -95,7 +94,7 @@ export default class TopCommand extends Command {
                   const user = this.container.client.users.resolve(db._id);
                   const emoji = (['🥇', '🥈', '🥉'] as const).at(idx) ?? '👏' as const; 
 
-                  return `${inlineCode(emoji)} ${bold(value.toLocaleString())} - ${user?.tag ?? 'Unknown User'}`;
+                  return `${emoji} ${bold(value.toLocaleString())} - ${user?.tag ?? 'Unknown User'}`;
                 })
               )
               : 'No players to show.'

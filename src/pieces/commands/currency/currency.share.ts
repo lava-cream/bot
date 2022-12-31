@@ -1,10 +1,11 @@
+import type { PlayerSchema } from "#lib/database";
 import { CommandError } from "#lib/framework";
-import { DeferCommandInteraction, join, parseNumber, send } from "#lib/utilities";
+import { DeferCommandInteraction, InteractionMessageContentBuilder, join, parseNumber, send } from "#lib/utilities";
 import { bold } from "@discordjs/builders";
 import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry, Command, CommandOptionsRunTypeEnum } from "@sapphire/framework";
 import { isNullOrUndefined } from "@sapphire/utilities";
-import { Constants } from "discord.js";
+import { Constants, User } from "discord.js";
 
 @ApplyOptions<Command.Options>({
   name: 'share',
@@ -18,9 +19,7 @@ export default class ShareCommand extends Command {
     const recepient = command.options.getMember('recepient', true);
     const amount = command.options.getString('amount', true);
 
-    if (db.wallet.value <= 1) {
-      throw new CommandError('You have nothing to share');
-    }
+    if (db.wallet.value <= 1) throw new CommandError('You have nothing to share!');
 
     const parsedAmount = parseNumber(amount, {
       amount: db.wallet.value,
@@ -28,30 +27,32 @@ export default class ShareCommand extends Command {
       maximum: db.wallet.value
     });
 
-    if (isNullOrUndefined(parsedAmount) || parsedAmount < 1) {
-      throw new CommandError('Must be a valid number.');
-    }
-    if (parsedAmount > db.wallet.value) {
-      throw new CommandError(`You only have ${bold(db.wallet.value.toLocaleString())} coins, can't share that many.`);
-    }
+    if (isNullOrUndefined(parsedAmount) || parsedAmount < 1) throw new CommandError('Must be a valid number.');
+    if (parsedAmount > db.wallet.value) throw new CommandError(`You can't share that many. You only have ${bold(db.wallet.value.toLocaleString())} coins!`);
 
     const dbRecepient = await this.container.db.players.fetch(recepient.user.id);
 
     await db.run(({ wallet }) => wallet.subValue(parsedAmount)).save();
     await dbRecepient.run(({ wallet }) => wallet.addValue(parsedAmount)).save();
-    await send(command, builder =>
-      builder.addEmbed(embed =>
+    await send(command, ShareCommand.renderSuccessfulTransactionMessage(parsedAmount, { db, user: command.user }, { db: dbRecepient, user: recepient.user }));
+  }
+
+  private static renderSuccessfulTransactionMessage(
+    amount: number,
+    sender: { db: PlayerSchema, user: User },
+    recepient: { db: PlayerSchema, user: User }
+  ) {
+    return new InteractionMessageContentBuilder()
+      .addEmbed(embed => 
         embed
           .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
           .setDescription(
             join(
-              `Successfully shared ${bold(parsedAmount.toLocaleString())} coins to ${bold(recepient.user.tag)}.`,
-              `You now have ${bold(db.wallet.toReadable(2))} coins, while they have ${bold(dbRecepient.wallet.toReadable(2))} coins.`
+              `Successfully shared ${bold(amount.toLocaleString())} coins to ${bold(recepient.user.tag)}.`,
+              `You now have ${bold(sender.db.wallet.toReadable(2))} coins, while they have ${bold(recepient.db.wallet.toReadable(2))} coins.`
             )
           )
-
       )
-    );
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

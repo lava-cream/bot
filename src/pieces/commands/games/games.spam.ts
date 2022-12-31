@@ -13,7 +13,6 @@ import {
   InteractionMessageContentBuilder,
   send,
   edit,
-  toNearestReadable,
   getGuildIconURL
 } from '#lib/utilities';
 import { bold, inlineCode, memberNicknameMention, userMention } from '@discordjs/builders';
@@ -21,7 +20,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { isTextChannel } from '@sapphire/discord.js-utilities';
 import { ApplicationCommandRegistry, Command, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { isNullOrUndefined, noop } from '@sapphire/utilities';
-import { ButtonInteraction, Collection, CommandInteraction, Constants, Message, Snowflake, User } from 'discord.js';
+import { ButtonInteraction, Collection, Constants, Message, Snowflake, User } from 'discord.js';
 
 interface Spammer {
   spams: number;
@@ -49,7 +48,7 @@ type SpamPlayers = Collection<Snowflake, Spammer>;
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class SpamCommand extends Command {
-  public override async chatInputRun(command: CommandInteraction<'cached'>) {
+  public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     await command.deferReply();
 
     const prize = Math.trunc(command.options.getNumber('prize', true));
@@ -98,7 +97,7 @@ export default class SpamCommand extends Command {
               .setDescription(
                 join(
                   `You won ${inlineCode(result.won.toLocaleString())} coins.`,
-                  `That's ${inlineCode(toNearestReadable(result.won))} for each message!\n`,
+                  `That's ${inlineCode(toReadable(result.won))} for each message!\n`,
                   'The host will distribute your share shortly.'
                 )
               )
@@ -232,7 +231,7 @@ export default class SpamCommand extends Command {
   }
 
   private static collectSpammers(
-    command: CommandInteraction<'cached'>,
+    command: Command.ChatInputInteraction<'cached'>,
     prize: number,
     message: Message<true>,
     players: SpamPlayers,

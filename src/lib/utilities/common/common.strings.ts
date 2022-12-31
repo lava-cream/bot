@@ -11,7 +11,7 @@ import { filterNullishAndEmpty, isNullOrUndefined } from '@sapphire/utilities';
  * @returns A shorthand number string.
  * @since 6.0.0
  */
-export function toNearestReadable(x: number, maximumFractionDigits = 2): string {
+export function toReadable(x: number, maximumFractionDigits = 2): string {
   return Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits }).format(x);
 }
 

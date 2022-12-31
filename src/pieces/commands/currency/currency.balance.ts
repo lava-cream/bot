@@ -1,9 +1,10 @@
-import type { CommandInteraction } from 'discord.js';
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { getHighestRoleColor, join, percent, edit, DeferCommandInteraction, getUserAvatarURL, toNearestReadable } from '#lib/utilities';
+import { join, percent, edit, DeferCommandInteraction, getUserAvatarURL, toReadable, InteractionMessageContentBuilder } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
+import { Constants, GuildMember } from 'discord.js';
+import type { PlayerSchema } from '#lib/database';
 
 @ApplyOptions<Command.Options>({
   name: 'balance',
@@ -12,27 +13,29 @@ import { bold, inlineCode } from '@discordjs/builders';
 })
 export default class BalanceCommand extends Command {
   @DeferCommandInteraction()
-  public override async chatInputRun(command: CommandInteraction<'cached'>) {
+  public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     const member = command.options.getMember('user') ?? command.member;
     const db = await this.container.db.players.fetch(member.user.id);
 
-    await edit(command, (content) =>
-      content.addEmbed((embed) =>
+    return await edit(command, BalanceCommand.renderContent(member, db));
+  }
+
+  private static renderContent(member: GuildMember, db: PlayerSchema) {
+    return new InteractionMessageContentBuilder()
+      .addEmbed(embed => 
         embed
           .setAuthor({ name: `${member.user.username}'s balance`, iconURL: getUserAvatarURL(member.user) })
-          .setColor(getHighestRoleColor(member))
+          .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
           .setDescription(
             join(
-              `${bold('Wallet:')} ${db.wallet.value.toLocaleString()}`,
-              `${bold('Bank:')} ${db.bank.value.toLocaleString()}/${db.bank.space.value.toLocaleString()} ${inlineCode(
+              `${bold('Wallet:')} ${db.wallet.toLocaleString()}`,
+              `${bold('Bank:')} ${db.bank.toLocaleString()}/${db.bank.space.toLocaleString()} ${inlineCode(
                 percent(db.bank.value, db.bank.space.value, 1)
               )}`
             )
           )
-          .setFooter({ text: `Net Worth: ${toNearestReadable(db.netWorth)}` })
-          .setTimestamp(command.createdAt)
+          .setFooter({ text: `Net Worth: ${toReadable(db.netWorth)}` })
       )
-    );
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

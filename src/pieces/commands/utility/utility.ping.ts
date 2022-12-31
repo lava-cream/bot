@@ -1,6 +1,6 @@
 import { type ApplicationCommandRegistry, Command } from '@sapphire/framework';
-import type { CommandInteraction } from 'discord.js';
 import { ApplyOptions } from '@sapphire/decorators';
+import { Constants } from 'discord.js';
 
 import { Stopwatch } from '@sapphire/stopwatch';
 import { randomColor, join, edit, send } from '#lib/utilities';
@@ -11,13 +11,19 @@ import { bold, inlineCode } from '@discordjs/builders';
   description: 'View the websocket and message latency.'
 })
 export default class PingCommand extends Command {
-  public override async chatInputRun(command: CommandInteraction) {
+  public override async chatInputRun(command: Command.ChatInputInteraction) {
     const watch = new Stopwatch().start();
 
-    await send(command, 'Pinging...');
+    await send(command, (builder) => 
+      builder
+        .addEmbed((embed) => 
+          embed
+            .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
+            .setDescription('Pinging...')
+        )
+    );
     await edit(command, (builder) =>
       builder
-        .setContent(null)
         .addEmbed((embed) =>
           embed
             .setColor(randomColor())

@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, randomItem, createEmbed, createButton, toNearestReadable } from '#lib/utilities';
+import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, randomItem, createEmbed, createButton, toReadable } from '#lib/utilities';
 import { Game } from '#lib/framework/index.js';
 import { Constants } from 'discord.js';
 import { bold } from '@discordjs/builders';
@@ -92,7 +92,7 @@ export default class EmojiPairGame extends Game {
 
         description.push(`${bold('PAIRED!')} You won ${bold(final.toLocaleString())} coins.`, `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
 
-        embed.setColor(Constants.Colors.GREEN).setFooter(ctx.schema.wins.coins.highest > 0 ? { text: `Highest Coins Won: ${toNearestReadable(ctx.schema.wins.coins.highest, 2)}` } : null);
+        embed.setColor(Constants.Colors.GREEN).setFooter(ctx.schema.wins.coins.highest > 0 ? { text: `Highest Coins Won: ${toReadable(ctx.schema.wins.coins.highest, 2)}` } : null);
         button.setLabel('Winner Winner').setStyle(Constants.MessageButtonStyles.SUCCESS);
         break;
       }

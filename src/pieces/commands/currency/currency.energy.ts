@@ -1,4 +1,3 @@
-import type { CommandInteraction } from 'discord.js';
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
@@ -51,15 +50,15 @@ export default class EnergyCommand extends Command {
     await collector.start();
   }
 
-  public static renderContent(command: CommandInteraction<'cached'>, db: PlayerSchema, componentId: CustomId, energized: boolean, ended: boolean) {
+  private static renderContent(command: Command.ChatInputInteraction<'cached'>, db: PlayerSchema, componentId: CustomId, energized: boolean, ended: boolean) {
     return new InteractionMessageContentBuilder()
       .addEmbed((embed) =>
         embed
           .setTitle(`${command.user.username}'s energy`)
-          .setColor(energized && ended ? Constants.Colors.GOLD : Constants.Colors.NOT_QUITE_BLACK)
+          .setColor(energized && ended ? Constants.Colors.GOLD : Constants.Colors.DARK_BUT_NOT_BLACK)
           .setDescription(
             join(
-              `${bold('⭐ Stars:')} ${db.energy.value.toLocaleString()}`,
+              `${bold('⭐ Stars:')} ${db.energy.toLocaleString()}`,
               `${bold('⚡ Energy:')} ${db.energy.energy.toLocaleString()}\n`,
               `Expire${db.energy.isExpired() ? 'd' : 's'} ${time(new Date(db.energy.expire), TimestampStyles.RelativeTime)}`
             )

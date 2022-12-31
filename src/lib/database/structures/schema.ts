@@ -1,4 +1,4 @@
-import { type OmitFunctions, pushElement, resolveElement, removeElement, toNearestReadable, toCollection } from '#lib/utilities';
+import { type OmitFunctions, pushElement, resolveElement, removeElement, toReadable, toCollection } from '#lib/utilities';
 import typegoose, { types } from '@typegoose/typegoose';
 import { Ctor, FirstArgument, isNullOrUndefined, Primitive } from '@sapphire/utilities';
 import type { Collection } from '@discordjs/collection';
@@ -253,7 +253,7 @@ export function CreateNumberValueSchema(defaultValue?: number) {
      * @returns The formatted string.
      */
     public toReadable(fractionDigits = 0) {
-      return toNearestReadable(this.value, fractionDigits);
+      return toReadable(this.value, fractionDigits);
     }
 
     /**

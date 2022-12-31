@@ -1,5 +1,5 @@
 import { CommandError, CommandOptionError } from "#lib/framework";
-import { DeferCommandInteraction, edit, parseNumber } from "#lib/utilities";
+import { DeferCommandInteraction, edit, parseNumber, toReadable } from "#lib/utilities";
 import { bold, inlineCode } from "@discordjs/builders";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
@@ -54,8 +54,8 @@ export default class BankCommand extends Subcommand {
       builder  
         .addEmbed(embed => 
           embed  
-            .setTitle(`Deposited ${cleanParsedAmount.toLocaleString()} Coins`)
-            .setColor(Constants.Colors.GREEN)
+            .setTitle(`Deposited ${cleanParsedAmount.toLocaleString()}`)
+            .setColor(Constants.Colors.DARK_GREEN)
             .addFields(
               {
                 name: 'Wallet',
@@ -68,6 +68,7 @@ export default class BankCommand extends Subcommand {
                 inline: true
               }
             )
+            .setFooter({ text: `Net Worth: ${toReadable(db.netWorth, 2)}` })
         )
     );
   }
@@ -104,8 +105,8 @@ export default class BankCommand extends Subcommand {
       builder  
         .addEmbed(embed => 
           embed  
-            .setTitle(`Withdrawn ${cleanParsedAmount.toLocaleString()} Coins`)
-            .setColor(Constants.Colors.GREEN)
+            .setTitle(`Withdrawn ${cleanParsedAmount.toLocaleString()}`)
+            .setColor(Constants.Colors.DARK_GREEN)
             .addFields(
               {
                 name: 'Wallet',
@@ -118,6 +119,7 @@ export default class BankCommand extends Subcommand {
                 inline: true
               }
             )
+            .setFooter({ text: `Net Worth: ${toReadable(db.netWorth, 2)}` })
         )
     );
   }

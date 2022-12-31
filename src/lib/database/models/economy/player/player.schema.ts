@@ -48,7 +48,7 @@ export class PlayerSchema extends Schema {
   }
 
   public get maxBet(): number {
-    return Math.round(PlayerBet.MinLimit + PlayerMasteryAddedLimits.Bet * this.upgrades.mastery);
+    return Math.round(PlayerBet.MaxLimit + PlayerMasteryAddedLimits.Bet * this.upgrades.mastery);
   }
 
   public get minBet(): number {

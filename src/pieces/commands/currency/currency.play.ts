@@ -1,5 +1,5 @@
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum, Result } from '@sapphire/framework';
-import { CommandInteraction, Constants } from 'discord.js';
+import { Constants } from 'discord.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
 import {
@@ -38,7 +38,7 @@ enum EnergyControl {
 })
 export default class PlayCommand extends Command {
   @DeferCommandInteraction()
-  public override async chatInputRun(command: CommandInteraction<'cached'>) {
+  public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
     const customId = Reflect.construct(CustomId, [command.createdAt]);
     const game = await Result.fromAsync(this.chooseGame(command, db, customId));
@@ -52,7 +52,7 @@ export default class PlayCommand extends Command {
     });
   }
 
-  private renderGamePickerContent(command: CommandInteraction<'cached'>, componentId: CustomId, game: Game | null, ended = false) {
+  private renderGamePickerContent(command: Command.ChatInputInteraction<'cached'>, componentId: CustomId, game: Game | null, ended = false) {
     return new InteractionMessageContentBuilder<ButtonBuilder | SelectMenuBuilder>()
       .addRow((row) =>
         row.addSelectMenuComponent((menu) =>
@@ -102,7 +102,7 @@ export default class PlayCommand extends Command {
       );
   }
 
-  private async chooseGame(command: CommandInteraction<'cached'>, db: PlayerSchema.Document, componentId: CustomId): Promise<Game | null> {
+  private async chooseGame(command: Command.ChatInputInteraction<'cached'>, db: PlayerSchema.Document, componentId: CustomId): Promise<Game | null> {
     return new Promise(async (resolve) => {
       const gamesStore = this.container.stores.get('games');
       const selection = new Map<string, Game>();
@@ -215,7 +215,7 @@ export default class PlayCommand extends Command {
     );
   }
 
-  private checkEnergy(command: CommandInteraction<'cached'>, db: PlayerSchema.Document, customId: CustomId): Promise<boolean> {
+  private checkEnergy(command: Command.ChatInputInteraction<'cached'>, db: PlayerSchema.Document, customId: CustomId): Promise<boolean> {
     return new Promise(async (resolve) => {
       if (!db.energy.isExpired()) return resolve(true);
       if (db.energy.energy < 1) {

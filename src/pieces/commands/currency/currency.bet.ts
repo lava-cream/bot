@@ -1,12 +1,12 @@
-import { CommandInteraction, Constants } from 'discord.js';
-import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum, Result } from '@sapphire/framework';
+import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { hasDecimal, edit, DeferCommandInteraction, parseNumber, join } from '#lib/utilities';
+import { hasDecimal, edit, DeferCommandInteraction, parseNumber, InteractionMessageContentBuilder } from '#lib/utilities';
 import { bold } from '@discordjs/builders';
 import { isNullOrUndefined } from '@sapphire/utilities';
-import type { PlayerSchema } from '#lib/database';
 import { CommandError } from '#lib/framework';
+import type { PlayerSchema } from '#lib/database';
+import { Constants } from 'discord.js';
 
 @ApplyOptions<Command.Options>({
   name: 'bet',
@@ -15,52 +15,47 @@ import { CommandError } from '#lib/framework';
 })
 export default class BetCommand extends Command {
   @DeferCommandInteraction()
-  public override async chatInputRun(command: CommandInteraction<'cached'>) {
+  public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
     const amount = command.options.getString('amount');
 
     if (isNullOrUndefined(amount)) {
-      const isSufficient = db.wallet.value >= db.bet.value;
-
-      return await edit(command, (builder) =>
-        builder.addEmbed((embed) =>
-          embed
-            .setColor(isSufficient ? Constants.Colors.DARK_GREEN : Constants.Colors.DARK_RED)
-            .setDescription(
-              join(`Your bet is ${bold(db.bet.value.toLocaleString())} coins.`, `${bold(`${isSufficient ? 'S' : 'Ins'}ufficient`)} to use on games.`)
-            )
-        )
-      );
+      return await edit(command, BetCommand.renderCurrentBetMessage(db));
     }
 
-    const parsedAmount = this.checkAmount(db, parseNumber(amount, {
+    const parsedAmount = parseNumber(amount, {
       amount: db.bet.value,
       minimum: db.minBet,
       maximum: db.maxBet
-    }));
+    });
 
-    if (parsedAmount.isErr()) throw new CommandError(parsedAmount.unwrapErr());
+    if (isNullOrUndefined(parsedAmount) || hasDecimal(parsedAmount)) throw new CommandError('You need to pass an actual number.');
+    if (parsedAmount === db.bet.value) throw new CommandError('Cannot change your bet to the same one.');
+    if (parsedAmount < db.minBet) throw new CommandError(`You can't bet lower than your minimum ${bold(db.minBet.toLocaleString())} limit.`);
+    if (parsedAmount > db.maxBet) throw new CommandError(`You can't bet higher than your maximum ${bold(db.maxBet.toLocaleString())} limit.`);
+    if (parsedAmount > db.wallet.value) throw new CommandError(`You only have ${bold(db.wallet.value.toLocaleString())} coins.`);
 
-    await db.run((db) => db.bet.setValue(parsedAmount.unwrap())).save();
-    await edit(command, (builder) =>
-      builder.addEmbed((embed) =>
-        embed.setColor(Constants.Colors.DARK_BUT_NOT_BLACK).setDescription(`You're now betting ${bold(parsedAmount.unwrap().toLocaleString())} coins.`)
-      )
-    );
-
+    await db.run((db) => db.bet.setValue(parsedAmount)).save();
+    await edit(command, BetCommand.renderBetUpdatedMessage(db));
     return;
   }
 
-  public checkAmount(db: PlayerSchema.Document, parsedAmount: ReturnType<typeof parseNumber>): Result<number, string> {
-    return Result.from(() => {
-      if (isNullOrUndefined(parsedAmount) || hasDecimal(parsedAmount)) throw 'You need to pass an actual number.';
-      if (parsedAmount === db.bet.value) throw 'Cannot change your bet to the same one.';
-      if (parsedAmount < db.minBet) throw `You can't bet lower than your minimum ${bold(db.minBet.toLocaleString())} limit.`;
-      if (parsedAmount > db.maxBet) throw `You can't bet higher than your maximum ${bold(db.maxBet.toLocaleString())} limit.`;
-      if (parsedAmount > db.wallet.value) throw `You only have ${bold(db.wallet.value.toLocaleString())} coins.`;
+  private static renderCurrentBetMessage(db: PlayerSchema) {
+    return new InteractionMessageContentBuilder()
+      .addEmbed(embed => 
+        embed  
+          .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
+          .setDescription(`Your current bet is ${bold(db.bet.toLocaleString())} coins.`)
+      )
+  } 
 
-      return parsedAmount;
-    });
+  private static renderBetUpdatedMessage(db: PlayerSchema) {
+    return new InteractionMessageContentBuilder()
+      .addEmbed(embed => 
+        embed  
+          .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
+          .setDescription(`You're now betting ${bold(db.bet.toLocaleString())} coins. Goodluck playing!`)
+      )
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

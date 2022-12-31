@@ -19,29 +19,29 @@ export type ResponderContent = string | InteractionMessageContentBuilder | Build
  * @template Cached The cached status of the target interaction.
  * @template Target The target interaction's type.
  * @param target The target interaction.
- * @param builder The message content builder.
+ * @param content The message content builder.
  * @since 6.0.0
  */
 export async function send<Cached extends CacheType>(
   target: ResponderTarget<Cached>,
-  builder: ResponderContent
+  content: ResponderContent
 ): Promise<GuildCacheMessage<Cached>> {
-  const content = new InteractionMessageContentBuilder().apply(
-    isFunction(builder) ? builder : (content) => (typeof builder === 'string' ? content.setContent(builder) : builder)
+  const builder = new InteractionMessageContentBuilder().apply(
+    isFunction(content) ? content : (builder) => (typeof content === 'string' ? builder.setContent(content) : content)
   );
   const { deferred, replied } = target;
 
   switch (true) {
     case deferred && !replied: {
-      return target.editReply(content);
+      return target.editReply(builder);
     }
 
     case replied: {
-      return target.followUp(content);
+      return target.followUp(builder);
     }
 
     default: {
-      return target.reply({ ...content, fetchReply: true });
+      return target.reply({ ...builder, fetchReply: true });
     }
   }
 }
@@ -51,17 +51,17 @@ export async function send<Cached extends CacheType>(
  * @template Cached The cached status of the target interaction.
  * @template Target The target interaction's type.
  * @param target The target interaction.
- * @param builder The message content builder.
+ * @param content The message content builder.
  * @since 6.0.0
  */
 export async function edit<Cached extends CacheType>(
   target: ResponderTarget<Cached>,
-  builder: ResponderContent
+  content: ResponderContent
 ): Promise<GuildCacheMessage<Cached>> {
-  const content = new InteractionMessageContentBuilder().apply(
-    isFunction(builder) ? builder : (content) => (typeof builder === 'string' ? content.setContent(builder) : builder)
+  const builder = new InteractionMessageContentBuilder().apply(
+    isFunction(content) ? content : (builder) => (typeof content === 'string' ? builder.setContent(content) : content)
   );
-  return await target.editReply(content);
+  return await target.editReply(builder);
 }
 
 /**
