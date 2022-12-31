@@ -141,47 +141,6 @@ export function createDiscordSnowflake(timestamp = Date.now()): string {
 }
 
 /**
- * Transforms a number to some readable format.
- * @param x The number to transform.
- * @param decimals The decimals to retain.
- * @example
- * ```typescript
- *  const parsed = toReadable(420_200);
- *
- *  console.log(parsed); // 420.2K
- * ```
- * @example
- * ```typescript
- *  const parsed = toReadable(950_000);
- *
- *  console.log(parsed); // 0.95M
- * ```
- * @version 5.2.2
- * @since 4.3.0
- */
-export function toReadable(x: number, decimals = 1): string {
-  const format = (n: number, i: string) => {
-    const fixed = (x / n).toFixed(decimals);
-    return `${Number(fixed.endsWith('0') ? Number(fixed) * 1 : fixed)}${i}`;
-  };
-
-  const data = [
-    { point: 9 * 100e15, value: 100e18, suffix: 'QT' },
-    { point: 9 * 100e12, value: 100e15, suffix: 'QD' },
-    { point: 9 * 100e9, value: 1e12, suffix: 'T' },
-    { point: 9 * 100e6, value: 1e9, suffix: 'B' },
-    { point: 9 * 100e3, value: 1e6, suffix: 'M' },
-    { point: 9 * 100, value: 1e3, suffix: 'K' }
-  ] as const;
-
-  for (const { point, value, suffix } of data) {
-    if (x >= point) return format(value, suffix);
-  }
-
-  return x.toString();
-}
-
-/**
  * Joins an array of strings to commas but leaving the last 2 items separated with "and".
  * @template T Array of strings to join.
  * @param array The array to join with.
