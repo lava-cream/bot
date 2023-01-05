@@ -26,8 +26,8 @@ export class PlayerGamesStatisticCoinsSchema extends CreateNumberValueSchema(0) 
    * @returns This schema.
    */
   public override addValue(value: number): this {
-    Reflect.set(this, 'highest', Math.max(this.highest, this.value + value));
-    return this;
+    Reflect.set(this, 'highest', Math.max(this.highest, value));
+    return super.addValue(value);
   }
 }
 
