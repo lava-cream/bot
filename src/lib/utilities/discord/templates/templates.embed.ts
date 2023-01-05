@@ -1,5 +1,4 @@
 import { createEmbed } from "#lib/utilities/builders/utilities.js";
-import { Constants } from "discord.js";
 
 /**
  * Represents a discord.js utility to create embeds based on different templates.
@@ -13,6 +12,6 @@ export namespace EmbedTemplates {
    * @since 6.0.0
    */
   export function createSimple(message: string) {
-    return createEmbed(embed => embed.setColor(Constants.Colors.DARK_BUT_NOT_BLACK).setDescription(message));
+    return createEmbed(embed => embed.setColor(0x2f3136).setDescription(message));
   }
 }

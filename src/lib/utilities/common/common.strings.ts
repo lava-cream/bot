@@ -2,7 +2,38 @@ import type { HexColorString } from 'discord.js';
 import { DiscordSnowflake } from '@sapphire/snowflake';
 import { filterNullishAndEmpty, isNullOrUndefined } from '@sapphire/utilities';
 
-new Intl.DateTimeFormat('en', {  })
+export enum InlineNumberCodeAlignment {
+  Left = 1,
+  Right = 3
+}
+
+export function toInlineNumberCode(numbers: number[], index: number, align: InlineNumberCodeAlignment): string {
+  const element = numbers
+    .map((number, _idx, stringArr) => {
+      const firstElem = stringArr.at(0)?.toLocaleString();
+      if (!firstElem) throw new Error('Empty Array');
+
+      const string = number.toLocaleString();
+
+      switch (align) {
+        case InlineNumberCodeAlignment.Left: {
+          return `${string.padStart(string.length + 1).padEnd(firstElem.length + 2)}`;
+        };
+
+        case InlineNumberCodeAlignment.Right: {
+          return `${string.padStart(firstElem.length + 1).padEnd(firstElem.length + 2)}`;
+        };
+
+        default: {
+          return `${string.padStart(string.length + 1).padEnd(string.length + 2)}`
+        }
+      }
+    })
+    .at(index);
+  
+  if (!element) throw new Error('Missing Number');
+  return element;
+}
 
 /**
  * Transforms a numerical value into something humans could easily read.

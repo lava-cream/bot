@@ -4,7 +4,6 @@ import { ApplyOptions } from '@sapphire/decorators';
 import type { PlayerSchema } from '#lib/database';
 import { Constants, MessageSelectOptionData, SelectMenuInteraction } from 'discord.js';
 import {
-  randomColor,
   join,
   Collector,
   seconds,
@@ -17,9 +16,11 @@ import {
   send,
   update,
   InteractionMessageUpdateBuilder,
-  SelectMenuBuilder
+  SelectMenuBuilder,
+  toInlineNumberCode,
+  InlineNumberCodeAlignment
 } from '#lib/utilities';
-import { bold } from '@discordjs/builders';
+import { inlineCode } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
 import type { APIApplicationCommandOptionChoice } from 'discord-api-types/v9';
 
@@ -97,21 +98,22 @@ export default class TopCommand extends Command {
       .map((db) => ({ db, value: Reflect.apply(Reflect.get(TopCommand.leaderboards, page), null, [db]) }))
       .filter(({ value, db }) => value > 0 && !this.container.client.users.resolve(db._id)?.bot)
       .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
+      .slice(0, 5);
 
     return Reflect.construct<[], InteractionMessageUpdateBuilder<SelectMenuBuilder> | InteractionMessageContentBuilder<SelectMenuBuilder>>(interaction instanceof SelectMenuInteraction ? InteractionMessageUpdateBuilder : InteractionMessageContentBuilder, [])
       .addEmbed((embed) =>
         embed
-          .setTitle(`Top ${leaderboard.length} ${pluralise(toTitleCase(page), leaderboard.length)}`)
-          .setColor(randomColor())
+          .setTitle(`${pluralise(toTitleCase(page), leaderboard.length)} Leaderboard`)
+          .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
           .setDescription(
             leaderboard.length > 0
               ? join(
-                ...leaderboard.map(({ db, value }, idx) => {
+                ...leaderboard.map(({ db }, idx, arr) => {
+                  const value = toInlineNumberCode(arr.map(e => e.value), idx, InlineNumberCodeAlignment.Right);
                   const user = this.container.client.users.resolve(db._id);
                   const emoji = (['🥇', '🥈', '🥉'] as const).at(idx) ?? '👏' as const; 
 
-                  return `${emoji} ${bold(value.toLocaleString())} - ${user?.tag ?? 'Unknown User'}`;
+                  return `${emoji} ${inlineCode(value)} - ${user?.tag ?? 'Unknown User'}`;
                 })
               )
               : 'No players to show.'
