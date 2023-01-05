@@ -1,6 +1,6 @@
 import { CommandError, CommandOptionError } from "#lib/framework";
 import { parseNumber, send } from "#lib/utilities";
-import { bold } from "@discordjs/builders";
+import { bold, inlineCode } from "@discordjs/builders";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { Subcommand } from "@sapphire/plugin-subcommands";
@@ -53,17 +53,19 @@ export default class BankCommand extends Subcommand {
       builder  
         .addEmbed(embed => 
           embed  
-            .setTitle(`Coins Deposited`)
-            .setColor(Constants.Colors.DARK_GREEN)
-            .setDescription(`Successfully deposited ${bold(cleanParsedAmount.toLocaleString())} coins into your bank.`)
+            .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
             .addFields(
               {
-                name: 'Wallet',
+                name: 'Deposited',
+                value: cleanParsedAmount.toLocaleString()
+              },
+              {
+                name: 'Wallet Balance',
                 value: db.wallet.toLocaleString(),
                 inline: true
               },
               {
-                name: 'Bank',
+                name: 'Bank Balance',
                 value: db.bank.toLocaleString(),
                 inline: true
               }
@@ -103,18 +105,20 @@ export default class BankCommand extends Subcommand {
       builder  
         .addEmbed(embed => 
           embed  
-            .setTitle(`Coins Withdrawn`)
-            .setColor(Constants.Colors.DARK_GREEN)
-            .setDescription(`Successfully withdrawn ${bold(cleanParsedAmount.toLocaleString())} coins from your bank.`)
+            .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
             .addFields(
               {
-                name: 'Wallet',
-                value: db.wallet.toLocaleString(),
+                name: 'Withdrawn',
+                value: inlineCode(cleanParsedAmount.toLocaleString())
+              },
+              {
+                name: 'Wallet Balance',
+                value: inlineCode(db.wallet.toLocaleString()),
                 inline: true
               },
               {
-                name: 'Bank',
-                value: db.bank.toLocaleString(),
+                name: 'Bank Balance',
+                value: inlineCode(db.bank.toLocaleString()),
                 inline: true
               }
             )
