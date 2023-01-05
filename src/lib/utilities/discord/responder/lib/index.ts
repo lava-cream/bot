@@ -74,9 +74,11 @@ export async function edit<Cached extends CacheType, Components extends MessageA
  */
 export async function update<Cached extends CacheType, Components extends MessageActionRowBuilderComponents>(
   target: Exclude<ResponderTarget<Cached>, CommandInteraction<Cached>>,
-  content: InteractionMessageUpdateBuilder<Components> | BuilderCallback<InteractionMessageUpdateBuilder<Components>>
+  content: Exclude<ResponderContent<Components>, string> // | InteractionMessageUpdateBuilder<Components> | BuilderCallback<InteractionMessageUpdateBuilder<Components>>
 ): Promise<GuildCacheMessage<Cached>> {
-  const builder = new InteractionMessageUpdateBuilder<Components>().apply(isFunction(content) ? content : (builder) => typeof content === 'string' ? builder.setContent(content) : content);
+  content = isFunction(content) ? new InteractionMessageContentBuilder<Components>().apply(content) : content;
+
+  const builder = Object.assign(new InteractionMessageUpdateBuilder<Components>(), content);
 
   return await target.update({ ...builder, fetchReply: true });
 }
