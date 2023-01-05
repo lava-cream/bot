@@ -2,7 +2,7 @@ import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '
 import { ApplyOptions } from '@sapphire/decorators';
 
 import { bold, time, TimestampStyles } from '@discordjs/builders';
-import { join, edit, InteractionMessageContentBuilder, CustomId, Collector, seconds, minutes, send, InteractionMessageUpdateBuilder, update } from '#lib/utilities';
+import { join, edit, InteractionMessageContentBuilder, CustomId, Collector, seconds, minutes, send, update } from '#lib/utilities';
 import { ButtonInteraction, Constants } from 'discord.js';
 import type { PlayerSchema } from '#lib/database';
 
@@ -48,10 +48,8 @@ export default class EnergyCommand extends Command {
     await collector.start();
   }
 
-  private static renderContent(interaction: Command.ChatInputInteraction<'cached'>, db: PlayerSchema, componentId: CustomId, energized: boolean, ended: boolean): InteractionMessageContentBuilder;
-  private static renderContent(interaction: ButtonInteraction<'cached'>, db: PlayerSchema, componentId: CustomId, energized: boolean, ended: boolean): InteractionMessageUpdateBuilder;
   private static renderContent(interaction: Command.ChatInputInteraction<'cached'> | ButtonInteraction<'cached'>, db: PlayerSchema, componentId: CustomId, energized: boolean, ended: boolean) {
-    return Reflect.construct<[], InteractionMessageContentBuilder | InteractionMessageUpdateBuilder>(interaction instanceof ButtonInteraction ? InteractionMessageUpdateBuilder : InteractionMessageContentBuilder, [])
+    return new InteractionMessageContentBuilder()
       .addEmbed((embed) =>
         embed
           .setTitle(`${interaction.user.username}'s energy`)
