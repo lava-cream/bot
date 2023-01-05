@@ -15,8 +15,6 @@ import {
   getGuildIconURL,
   send,
   update,
-  InteractionMessageUpdateBuilder,
-  SelectMenuBuilder,
   toInlineNumberCode,
   InlineNumberCodeAlignment
 } from '#lib/utilities';
@@ -91,16 +89,14 @@ export default class TopCommand extends Command {
     await collector.start();
   }
 
-  protected renderContent(interaction: Command.ChatInputInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>, ended: boolean): InteractionMessageContentBuilder<SelectMenuBuilder>;
-  protected renderContent(interaction: SelectMenuInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>, ended: boolean): InteractionMessageUpdateBuilder<SelectMenuBuilder>;
-  protected renderContent(interaction: Command.ChatInputInteraction<'cached'> | SelectMenuInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>, ended: boolean): InteractionMessageContentBuilder<SelectMenuBuilder> | InteractionMessageUpdateBuilder<SelectMenuBuilder> {
+  protected renderContent(interaction: Command.ChatInputInteraction<'cached'> | SelectMenuInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>, ended: boolean): InteractionMessageContentBuilder {
     const leaderboard = dbs
       .map((db) => ({ db, value: Reflect.apply(Reflect.get(TopCommand.leaderboards, page), null, [db]) }))
       .filter(({ value, db }) => value > 0 && !this.container.client.users.resolve(db._id)?.bot)
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
 
-    return Reflect.construct<[], InteractionMessageUpdateBuilder<SelectMenuBuilder> | InteractionMessageContentBuilder<SelectMenuBuilder>>(interaction instanceof SelectMenuInteraction ? InteractionMessageUpdateBuilder : InteractionMessageContentBuilder, [])
+    return new InteractionMessageContentBuilder()
       .addEmbed((embed) =>
         embed
           .setTitle(`${pluralise(toTitleCase(page), leaderboard.length)} Leaderboard`)
