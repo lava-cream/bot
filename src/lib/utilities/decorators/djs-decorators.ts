@@ -1,6 +1,7 @@
 import { createMethodDecorator } from '@sapphire/decorators';
-import type { ChatInputCommand, ChatInputCommandContext } from '@sapphire/framework';
-import type { CommandInteraction } from 'discord.js';
+import { ChatInputCommand, ChatInputCommandContext, Result, UserError } from '@sapphire/framework';
+import { CommandInteraction, Constants } from 'discord.js';
+import { edit } from '../discord/index.js';
 
 /**
  * Defers the {@link CommandInteraction} passed into chatInputRun.
@@ -14,7 +15,19 @@ export const DeferCommandInteraction = (ephemeral = false): MethodDecorator => {
 
     descriptor.value = <any>async function (this: ChatInputCommand, command: CommandInteraction, context: ChatInputCommandContext) {
       await command.deferReply({ ephemeral });
-      return Reflect.apply(method, this, [command, context]);
-    };
+
+      const result = await Result.fromAsync(method.call(this, command, context));
+      if (result.isErr()) {
+        const error = result.unwrapErr();
+
+        if (error instanceof UserError && command.replied) {
+          await edit(command, builder => builder.addEmbed(
+            embed => embed.setDescription(error.message).setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
+          ));
+        }
+
+        throw error;
+      }
+    }
   });
 };

@@ -11,7 +11,7 @@ export class ChatInputCommandErrorListener extends Listener<typeof Events.ChatIn
     super(context, { event: Events.ChatInputCommandError });
   }
 
-  public async run(error: UserError, payload: ChatInputCommandErrorPayload): Promise<void> {
+  public async run(error: unknown, payload: ChatInputCommandErrorPayload): Promise<void> {
     const responder = new Responder(payload.interaction);
     const embed = createEmbed(embed =>
       embed
@@ -23,7 +23,7 @@ export class ChatInputCommandErrorListener extends Listener<typeof Events.ChatIn
       await responder.send(content => content.addEmbed(() => embed.setDescription(error.message)));
     }
 
-    this.container.logger.error('[CLIENT => COMMAND-HANDLER]', 'Command Error', error);
+    this.container.logger.error('[CLIENT => COMMAND-HANDLER]', error);
   }
 }
 
@@ -44,6 +44,6 @@ export class ChatInputSubcommandErrorListener extends Listener<typeof Subcommand
       await responder.send(content => content.addEmbed(() => embed.setDescription(error.message)));
     }
 
-    this.container.logger.error('[CLIENT => COMMAND-HANDLER]', 'Command Error', error);
+    this.container.logger.error('[CLIENT => COMMAND-HANDLER]', error);
   }
 }

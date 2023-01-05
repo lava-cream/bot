@@ -2,22 +2,26 @@ import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '
 import { ApplyOptions } from '@sapphire/decorators';
 
 import type { PlayerSchema } from '#lib/database';
-import type { MessageSelectOptionData } from 'discord.js';
+import { Constants, MessageSelectOptionData, SelectMenuInteraction } from 'discord.js';
 import {
   randomColor,
   join,
   Collector,
   seconds,
   InteractionMessageContentBuilder,
-  DeferCommandInteraction,
   edit,
   CustomIdentifier,
   pluralise,
   CustomId,
-  getGuildIconURL
+  getGuildIconURL,
+  send,
+  update,
+  InteractionMessageUpdateBuilder,
+  SelectMenuBuilder
 } from '#lib/utilities';
 import { bold } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
+import type { APIApplicationCommandOptionChoice } from 'discord-api-types/v9';
 
 enum ComponentIdentifiers {
   Paginator = 'paginator'
@@ -43,11 +47,23 @@ export default class TopCommand extends Command {
     [PageType.Energy]: (db) => db.energy.energy
   };
 
-  @DeferCommandInteraction()
   public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
-    let activeType: PageType = PageType.Wallet;
+    let activeType: PageType = command.options.getString('type') as PageType | null ?? PageType.Wallet;
+
+    await send(command, builder => builder.addEmbed(
+      embed => embed.setColor(Constants.Colors.DARK_BUT_NOT_BLACK).setDescription('Fetching...')
+    ));
 
     const dbs = await this.container.db.players.fetchAll(true);
+
+    for (const db of dbs.values()) {
+      try {
+        if (!command.client.users.resolve(db._id)) {
+          await command.client.users.fetch(db._id, { cache: true, force: true });
+        }
+      } catch {}
+    }
+
     const customId = new CustomId(command.createdAt).create(ComponentIdentifiers.Paginator);
     const collector = new Collector({
       message: await edit(command, this.renderContent(command, activeType, dbs, customId, false)),
@@ -58,12 +74,11 @@ export default class TopCommand extends Command {
         [customId]: async (ctx) => {
           ctx.collector.resetTimer();
           activeType = ctx.interaction.values.at(0) as PageType;
-          await edit(ctx.interaction, this.renderContent(command, activeType, dbs, customId, false));
+          await update(ctx.interaction, this.renderContent(ctx.interaction, activeType, dbs, customId, false));
         }
       },
       filter: async (menu) => {
         const context = menu.user.id === command.user.id;
-        await menu.deferUpdate();
         return context;
       },
       end: async () => {
@@ -75,14 +90,16 @@ export default class TopCommand extends Command {
     await collector.start();
   }
 
-  protected renderContent(command: Command.ChatInputInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>, ended: boolean) {
+  protected renderContent(interaction: Command.ChatInputInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>, ended: boolean): InteractionMessageContentBuilder<SelectMenuBuilder>;
+  protected renderContent(interaction: SelectMenuInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>, ended: boolean): InteractionMessageUpdateBuilder<SelectMenuBuilder>;
+  protected renderContent(interaction: Command.ChatInputInteraction<'cached'> | SelectMenuInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>, ended: boolean): InteractionMessageContentBuilder<SelectMenuBuilder> | InteractionMessageUpdateBuilder<SelectMenuBuilder> {
     const leaderboard = dbs
       .map((db) => ({ db, value: Reflect.apply(Reflect.get(TopCommand.leaderboards, page), null, [db]) }))
       .filter(({ value }) => value > 0)
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
 
-    return new InteractionMessageContentBuilder()
+    return Reflect.construct<[], InteractionMessageUpdateBuilder<SelectMenuBuilder> | InteractionMessageContentBuilder<SelectMenuBuilder>>(interaction instanceof SelectMenuInteraction ? InteractionMessageUpdateBuilder : InteractionMessageContentBuilder, [])
       .addEmbed((embed) =>
         embed
           .setTitle(`Top ${leaderboard.length} ${pluralise(toTitleCase(page), leaderboard.length)}`)
@@ -99,7 +116,7 @@ export default class TopCommand extends Command {
               )
               : 'No players to show.'
           )
-          .setFooter({ text: command.guild.name, iconURL: getGuildIconURL(command.guild) ?? void 0 })
+          .setFooter({ text: interaction.guild.name, iconURL: getGuildIconURL(interaction.guild) ?? void 0 })
       )
       .addRow((row) =>
         row.addSelectMenuComponent((menu) =>
@@ -123,6 +140,18 @@ export default class TopCommand extends Command {
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
-    registry.registerChatInputCommand((builder) => builder.setName(this.name).setDescription(this.description));
+    registry.registerChatInputCommand((builder) => 
+      builder
+        .setName(this.name)
+        .setDescription(this.description)
+        .addStringOption(option => 
+          option
+            .setName('type')
+            .setDescription('The leaderboard you want to view.')
+            .addChoices(
+              ...Object.entries(PageType).map(([name, value]) => (<APIApplicationCommandOptionChoice<string>>{ name, value }))
+            )  
+        )
+      );
   }
 }

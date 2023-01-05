@@ -2,6 +2,8 @@ import type { HexColorString } from 'discord.js';
 import { DiscordSnowflake } from '@sapphire/snowflake';
 import { filterNullishAndEmpty, isNullOrUndefined } from '@sapphire/utilities';
 
+new Intl.DateTimeFormat('en', {  })
+
 /**
  * Transforms a numerical value into something humans could easily read.
  * The original {@link toReadable} util will be depreciated after the next minor release.

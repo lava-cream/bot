@@ -1,20 +1,37 @@
+import { GuildSchemaStatus } from '#lib/database';
 import { PreconditionNames } from '#lib/framework';
 import { createEmbed, send } from '#lib/utilities';
 import { time, TimestampStyles } from '@discordjs/builders';
 import type { ChatInputCommandDeniedPayload, Preconditions, UserError } from '@sapphire/framework';
 import { Events, Identifiers, Listener } from '@sapphire/framework';
-import { Constants, Permissions } from 'discord.js';
+import { toTitleCase } from '@sapphire/utilities';
+import { Constants, Permissions, PermissionString } from 'discord.js';
 
 export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatInputCommandDenied> {
   public constructor(context: Listener.Context) {
     super(context, { event: Events.ChatInputCommandDenied });
   }
 
+  private get permissionReadables(): Record<PermissionString, string> {
+    const obj: Record<PermissionString, string> = Object.create(null);
+
+    for (const string of Object.keys(Permissions.FLAGS) as PermissionString[]) {
+      Reflect.defineProperty(obj, string, toTitleCase(string.replaceAll('_', ' ')));
+    }
+
+    return obj;
+  };
+
   public async run(error: UserError, payload: ChatInputCommandDeniedPayload) {
     const embed = createEmbed(embed => embed.setColor(Constants.Colors.DARK_BUT_NOT_BLACK));
 
     if (this.isClientMissingPermissions(error, error.context)) {
-      embed;
+      const missingPermissions = error.context.permissions.toArray();
+      embed.setDescription('This command requires me to have special permissions to run this command.');
+      embed.addFields({ 
+        name: `${missingPermissions.toLocaleString()} Permissions`, 
+        value: missingPermissions.map(perm => Reflect.get(this.permissionReadables, perm)).join(', ') 
+      });
     } else if (this.isClientPermissionsNoClient(error)) {
       embed.setDescription("The bot can't check its permission from this channel.");
     } else if (this.isClientHasZeroPermissions(error)) {
@@ -30,7 +47,12 @@ export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatI
     } else if (this.isThreadOnly(error)) {
       embed.setDescription('You cannot run this command outside threads.');
     } else if (this.isUserPermissions(error, error.context)) {
-      embed;
+      const missingPermissions = error.context.permissions.toArray();
+      embed.setDescription('This command requires you to have special permissions to run this command.');
+      embed.addFields({ 
+        name: `${missingPermissions.toLocaleString()} Permissions`, 
+        value: missingPermissions.map(perm => Reflect.get(this.permissionReadables, perm)).join(', ') 
+      });
     } else if (this.isUserMissingStaffPermissions(error)) {
       embed.setDescription('You need to be a server staff to use this command.');
     } else if (this.isOwnerOnly(error)) {
@@ -39,10 +61,25 @@ export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatI
       embed.setDescription("You're currently blocked for using this bot.");
     } else if (this.isUserAccountYoung(error)) {
       embed.setDescription('Your account is too young to use this bot!');
-    } else if (this.isGuildStatusBlocked(error)) {
-      embed.setDescription("This server is currently blocked from using this bot.");
+    } else if (this.isGuildStatusBlocked(error, error.context)) {
+      switch (error.context.status) {
+        case GuildSchemaStatus.Unverified: {
+          embed.setDescription('This server is currently pending for verification.');
+          break;
+        };
+
+        case GuildSchemaStatus.Suspended: {
+          embed.setDescription('This server is temporarily blocked from using this bot.');
+          break;
+        };
+
+        case GuildSchemaStatus.Terminated: {
+          embed.setDescription('This server is permanently banned from using this bot.');
+          break;
+        };
+      }
     } else {
-      embed.setDescription('You cannot run this command. I wonder why.');
+      embed.setDescription('Wow, imagine not being able to run this command for no reason! Error reported btw.');
       this.container.logger.error(`"${payload.interaction.user.tag} (${payload.interaction.user.id})" was blocked from using "${payload.context.commandName}" for an unknown reason`, { error, payload });
     }
 
@@ -65,8 +102,8 @@ export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatI
     return Reflect.get(error, 'identifier') === PreconditionNames.UserAccountAge;
   }
 
-  public isGuildStatusBlocked(error: UserError): boolean {
-    return Reflect.get(error, 'identifier') === PreconditionNames.GuildStatus;
+  public isGuildStatusBlocked(error: UserError, context: unknown): context is Preconditions['GuildStatus'] {
+    return Reflect.get(error, 'identifier') === PreconditionNames.GuildStatus && typeof Reflect.get(context as object, 'status') === 'number';
   }
 
   public isClientMissingPermissions(error: UserError, context: unknown): context is Preconditions['ClientPermissions'] {

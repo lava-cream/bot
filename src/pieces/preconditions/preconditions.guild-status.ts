@@ -33,20 +33,20 @@ export default class GuildBlockListener extends AllFlowsPrecondition {
   }
 
   public override messageRun(message: Message) {
-    return !message.inGuild() ? this.error({ identifier: this.name, message: 'Not in guild.' }) : this.sharedRun(message.guild);
+    return !message.inGuild() ? this.ok() : this.sharedRun(message.guild);
   }
 
   public override chatInputRun(command: CommandInteraction) {
-    return !command.inCachedGuild() ? this.error({ identifier: this.name, message: 'Not in guild.' }) : this.sharedRun(command.guild);
+    return !command.inCachedGuild() ? this.ok() : this.sharedRun(command.guild);
   }
 
   public override contextMenuRun(context: ContextMenuInteraction) {
-    return !context.inCachedGuild() ? this.error({ identifier: this.name, message: 'Not in guild.' }) : this.sharedRun(context.guild);
+    return !context.inCachedGuild() ? this.ok() : this.sharedRun(context.guild);
   }
 }
 
 declare module '@sapphire/framework' {
   interface Preconditions {
-    [PreconditionNames.GuildStatus]: never;
+    [PreconditionNames.GuildStatus]: GuildStatusPreconditionContext;
   }
 }

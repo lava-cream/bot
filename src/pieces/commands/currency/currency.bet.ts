@@ -1,7 +1,7 @@
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { hasDecimal, edit, DeferCommandInteraction, parseNumber, InteractionMessageContentBuilder } from '#lib/utilities';
+import { hasDecimal, parseNumber, InteractionMessageContentBuilder, send } from '#lib/utilities';
 import { bold } from '@discordjs/builders';
 import { isNullOrUndefined } from '@sapphire/utilities';
 import { CommandError } from '#lib/framework';
@@ -14,13 +14,12 @@ import { Constants } from 'discord.js';
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class BetCommand extends Command {
-  @DeferCommandInteraction()
   public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
     const amount = command.options.getString('amount');
 
     if (isNullOrUndefined(amount)) {
-      return await edit(command, BetCommand.renderCurrentBetMessage(db));
+      return await send(command, BetCommand.renderCurrentBetMessage(db));
     }
 
     const parsedAmount = parseNumber(amount, {
@@ -36,7 +35,7 @@ export default class BetCommand extends Command {
     if (parsedAmount > db.wallet.value) throw new CommandError(`You only have ${bold(db.wallet.value.toLocaleString())} coins.`);
 
     await db.run((db) => db.bet.setValue(parsedAmount)).save();
-    await edit(command, BetCommand.renderBetUpdatedMessage(db));
+    await send(command, BetCommand.renderBetUpdatedMessage(db));
     return;
   }
 

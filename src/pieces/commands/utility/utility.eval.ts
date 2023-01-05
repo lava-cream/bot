@@ -7,9 +7,9 @@ import {
   MessageContentBuilder,
   InteractionMessageContentBuilder,
   CustomId,
-  DeferCommandInteraction,
   edit,
-  unsend
+  unsend,
+  send
 } from '#lib/utilities';
 import { Result } from '@sapphire/result';
 import { Stopwatch } from '@sapphire/stopwatch';
@@ -47,14 +47,13 @@ export default class EvalCommand extends Command {
     return evaled;
   }
 
-  @DeferCommandInteraction()
   public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     const code = command.options.getString('code', true);
     const dm = command.options.getBoolean('dm') ?? false;
     const customId = new CustomId(new Date(command.createdTimestamp));
     const context = { watch: new Stopwatch(), evaled: '' };
 
-    await edit(command, (content) => content.addEmbed((embed) => embed.setDescription('Please wait...').setColor(Constants.Colors.DARK_BUT_NOT_BLACK)));
+    await send(command, (content) => content.addEmbed((embed) => embed.setDescription('Please wait...').setColor(Constants.Colors.DARK_BUT_NOT_BLACK)));
     context.watch.start();
 
     const evaluate = async () => {

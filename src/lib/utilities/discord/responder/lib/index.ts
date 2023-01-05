@@ -1,5 +1,5 @@
 import type { GuildCacheMessage, CacheType, CommandInteraction, ButtonInteraction, SelectMenuInteraction } from 'discord.js';
-import { type BuilderCallback, InteractionMessageContentBuilder, CustomId } from '#lib/utilities';
+import { type BuilderCallback, InteractionMessageContentBuilder, CustomId, InteractionMessageUpdateBuilder, MessageActionRowBuilderComponents } from '#lib/utilities';
 import { isFunction, isNullOrUndefined } from '@sapphire/utilities';
 import { Result } from '@sapphire/result';
 
@@ -12,23 +12,22 @@ export type ResponderTarget<Cached extends CacheType> = CommandInteraction<Cache
 /**
  * Represents the responder content.
  */
-export type ResponderContent = string | InteractionMessageContentBuilder | BuilderCallback<InteractionMessageContentBuilder>;
+export type ResponderContent<Components extends MessageActionRowBuilderComponents> = string | InteractionMessageContentBuilder<Components> | BuilderCallback<InteractionMessageContentBuilder<Components>>;
 
 /**
  * Sends a response to an interaction.
  * @template Cached The cached status of the target interaction.
- * @template Target The target interaction's type.
+ * @template Components The type of the components of the content.
  * @param target The target interaction.
  * @param content The message content builder.
+ * @returns A message object.
  * @since 6.0.0
  */
-export async function send<Cached extends CacheType>(
+export async function send<Cached extends CacheType, Components extends MessageActionRowBuilderComponents>(
   target: ResponderTarget<Cached>,
-  content: ResponderContent
+  content: ResponderContent<Components>
 ): Promise<GuildCacheMessage<Cached>> {
-  const builder = new InteractionMessageContentBuilder().apply(
-    isFunction(content) ? content : (builder) => (typeof content === 'string' ? builder.setContent(content) : content)
-  );
+  const builder = new InteractionMessageContentBuilder<Components>().apply(isFunction(content) ? content : (builder) => typeof content === 'string' ? builder.setContent(content) : content);
   const { deferred, replied } = target;
 
   switch (true) {
@@ -49,19 +48,37 @@ export async function send<Cached extends CacheType>(
 /**
  * Edits the original response of an interaction.
  * @template Cached The cached status of the target interaction.
- * @template Target The target interaction's type.
+ * @template Components The type of the components of the content.
  * @param target The target interaction.
  * @param content The message content builder.
+ * @returns A message object.
  * @since 6.0.0
  */
-export async function edit<Cached extends CacheType>(
+export async function edit<Cached extends CacheType, Components extends MessageActionRowBuilderComponents>(
   target: ResponderTarget<Cached>,
-  content: ResponderContent
+  content: ResponderContent<Components>
 ): Promise<GuildCacheMessage<Cached>> {
-  const builder = new InteractionMessageContentBuilder().apply(
-    isFunction(content) ? content : (builder) => (typeof content === 'string' ? builder.setContent(content) : content)
-  );
+  const builder = new InteractionMessageContentBuilder<Components>().apply(isFunction(content) ? content : (builder) => typeof content === 'string' ? builder.setContent(content) : content);
+
   return await target.editReply(builder);
+}
+
+/**
+ * Updates a message component interaction.
+ * @template Cached The cached status of the target interaction.
+ * @template Components The type of the components of the content.
+ * @param target The target interaction.
+ * @param content The message content.
+ * @returns A message object.
+ * @since 6.0.0
+ */
+export async function update<Cached extends CacheType, Components extends MessageActionRowBuilderComponents>(
+  target: Exclude<ResponderTarget<Cached>, CommandInteraction<Cached>>,
+  content: InteractionMessageUpdateBuilder<Components> | BuilderCallback<InteractionMessageUpdateBuilder<Components>>
+): Promise<GuildCacheMessage<Cached>> {
+  const builder = new InteractionMessageUpdateBuilder<Components>().apply(isFunction(content) ? content : (builder) => typeof content === 'string' ? builder.setContent(content) : content);
+
+  return await target.update({ ...builder, fetchReply: true });
 }
 
 /**

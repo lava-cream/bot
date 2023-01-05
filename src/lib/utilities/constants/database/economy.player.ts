@@ -29,14 +29,14 @@ export const enum PlayerBet {
 export const enum PlayerBank {
   Default = PlayerDefaults.Bank,
   MaxLimit = PlayerLimits.Bank,
-  DefaultSpaceMultiplier = 1,
-  MinSpaceMultiplier = 1,
-  MaxSpaceMultiplier = 75,
+  DefaultSpaceMultiplier = 10,
+  MinSpaceMultiplier = 10,
+  MaxSpaceMultiplier = 100,
 }
 
 export const enum PlayerEnergy {
   StarRatio = 100, // StarRatio = 1 Energy
-  StarGain = 10, // StarGain added Per Win
+  StarGain = 50, // StarGain added Per Win
   DefaultDuration = 10, // X Minutes
   TierAddedDefaultDuration = DefaultDuration * 0.2 // X Minutes
 }

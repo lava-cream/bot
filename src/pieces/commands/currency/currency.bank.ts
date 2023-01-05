@@ -1,6 +1,6 @@
 import { CommandError, CommandOptionError } from "#lib/framework";
-import { DeferCommandInteraction, edit, parseNumber, toReadable } from "#lib/utilities";
-import { bold, inlineCode } from "@discordjs/builders";
+import { parseNumber, send } from "#lib/utilities";
+import { bold } from "@discordjs/builders";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { Subcommand } from "@sapphire/plugin-subcommands";
@@ -22,7 +22,6 @@ import { Constants } from "discord.js";
   ]
 })
 export default class BankCommand extends Subcommand {
-  @DeferCommandInteraction()
   public async chatInputDeposit(command: Subcommand.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
     if (db.bank.isMaxValue()) throw new CommandError('Your bank is full.');
@@ -50,30 +49,29 @@ export default class BankCommand extends Subcommand {
       })
       .save();
     
-    await edit(command, builder => 
+    await send(command, builder => 
       builder  
         .addEmbed(embed => 
           embed  
-            .setTitle(`Deposited ${cleanParsedAmount.toLocaleString()}`)
+            .setTitle(`Coins Deposited`)
             .setColor(Constants.Colors.DARK_GREEN)
+            .setDescription(`Successfully deposited ${bold(cleanParsedAmount.toLocaleString())} coins into your bank.`)
             .addFields(
               {
                 name: 'Wallet',
-                value: inlineCode(db.wallet.toLocaleString()),
+                value: db.wallet.toLocaleString(),
                 inline: true
               },
               {
                 name: 'Bank',
-                value: inlineCode(db.bank.toLocaleString()),
+                value: db.bank.toLocaleString(),
                 inline: true
               }
             )
-            .setFooter({ text: `Net Worth: ${toReadable(db.netWorth, 2)}` })
         )
     );
   }
 
-  @DeferCommandInteraction()
   public async chatInputWithdraw(command: Subcommand.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
     if (db.bank.value < 1) throw new CommandError('You have none to withdraw.');
@@ -101,25 +99,25 @@ export default class BankCommand extends Subcommand {
       })
       .save();
     
-    await edit(command, builder => 
+    await send(command, builder => 
       builder  
         .addEmbed(embed => 
           embed  
-            .setTitle(`Withdrawn ${cleanParsedAmount.toLocaleString()}`)
+            .setTitle(`Coins Withdrawn`)
             .setColor(Constants.Colors.DARK_GREEN)
+            .setDescription(`Successfully withdrawn ${bold(cleanParsedAmount.toLocaleString())} coins from your bank.`)
             .addFields(
               {
                 name: 'Wallet',
-                value: inlineCode(db.wallet.toLocaleString()),
+                value: db.wallet.toLocaleString(),
                 inline: true
               },
               {
                 name: 'Bank',
-                value: inlineCode(db.bank.toLocaleString()),
+                value: db.bank.toLocaleString(),
                 inline: true
               }
             )
-            .setFooter({ text: `Net Worth: ${toReadable(db.netWorth, 2)}` })
         )
     );
   }

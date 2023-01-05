@@ -1,7 +1,7 @@
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { join, percent, edit, DeferCommandInteraction, getUserAvatarURL, toReadable, InteractionMessageContentBuilder } from '#lib/utilities';
+import { join, percent, send, getUserAvatarURL, toReadable, InteractionMessageContentBuilder } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
 import { Constants, GuildMember } from 'discord.js';
 import type { PlayerSchema } from '#lib/database';
@@ -12,12 +12,11 @@ import type { PlayerSchema } from '#lib/database';
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class BalanceCommand extends Command {
-  @DeferCommandInteraction()
   public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     const member = command.options.getMember('user') ?? command.member;
     const db = await this.container.db.players.fetch(member.user.id);
 
-    return await edit(command, BalanceCommand.renderContent(member, db));
+    return await send(command, BalanceCommand.renderContent(member, db));
   }
 
   private static renderContent(member: GuildMember, db: PlayerSchema) {

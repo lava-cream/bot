@@ -1,6 +1,6 @@
 import type { PlayerSchema } from "#lib/database";
 import { CommandError } from "#lib/framework";
-import { DeferCommandInteraction, InteractionMessageContentBuilder, join, parseNumber, send } from "#lib/utilities";
+import { InteractionMessageContentBuilder, join, parseNumber, send } from "#lib/utilities";
 import { bold } from "@discordjs/builders";
 import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry, Command, CommandOptionsRunTypeEnum } from "@sapphire/framework";
@@ -13,7 +13,6 @@ import { Constants, User } from "discord.js";
   runIn: [CommandOptionsRunTypeEnum.GuildText],
 })
 export default class ShareCommand extends Command {
-  @DeferCommandInteraction()
   public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
     const recepient = command.options.getMember('recepient', true);

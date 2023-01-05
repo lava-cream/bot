@@ -2,8 +2,8 @@ import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '
 import { ApplyOptions } from '@sapphire/decorators';
 
 import { bold, time, TimestampStyles } from '@discordjs/builders';
-import { join, edit, DeferCommandInteraction, InteractionMessageContentBuilder, CustomId, Collector, seconds, minutes } from '#lib/utilities';
-import { Constants } from 'discord.js';
+import { join, edit, InteractionMessageContentBuilder, CustomId, Collector, seconds, minutes, send, InteractionMessageUpdateBuilder, update } from '#lib/utilities';
+import { ButtonInteraction, Constants } from 'discord.js';
 import type { PlayerSchema } from '#lib/database';
 
 @ApplyOptions<Command.Options>({
@@ -12,31 +12,29 @@ import type { PlayerSchema } from '#lib/database';
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class EnergyCommand extends Command {
-  @DeferCommandInteraction()
   public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
     const componentId = new CustomId(new Date(command.createdTimestamp));
 
     if (!db.energy.isExpired()) {
-      await edit(command, EnergyCommand.renderContent(command, db, componentId, true, true));
+      await send(command, EnergyCommand.renderContent(command, db, componentId, true, true));
       return;
     }
 
     const collector = new Collector({
-      message: await edit(command, EnergyCommand.renderContent(command, db, componentId, false, false)),
+      message: await send(command, EnergyCommand.renderContent(command, db, componentId, false, false)),
       componentType: 'BUTTON',
       max: Infinity,
       time: seconds(10),
       actions: {
         [componentId.create('energize')]: async ctx => {
           await db.run((db) => db.energy.subEnergy(1).setExpire(Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)))).save();
-          await edit(ctx.interaction, EnergyCommand.renderContent(command, db, componentId, true, true));
+          await update(ctx.interaction, EnergyCommand.renderContent(ctx.interaction, db, componentId, true, true));
           return ctx.stop();
         }
       },
       filter: async (btn) => {
         const contextual = btn.user.id === command.user.id;
-        await btn.deferUpdate();
         return contextual;
       },
       end: async (ctx) => {
@@ -50,12 +48,14 @@ export default class EnergyCommand extends Command {
     await collector.start();
   }
 
-  private static renderContent(command: Command.ChatInputInteraction<'cached'>, db: PlayerSchema, componentId: CustomId, energized: boolean, ended: boolean) {
-    return new InteractionMessageContentBuilder()
+  private static renderContent(interaction: Command.ChatInputInteraction<'cached'>, db: PlayerSchema, componentId: CustomId, energized: boolean, ended: boolean): InteractionMessageContentBuilder;
+  private static renderContent(interaction: ButtonInteraction<'cached'>, db: PlayerSchema, componentId: CustomId, energized: boolean, ended: boolean): InteractionMessageUpdateBuilder;
+  private static renderContent(interaction: Command.ChatInputInteraction<'cached'> | ButtonInteraction<'cached'>, db: PlayerSchema, componentId: CustomId, energized: boolean, ended: boolean) {
+    return Reflect.construct<[], InteractionMessageContentBuilder | InteractionMessageUpdateBuilder>(interaction instanceof ButtonInteraction ? InteractionMessageUpdateBuilder : InteractionMessageContentBuilder, [])
       .addEmbed((embed) =>
         embed
-          .setTitle(`${command.user.username}'s energy`)
-          .setColor(energized && ended ? Constants.Colors.GOLD : Constants.Colors.DARK_BUT_NOT_BLACK)
+          .setTitle(`${interaction.user.username}'s energy`)
+          .setColor(energized && ended ? Constants.Colors.DARK_GOLD : Constants.Colors.DARK_BUT_NOT_BLACK)
           .setDescription(
             join(
               `${bold('⭐ Stars:')} ${db.energy.toLocaleString()}`,
