@@ -12,13 +12,15 @@ import {
   ButtonBuilder,
   edit,
   CustomId,
-  getUserAvatarURL,
-  DeferCommandInteraction
+  update,
+  send
 } from '#lib/utilities';
 import { type Game, GameContext, Games } from '#lib/framework';
 import { isNullish, isNullOrUndefined } from '@sapphire/utilities';
 import type { PlayerSchema } from '#lib/database';
 import type { MessageSelectOptionData } from 'discord.js';
+import type { PlayerGamesSchema } from '#lib/database/models/economy/player/player.game.schema';
+import { time, TimestampStyles } from '@discordjs/builders';
 
 enum PickerControl {
   Dropdown = 'picker_list',
@@ -37,7 +39,6 @@ enum EnergyControl {
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class PlayCommand extends Command {
-  @DeferCommandInteraction()
   public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
     const customId = Reflect.construct(CustomId, [command.createdAt]);
@@ -52,7 +53,9 @@ export default class PlayCommand extends Command {
     });
   }
 
-  private renderGamePickerContent(command: Command.ChatInputInteraction<'cached'>, componentId: CustomId, game: Game | null, ended = false) {
+  private renderGamePickerContent(command: Command.ChatInputInteraction<'cached'>, componentId: CustomId, game: Game, schema: PlayerGamesSchema, ended?: boolean): InteractionMessageContentBuilder<ButtonBuilder | SelectMenuBuilder>;
+  private renderGamePickerContent(command: Command.ChatInputInteraction<'cached'>, componentId: CustomId, game: Game | null, schema: PlayerGamesSchema | null, ended?: boolean): InteractionMessageContentBuilder<ButtonBuilder | SelectMenuBuilder>;
+  private renderGamePickerContent(_command: Command.ChatInputInteraction<'cached'>, componentId: CustomId, game: Game | null, schema: PlayerGamesSchema | null, ended = false) {
     return new InteractionMessageContentBuilder<ButtonBuilder | SelectMenuBuilder>()
       .addRow((row) =>
         row.addSelectMenuComponent((menu) =>
@@ -98,59 +101,87 @@ export default class PlayCommand extends Command {
           .setDescription(
             isNullish(game) ? 'Choose a game to play from the dropdown below.' : game.detailedDescription ?? 'No description provided.'
           )
-          .setFooter({ text: command.user.tag, iconURL: getUserAvatarURL(command.user) })
+          .setFields(
+            !isNullish(schema)
+              ? [
+                {
+                  name: 'Last Played',
+                  value: time(new Date(schema.lastPlayedTimestamp), TimestampStyles.RelativeTime),
+                  inline: true
+                },
+                {
+                  name: 'Win Rate',
+                  value: `${(schema.winRate * 100).toFixed(2)}%`,
+                  inline: true,
+                },
+                {
+                  name: 'Net Profit',
+                  value: schema.profit.toLocaleString(),
+                  inline: true
+                }
+              ]
+              : []
+          )
       );
   }
 
   private async chooseGame(command: Command.ChatInputInteraction<'cached'>, db: PlayerSchema.Document, componentId: CustomId): Promise<Game | null> {
     return new Promise(async (resolve) => {
       const gamesStore = this.container.stores.get('games');
-      const selection = new Map<string, Game>();
+
+      let selectedGame: Game | null = !isNullOrUndefined(db.games.lastGamePlayed) 
+        ? gamesStore.get(db.games.lastGamePlayed.id) 
+        : null;
+      let selectedGameSchema: PlayerGamesSchema | null = !isNullOrUndefined(selectedGame)
+        ? db.games.resolve(selectedGame.id) ?? db.games.create(selectedGame.id)
+        : null;
+
       const collector = new Collector({
-        message: await edit(command, this.renderGamePickerContent(command, componentId, !isNullOrUndefined(db.games.lastGamePlayed) ? gamesStore.get(db.games.lastGamePlayed.id) : null)),
+        message: await send(command, this.renderGamePickerContent(command, componentId, selectedGame, selectedGameSchema)),
         max: Infinity,
-        time: seconds(60),
+        time: seconds(10),
         filter: async (component) => {
           const context = component.user.id === command.user.id;
-          await component.deferUpdate();
           return context;
         },
-        end: (ctx) => (ctx.wasInternallyStopped() ? resolve(null) : void 0)
+        end: async (ctx) => {
+          if (ctx.wasInternallyStopped()) {
+            await edit(command, this.renderGamePickerContent(command, componentId, selectedGame, selectedGameSchema, true));
+            return resolve(null);
+          }
+        }
       });
-
-      if (!isNullOrUndefined(db.games.lastGamePlayed)) {
-        selection.set(command.user.id, gamesStore.get(db.games.lastGamePlayed.id));
-      }
 
       for (const customId of Object.values(PickerControl)) {
         collector.actions.add(componentId.create(customId), async (ctx) => {
           if (ctx.interaction.isSelectMenu()) {
             const gameId = ctx.interaction.values.at(0) as Games.Keys ?? null;
             const game = !isNullOrUndefined(gameId) ? gamesStore.get(gameId) : null;
+            const schema = !isNullOrUndefined(game) ? db.games.resolve(game.id) : null;
 
-            if (!isNullOrUndefined(game)) {
-              await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, game));
-              selection.set(command.user.id, game);
-              ctx.collector.resetTimer();
-              return;
+            if (!isNullOrUndefined(game) && !isNullOrUndefined(schema)) {
+              await update(ctx.interaction, this.renderGamePickerContent(command, componentId, selectedGame = game, selectedGameSchema = schema));
+              return ctx.collector.resetTimer();
             }
           }
 
           if (ctx.interaction.isButton()) {
+            const game = selectedGame;
+            const schema = selectedGameSchema;
+
+            if (isNullOrUndefined(game) || isNullOrUndefined(schema)) return;
+
             switch (ctx.interaction.customId) {
               case componentId.create(PickerControl.Proceed): {
-                const game = selection.get(command.user.id);
-                if (isNullOrUndefined(game)) return;
-
+                ctx.stop();
                 await db.run(db => db.games.setLastPlayed(game.id, command.createdAt)).save();
-                await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, game, true));
-                ctx.collector.stop(ctx.interaction.customId);
+                await update(ctx.interaction, this.renderGamePickerContent(command, componentId, game, schema, true));
                 return resolve(game);
               }
 
               case componentId.create(PickerControl.Cancel): {
-                await edit(ctx.interaction, this.renderGamePickerContent(command, componentId, selection.get(command.user.id) ?? null, true));
-                ctx.collector.stop(ctx.interaction.customId);
+                ctx.stop();
+                await update(ctx.interaction, this.renderGamePickerContent(command, componentId, game, schema, true));
                 return resolve(null);
               }
             }
@@ -180,31 +211,17 @@ export default class PlayCommand extends Command {
         row
           .addButtonComponent((btn) =>
             btn
-              .setLabel('Recharge')
               .setDisabled(!isNullish(energized))
               .setCustomId(customId.create(EnergyControl.Energize))
               .setEmoji('⚡')
-              .setStyle(
-                isNullish(energized)
-                  ? Constants.MessageButtonStyles.PRIMARY
-                  : energized
-                  ? Constants.MessageButtonStyles.SUCCESS
-                  : Constants.MessageButtonStyles.SECONDARY
-              )
+              .setStyle(Constants.MessageButtonStyles.SECONDARY)
           )
           .addButtonComponent((btn) =>
             btn
-              .setLabel('Cancel')
               .setDisabled(!isNullish(energized))
               .setCustomId(customId.create(EnergyControl.Cancel))
               .setEmoji('❌')
-              .setStyle(
-                isNullish(energized)
-                  ? Constants.MessageButtonStyles.PRIMARY
-                  : energized
-                  ? Constants.MessageButtonStyles.SECONDARY
-                  : Constants.MessageButtonStyles.SUCCESS
-              )
+              .setStyle(Constants.MessageButtonStyles.SECONDARY)
           )
       );
   }
