@@ -95,7 +95,7 @@ export default class TopCommand extends Command {
   protected renderContent(interaction: Command.ChatInputInteraction<'cached'> | SelectMenuInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>, ended: boolean): InteractionMessageContentBuilder<SelectMenuBuilder> | InteractionMessageUpdateBuilder<SelectMenuBuilder> {
     const leaderboard = dbs
       .map((db) => ({ db, value: Reflect.apply(Reflect.get(TopCommand.leaderboards, page), null, [db]) }))
-      .filter(({ value }) => value > 0)
+      .filter(({ value, db }) => value > 0 && !this.container.client.users.resolve(db._id)?.bot)
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
 
