@@ -1,5 +1,7 @@
 import { Schema, CastDocument, CastJSON, prop, CreateResolvableSchemaType } from '#lib/database/structures/schema.js';
+
 import { PlayerBet, PlayerMasteryAddedLimits } from '#lib/utilities/constants/index.js';
+
 import { PlayerWalletSchema } from './player.wallet.schema.js';
 import { PlayerBankSchema } from './player.bank.schema.js';
 import { PlayerEnergySchema } from './player.energy.schema.js';
@@ -10,7 +12,7 @@ import { PlayerMultiplierSchema } from './player.multiplier.schema.js';
 import { PlayerAdvancementsManagerSchema } from './player.advancements.schema.js';
 import { PlayerPartyManagerSchema } from './player.party.schema.js';
 import { PlayerGamesManagerSchema } from './player.game.schema.js';
-import { container } from '@sapphire/framework';
+import { PlayerBoosterManagerSchema } from './player.booster.schema.js';
 
 export class PlayerSchema extends Schema {
   @prop({ type: () => PlayerWalletSchema, immutable: true, default: new PlayerWalletSchema() })
@@ -43,6 +45,9 @@ export class PlayerSchema extends Schema {
   @prop({ type: () => PlayerGamesManagerSchema, immutable: true, default: new PlayerGamesManagerSchema() })
   public readonly games!: PlayerGamesManagerSchema;
 
+  @prop({ type: () => PlayerBoosterManagerSchema, immutable: true, default: new PlayerBoosterManagerSchema() })
+  public readonly boosters!: PlayerBoosterManagerSchema;
+
   public get netWorth(): number {
     return this.wallet.value + this.bank.value;
   }
@@ -53,17 +58,6 @@ export class PlayerSchema extends Schema {
 
   public get minBet(): number {
     return PlayerBet.MinLimit;
-  }
-
-  public async calculateMultiplier() {
-    let multiplier = this.multiplier.value;
-
-    if (this.party.entries.length) {
-      const parties = await Promise.all(this.party.entries.map((p) => container.db.parties.fetch(p.id)));
-      multiplier += parties.reduce((n, p) => n + p.multiplier, 0);
-    }
-
-    return multiplier;
   }
 }
 
