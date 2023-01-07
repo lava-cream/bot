@@ -7,7 +7,7 @@ import * as Coinflip from '#lib/utilities/games/coinflip/index.js';
 import { bold } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
-import { checkClientReadyStatus, edit, InteractionMessageContentBuilder, percent } from '#lib/utilities';
+import { checkClientReadyStatus, edit, InteractionMessageContentBuilder, percent, roundZero } from '#lib/utilities';
 
 declare module '#lib/framework/structures/game/game.types' {
   interface Games {
@@ -53,11 +53,11 @@ export default class CoinFlipGame extends Game {
 
         switch (true) {
           case game.isWin(): {
-            const winnings = context.winnings
+            const winnings = roundZero(context.winnings
               .setBase(0.9)
               .setMultiplier(context.db.multiplier.value)
               .setRandom(Math.random() * 0.2)
-              .calculate(context.db.bet.value);
+              .calculate(context.db.bet.value));
 
             await context.db
               .run((db) => {

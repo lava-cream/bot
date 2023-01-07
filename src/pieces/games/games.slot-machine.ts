@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Game } from '#lib/framework/index.js';
 
-import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, createEmbed, createButton, toReadable } from '#lib/utilities';
+import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, createEmbed, createButton, toReadable, roundZero } from '#lib/utilities';
 import { Constants } from 'discord.js';
 import { bold, inlineCode } from '@discordjs/builders';
 
@@ -78,10 +78,10 @@ export default class SlotMachineGame extends Game {
       }
 
       case machine.isJackpot() || machine.isWin(): {
-        const won = ctx.winnings
+        const won = roundZero(ctx.winnings
           .setBase(machine.multiplier)
           .setMultiplier(ctx.db.multiplier.value)
-          .calculate(ctx.db.bet.value);
+          .calculate(ctx.db.bet.value));
 
         ctx.db.run(db => {
           ctx.schema.win(won);

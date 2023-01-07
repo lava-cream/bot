@@ -1,5 +1,5 @@
 import { Game } from '#lib/framework';
-import { Collector, percent, getUserAvatarURL, join, seconds, checkClientReadyStatus, createEmbed, createButton, InteractionMessageContentBuilder } from '#lib/utilities';
+import { Collector, percent, getUserAvatarURL, join, seconds, checkClientReadyStatus, createEmbed, createButton, InteractionMessageContentBuilder, roundZero } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Constants } from 'discord.js';
@@ -95,11 +95,11 @@ export default class DiceRollGame extends Game {
       }
 
       case game.isWin(): {
-        const winnings = ctx.winnings
+        const winnings = roundZero(ctx.winnings
           .setBase(0.05)
           .setMultiplier(ctx.db.multiplier.value)
           .setRandom(Math.random() * 1.9)
-          .calculate(ctx.db.bet.value);
+          .calculate(ctx.db.bet.value));
 
         ctx.db.run((db) => {
           ctx.schema.win(winnings);

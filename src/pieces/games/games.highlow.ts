@@ -1,7 +1,7 @@
 import { Game } from '#lib/framework/index.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { join, seconds, getUserAvatarURL, Collector, InteractionMessageContentBuilder, ButtonBuilder, edit } from '#lib/utilities';
+import { join, seconds, getUserAvatarURL, Collector, InteractionMessageContentBuilder, ButtonBuilder, edit, roundZero } from '#lib/utilities';
 import * as Highlow from '#lib/utilities/games/highlow/index.js';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
@@ -75,11 +75,11 @@ export default class HighlowGame extends Game {
 
         if (!logic.hasGuessed()) return;
 
-        const winnings = context.winnings
+        const winnings = roundZero(context.winnings
           .setBase(logic.isJackpot() ? 10 : 0.75)
           .setMultiplier(logic.isJackpot() ? 0 : Math.random() * 0.5)
           .setRandom(logic.isJackpot() ? 0 : context.db.multiplier.value)
-          .calculate(context.db.bet.value);
+          .calculate(context.db.bet.value));
 
         switch (true) {
           case logic.isJackpot():

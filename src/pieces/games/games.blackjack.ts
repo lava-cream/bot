@@ -1,7 +1,7 @@
 import { Game } from '#lib/framework/index.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { getUserAvatarURL, join, seconds, InteractionMessageContentBuilder } from '#lib/utilities';
+import { getUserAvatarURL, join, seconds, InteractionMessageContentBuilder, roundZero } from '#lib/utilities';
 import { checkClientReadyStatus, Collector, edit } from '#lib/utilities/discord/index.js';
 import * as Blackjack from '#lib/utilities/games/blackjack/index.js';
 import { bold, hyperlink, inlineCode } from '@discordjs/builders';
@@ -57,11 +57,11 @@ export default class BlackjackGame extends Game {
 
       switch (game.outcome?.outcome) {
         case Blackjack.Outcome.WIN: {
-          const winnings = context.winnings
+          const winnings = roundZero(context.winnings
             .setBase(0.1)
             .setMultiplier(context.db.multiplier.value)
             .setRandom(Math.random() * 1.8)
-            .calculate(context.db.bet.value)
+            .calculate(context.db.bet.value))
 
           await context.db
             .run((db) => {

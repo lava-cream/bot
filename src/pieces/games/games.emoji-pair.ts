@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, randomItem, createEmbed, createButton, toReadable } from '#lib/utilities';
+import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, randomItem, createEmbed, createButton, toReadable, roundZero } from '#lib/utilities';
 import { Game } from '#lib/framework/index.js';
 import { Constants } from 'discord.js';
 import { bold } from '@discordjs/builders';
@@ -76,10 +76,10 @@ export default class EmojiPairGame extends Game {
       }
 
       case logic.isWin(): {
-        const winnings = ctx.winnings 
+        const winnings = roundZero(ctx.winnings 
           .setBase(randomItem(logic.pair).multiplier)
           .setMultiplier(ctx.db.multiplier.value)
-          .calculate(ctx.db.bet.value);
+          .calculate(ctx.db.bet.value));
 
         ctx.db.run((db) => {
           ctx.schema.win(winnings);
