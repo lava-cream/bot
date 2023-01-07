@@ -1,8 +1,9 @@
 import type { PlayerSchema } from '#lib/database';
 import { BuilderCallback, CustomId, InteractionMessageContentBuilder, isMessageInstance, Responder } from '#lib/utilities';
+import { EmbedTemplates } from '#lib/utilities/discord/templates/templates.embed.js';
 import { Result } from '@sapphire/result';
 import { isNullOrUndefined } from '@sapphire/utilities';
-import { CommandInteraction, Constants, GuildCacheMessage } from 'discord.js';
+import type { CommandInteraction, GuildCacheMessage } from 'discord.js';
 import type { Game } from './game.piece.js';
 
 /**
@@ -111,9 +112,7 @@ export class GameContext {
    * Renders the idle message.
    */
   private renderMessage(message: string) {
-    return new InteractionMessageContentBuilder().addEmbed((embed) =>
-      embed.setTitle('Game Ended').setColor(Constants.Colors.RED).setDescription(message)
-    );
+    return new InteractionMessageContentBuilder().addEmbed(() => EmbedTemplates.createSimple(message));
   }
 }
 
