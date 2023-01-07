@@ -4,7 +4,7 @@ import { EmbedTemplates } from '#lib/utilities/discord/templates/templates.embed
 import { Result } from '@sapphire/result';
 import type { CommandInteraction } from 'discord.js';
 import type { Game } from './game.piece.js';
-import { GameResponder } from './game.responder';
+import { GameResponder } from './game.responder.js';
 import { GameWinnings } from './game.winnings.js';
 
 /**
