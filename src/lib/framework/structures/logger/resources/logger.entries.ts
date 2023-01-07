@@ -3,7 +3,7 @@ import type { Guild } from 'discord.js';
 /**
  * The logger entries. Use module augmentation against this interface to add types.
  */
-export interface Loggers extends Record<LoggerType, BaseLoggerPayload> {}
+export declare interface Loggers {}
 
 export declare namespace Loggers {
   /**
@@ -12,8 +12,8 @@ export declare namespace Loggers {
   type Keys = keyof Loggers;
   /**
    * The {@link Loggers} values.
-   */
-  type Values = Loggers[Keys];
+  */
+ type Values = Loggers[Keys];
 }
 
 /**
@@ -25,11 +25,4 @@ export interface BaseLoggerPayload {
    * The source guild.
    */
   readonly guild: Guild;
-}
-
-/**
- * The logger entry types.
- */
-export const enum LoggerType {
-  DonationUpdate = 'donationUpdate'
 }

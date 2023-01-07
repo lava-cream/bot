@@ -20,4 +20,15 @@ export class PartyRequestSchema extends SubSchema {
   }
 }
 
-export class PartyRequestManagerSchema extends CreateSubSchemaManager(SubSchema) { }
+export class PartyRequestManagerSchema extends CreateSubSchemaManager(PartyRequestSchema) {
+  /**
+   * Retreives party requests, particularly, expired ones.
+   * @param flush If the expired requests should be removed from this manager or not.
+   * @returns An array of expired party requests.
+   */
+  public getExpired(flush = false) {
+    const expired = this.entries.filter((entry) => Date.now() > entry.expire);
+    if (flush) for (const expire of expired) this.delete(expire.id);
+    return expired;
+  }
+}

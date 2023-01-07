@@ -1,12 +1,27 @@
-import type { CommandInteraction } from 'discord.js';
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
 import type { PlayerSchema } from '#lib/database';
-import { MessageEmbed, MessageSelectOptionData, WebhookEditMessageOptions, MessageActionRow, MessageSelectMenu } from 'discord.js';
-import { randomColor, join, createComponentId, Collector, seconds } from '#lib/utilities';
-import { inlineCode, bold } from '@discordjs/builders';
-import { toTitleCase, noop } from '@sapphire/utilities';
+import { Constants, MessageSelectOptionData, SelectMenuInteraction } from 'discord.js';
+import {
+  join,
+  Collector,
+  seconds,
+  InteractionMessageContentBuilder,
+  edit,
+  CustomIdentifier,
+  pluralise,
+  CustomId,
+  getGuildIconURL,
+  send,
+  update,
+  toInlineNumberCode,
+  InlineNumberCodeAlignment,
+  EmbedTemplates
+} from '#lib/utilities';
+import { inlineCode } from '@discordjs/builders';
+import { toTitleCase } from '@sapphire/utilities';
+import type { APIApplicationCommandOptionChoice } from 'discord-api-types/v9';
 
 enum ComponentIdentifiers {
   Paginator = 'paginator'
@@ -14,105 +29,100 @@ enum ComponentIdentifiers {
 
 enum PageType {
   Wallet = 'wallet',
-  Bank = 'bank'
+  Bank = 'bank',
+  Star = 'star',
+  Energy = 'energy'
 }
 
 @ApplyOptions<Command.Options>({
   name: 'top',
-  description: 'View the leading players of the currency.',
+  description: 'View the player leaderboards.',
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class TopCommand extends Command {
-  public override async chatInputRun(command: CommandInteraction<'cached'>) {
-    await command.deferReply();
+  private static leaderboards: Record<PageType, (db: PlayerSchema) => number> = {
+    [PageType.Wallet]: (db) => db.wallet.value,
+    [PageType.Bank]: (db) => db.bank.value,
+    [PageType.Star]: (db) => db.energy.value,
+    [PageType.Energy]: (db) => db.energy.energy
+  };
 
-    let activeType: PageType = PageType.Wallet;
+  public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
+    let activeType: PageType = command.options.getString('type') as PageType | null ?? PageType.Wallet;
+
+    await send(command, builder => builder.addEmbed(
+      embed => embed.setColor(Constants.Colors.DARK_BUT_NOT_BLACK).setDescription('Fetching...')
+    ));
 
     const dbs = await this.container.db.players.fetchAll(true);
+
+    for (const db of dbs.values()) {
+      try {
+        if (!command.client.users.resolve(db._id)) {
+          await command.client.users.fetch(db._id, { cache: true, force: true });
+        }
+      } catch {}
+    }
+
+    const customId = new CustomId(command.createdAt).create(ComponentIdentifiers.Paginator);
     const collector = new Collector({
-      message: await command.editReply(this.renderContent(command, activeType, dbs)),
+      message: await edit(command, this.renderContent(command, activeType, dbs, customId, false)),
       componentType: 'SELECT_MENU',
-      time: seconds(30),
+      time: seconds(10),
       max: Infinity,
+      actions: {
+        [customId]: async (ctx) => {
+          ctx.collector.resetTimer();
+          activeType = ctx.interaction.values.at(0) as PageType;
+          await update(ctx.interaction, this.renderContent(ctx.interaction, activeType, dbs, customId, false));
+        }
+      },
       filter: async (menu) => {
         const context = menu.user.id === command.user.id;
-        await menu.deferUpdate();
         return context;
+      },
+      end: async () => {
+        await edit(command, this.renderContent(command, activeType, dbs, customId, true));
+        return;
       }
-    });
-
-    collector.actions.add(
-      createComponentId({ date: new Date(command.createdTimestamp), customId: ComponentIdentifiers.Paginator }).customId,
-      async (ctx) => {
-        switch ((activeType = ctx.interaction.values.at(0) as PageType)) {
-          case PageType.Wallet:
-          case PageType.Bank: {
-            await ctx.interaction.editReply(this.renderContent(command, activeType, dbs));
-            break;
-          }
-        }
-      }
-    );
-
-    collector.setEndAction(async (ctx) => {
-      const content = this.renderContent(command, activeType, dbs);
-      return void (await ctx.message.edit(content).catch(noop));
     });
 
     await collector.start();
   }
 
-  protected renderContent(command: CommandInteraction<'cached'>, page: PageType, dbs: PlayerSchema[]): WebhookEditMessageOptions {
-    const embed = new MessageEmbed().setColor(randomColor());
+  protected renderContent(interaction: Command.ChatInputInteraction<'cached'> | SelectMenuInteraction<'cached'>, page: PageType, dbs: PlayerSchema[], customId: CustomIdentifier<ComponentIdentifiers>, ended: boolean): InteractionMessageContentBuilder {
+    const leaderboard = dbs
+      .map((db) => ({ db, value: Reflect.apply(Reflect.get(TopCommand.leaderboards, page), null, [db]) }))
+      .filter(({ value, db }) => value > 0 && !this.container.client.users.resolve(db._id)?.bot)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
 
-    switch (page) {
-      case PageType.Wallet: {
-        const wallets = dbs
-          .filter((db) => db.wallet.value > 0)
-          .sort((a, b) => b.wallet.value - a.wallet.value)
-          .slice(0, 10);
+    return new InteractionMessageContentBuilder()
+      .addEmbed(() =>
+        EmbedTemplates.createCamouflaged()
+          .setTitle(`${pluralise(toTitleCase(page), leaderboard.length)} Leaderboard`)
+          .setDescription(
+            leaderboard.length > 0
+              ? join(
+                ...leaderboard.map(({ db }, idx, arr) => {
+                  const value = toInlineNumberCode(arr.map(e => e.value), idx, InlineNumberCodeAlignment.Right);
+                  const user = this.container.client.users.resolve(db._id);
+                  const emoji = (['🥇', '🥈', '🥉'] as const).at(idx) ?? '👏' as const; 
 
-        embed.setTitle(`Top ${wallets.length} wallets`);
-        embed.setDescription(
-          join(
-            ...wallets.map((db, idx) => {
-              const user = this.container.client.users.resolve(db._id);
-              return `${inlineCode(`#${idx + 1}`)} ${bold(db.wallet.value.toLocaleString())} - ${user?.tag ?? 'Unknown User'}`;
-            })
+                  return `${emoji} ${inlineCode(value)} - ${user?.tag ?? 'Unknown User'}`;
+                })
+              )
+              : 'No players to show.'
           )
-        );
-
-        break;
-      }
-
-      case PageType.Bank: {
-        const banks = dbs
-          .filter((db) => db.bank.value > 0)
-          .sort((a, b) => b.bank.value - a.bank.value)
-          .slice(0, 10);
-
-        embed.setTitle(`Top ${banks.length} banks`);
-        embed.setDescription(
-          join(
-            ...banks.map((db, idx) => {
-              const user = this.container.client.users.resolve(db._id);
-              return `${inlineCode(`#${idx + 1}`)} ${bold(db.bank.value.toLocaleString())} - ${user?.tag ?? 'Unknown User'}`;
-            })
-          )
-        );
-
-        break;
-      }
-    }
-
-    return {
-      embeds: [embed],
-      components: [
-        new MessageActionRow<MessageSelectMenu>().addComponents(
-          new MessageSelectMenu()
-            .setCustomId(createComponentId({ date: new Date(command.createdTimestamp), customId: ComponentIdentifiers.Paginator }).customId)
+          .setFooter({ text: interaction.guild.name, iconURL: getGuildIconURL(interaction.guild) ?? void 0 })
+      )
+      .addRow((row) =>
+        row.addSelectMenuComponent((menu) =>
+          menu
+            .setCustomId(customId)
             .setPlaceholder(toTitleCase(page))
             .setMaxValues(1)
+            .setDisabled(ended)
             .setOptions(
               ...Object.values(PageType).map(
                 (id) =>
@@ -124,11 +134,22 @@ export default class TopCommand extends Command {
               )
             )
         )
-      ]
-    };
+      );
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
-    registry.registerChatInputCommand((builder) => builder.setName(this.name).setDescription(this.description));
+    registry.registerChatInputCommand((builder) => 
+      builder
+        .setName(this.name)
+        .setDescription(this.description)
+        .addStringOption(option => 
+          option
+            .setName('type')
+            .setDescription('The leaderboard you want to view.')
+            .addChoices(
+              ...Object.entries(PageType).map(([name, value]) => (<APIApplicationCommandOptionChoice<string>>{ name, value }))
+            )  
+        )
+      );
   }
 }

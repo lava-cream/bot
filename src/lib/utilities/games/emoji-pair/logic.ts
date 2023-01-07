@@ -9,6 +9,7 @@ export type Pair = Emoji[];
 
 export class Logic {
   public pair: Pair;
+  public revealed = false;
 
   public constructor(public readonly emojis: Emoji[]) {
     this.pair = randomItems(emojis, 2, false);
@@ -32,6 +33,11 @@ export class Logic {
 
   public reroll(): this {
     this.pair = randomItems(this.emojis, 2, false);
+    return this;
+  }
+
+  public reveal(): this {
+    this.revealed = true;
     return this;
   }
 }

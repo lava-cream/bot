@@ -1,5 +1,7 @@
 import { Schema, CastDocument, CastJSON, prop, CreateResolvableSchemaType } from '#lib/database/structures/schema.js';
-import { PlayerDefaults, PlayerMasteryAddedLimits } from '#lib/utilities/constants/index.js';
+
+import { PlayerBet, PlayerMasteryAddedLimits } from '#lib/utilities/constants/index.js';
+
 import { PlayerWalletSchema } from './player.wallet.schema.js';
 import { PlayerBankSchema } from './player.bank.schema.js';
 import { PlayerEnergySchema } from './player.energy.schema.js';
@@ -9,7 +11,8 @@ import { PlayerBetSchema } from './player.bet.schema.js';
 import { PlayerMultiplierSchema } from './player.multiplier.schema.js';
 import { PlayerAdvancementsManagerSchema } from './player.advancements.schema.js';
 import { PlayerPartyManagerSchema } from './player.party.schema.js';
-import { container } from '@sapphire/framework';
+import { PlayerGamesManagerSchema } from './player.game.schema.js';
+import { PlayerBoosterManagerSchema } from './player.booster.schema.js';
 
 export class PlayerSchema extends Schema {
   @prop({ type: () => PlayerWalletSchema, immutable: true, default: new PlayerWalletSchema() })
@@ -39,27 +42,22 @@ export class PlayerSchema extends Schema {
   @prop({ type: () => PlayerPartyManagerSchema, immutable: true, default: new PlayerPartyManagerSchema() })
   public readonly party!: PlayerPartyManagerSchema;
 
+  @prop({ type: () => PlayerGamesManagerSchema, immutable: true, default: new PlayerGamesManagerSchema() })
+  public readonly games!: PlayerGamesManagerSchema;
+
+  @prop({ type: () => PlayerBoosterManagerSchema, immutable: true, default: new PlayerBoosterManagerSchema() })
+  public readonly boosters!: PlayerBoosterManagerSchema;
+
   public get netWorth(): number {
     return this.wallet.value + this.bank.value;
   }
 
   public get maxBet(): number {
-    return Math.round(PlayerDefaults.Bet + PlayerMasteryAddedLimits.Bet * this.upgrades.mastery.value);
+    return Math.round(PlayerBet.MaxLimit + PlayerMasteryAddedLimits.Bet * this.upgrades.mastery);
   }
 
   public get minBet(): number {
-    return Math.round(this.maxBet / 1_000);
-  }
-
-  public async calculateMultiplier() {
-    let multiplier = this.multiplier.value;
-
-    if (this.party.entries.length) {
-      const parties = await Promise.all(this.party.entries.map(p => container.db.parties.fetch(p.id)));
-      for (const party of parties.values()) multiplier += party.members.multiplier;
-    }
-
-    return multiplier;
+    return PlayerBet.MinLimit;
   }
 }
 

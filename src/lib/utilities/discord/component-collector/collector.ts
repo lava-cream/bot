@@ -1,59 +1,14 @@
+import { Builder, BuilderCallback } from '#lib/utilities/builders/builder.js';
+import { FirstArgument, isFunction, isNullOrUndefined } from '@sapphire/utilities';
 import type {
   MessageComponentTypeResolvable,
-  Message,
-  MessageCollectorOptionsParams,
-  Awaitable,
   MappedInteractionTypes,
   InteractionCollector,
+  Collection
 } from 'discord.js';
 import { CollectorActionManager } from './collector.action-manager.js';
-import type { CollectorActionContext } from './collector.action.js';
-
-/**
- * Options to create a {@link Collector}.
- * @template T The component type.
- * @template Cached Whether the interaction came from a cached message.
- * @since 6.0.0
- */
-export interface CollectorOptions<in out T extends MessageComponentTypeResolvable, in out Cached extends boolean> extends MessageCollectorOptionsParams<T, Cached> {
-  /**
-   * The message to collect interactions from.
-   */
-  message: Message<Cached>;
-  /**
-   * The type of the message component to collect.
-   */
-  componentType: T;
-  /**
-   * Called when the InteractionCollector attached emits the `end` event.
-   */
-  end?: CollectorEndPredicate<T, Cached>;
-}
-
-/**
- * The predicate to call when the collector ends.
- * @template T The component's type.
- * @template Cached The cache status.
- */
-type CollectorEndPredicate<T extends MessageComponentTypeResolvable, Cached extends boolean> = (
-  /**
-   * The context for this predicate.
-   */
-  context: Omit<CollectorActionContext<T, Cached>, 'interaction' | 'action'> & Readonly<{
-    /**
-     * The interaction or null if no interactions were found from the collected elements.
-     */
-    interaction: MappedInteractionTypes<Cached>[T] | null;
-    /**
-     * The reason why the collector ended.
-     */
-    reason: string;
-    /**
-     * Checks if the InteractionCollector attached stopped this collector from running.
-     */
-    wasInternallyStopped(): boolean
-  }>
-) => Awaitable<void>;
+import type { CollectorActionContext, CollectorEndAction } from './collector.action.js';
+import CollectorOptions, { ICollectorOptions } from './collector.options.js';
 
 /**
  * Represents a component collector.
@@ -62,7 +17,7 @@ type CollectorEndPredicate<T extends MessageComponentTypeResolvable, Cached exte
  * @version 6.0.0
  * @since 4.7.2
  */
-export class Collector<in out T extends MessageComponentTypeResolvable, Cached extends boolean = boolean> {
+export class Collector<in out T extends MessageComponentTypeResolvable, Cached extends boolean = boolean> extends Builder {
   /**
    * Actions Manager
    * -
@@ -76,38 +31,91 @@ export class Collector<in out T extends MessageComponentTypeResolvable, Cached e
    * The main interaction collector assigned for this component collector.
    */
   public collector?: InteractionCollector<MappedInteractionTypes<Cached>[T]>;
+  /**
+   * Collector Options
+   * -
+   * The collector's to-apply options for the InteractionCollector.
+   */
+  public options: CollectorOptions<T, Cached>;
 
   /**
    * The component collector's constructor.
    * @param options Options to create an interaction collector.
    */
-  public constructor(public options: CollectorOptions<T, Cached>) {}
+  public constructor(options?: ICollectorOptions<T, Cached> | BuilderCallback<CollectorOptions<T, Cached>>) {
+    super();
+    this.options = new CollectorOptions(this, isFunction(options) ? Builder.build(new CollectorOptions(this), options) : options);
+  }
 
   /**
    * Starts collecting for interactions.
-   * @param options The options for the collector.
    * @returns None.
    */
-  public start(): Promise<void> {
-    return new Promise(async (resolve) => {
-      const collector = (this.collector = this.options.message.createMessageComponentCollector<T>(this.options));
-
-      collector.on('collect', (interaction) => {
-        const action = this.actions.resolve(interaction.customId);
-        return action?.run({ interaction, action, collector, message: this.options.message });
-      });
-
-      collector.on('end', (collected, reason) => {
-        return this.options.end?.({ 
-          interaction: collected.find((i) => i.customId === this.actions.resolve(collected.last()?.customId!)?.id) ?? null, 
-          message: this.options.message, 
-          collector, 
-          reason, 
-          wasInternallyStopped: () => ['time', 'idle', 'user'].includes(reason),
-        });
-      });
-
-      collector.once('end', () => resolve());
+  public start(message = this.options.message): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+      const collector = this.createCollector(message);
+      if (!collector) return reject('Missing "options.message"');
+      
+      collector
+        .on('collect', (interaction) => Reflect.apply(this.onCollect, this, [interaction, collector]))
+        .on('end', (collected, reason) => Reflect.apply(this.onEnd, this, [collected, reason, collector]))
+        .once('end', () => resolve());
     });
   }
+
+  /**
+   * Attaches the main {@link InteractionCollector} to use for this collector.
+   * @returns An instance of {@link InteractionCollector}, `false` otherwise.
+   */
+  private createCollector(message = this.options.message) {
+    return !isNullOrUndefined(message) && (this.collector = message.createMessageComponentCollector<T>(this.options));
+  }
+
+  /**
+   * Represents this collector's handler for receiving interactions emitted by the attached {@link InteractionCollector}.
+   * @param interaction The interaction received by the attached {@link InteractionCollector}.
+   * @param collector The attached {@link InteractionCollector}.
+   * @returns Void.
+   */
+  private async onCollect(interaction: MappedInteractionTypes<Cached>[T], collector: InteractionCollector<MappedInteractionTypes<Cached>[T]>): Promise<void> {
+    const action = this.actions.resolve(interaction.customId);
+    if (isNullOrUndefined(action)) return;
+    
+    const context: CollectorActionContext<T, Cached> = { 
+      action, 
+      collector, 
+      interaction,
+      stop(reason) {
+        return this.collector.stop(reason ?? this.interaction.customId);
+      }, 
+    };
+
+
+    return Reflect.apply(action.run, action, [context]);
+  }
+
+  /**
+   * Represents this collector's handler for when the {@link InteractionCollector} ends.
+   * @param collected A collection of collected interactions.
+   * @param reason The reasons why the collector ended.
+   * @param collector An {@link InteractionCollector} instance.
+   * @returns Void.
+   */
+  private async onEnd(collected: Collection<string, MappedInteractionTypes<Cached>[T]>, reason: string, collector: InteractionCollector<MappedInteractionTypes<Cached>[T]>): Promise<void> {
+    const context: FirstArgument<CollectorEndAction<T, Cached>> = {
+      collector,
+      reason,
+      interaction: collected.last() ?? null,
+      wasInternallyStopped() {
+        return Collector.NativeCollectorEndReasons.includes(this.reason);
+      },
+    };
+
+    return void (!isNullOrUndefined(this.options.end) && Reflect.apply(this.options.end, null, [context]));
+  }
+
+  /**
+   * An array of reasons of the {@link InteractionCollector} on why it ends on behalf of calling {@link InteractionCollector#stop}.
+   */
+  private static NativeCollectorEndReasons = ['time', 'user', 'idle', 'limit', 'componentLimit', 'userLimit', 'messageDelete', 'channelDelete', 'threadDelete', 'guildDelete'] satisfies string[];
 }

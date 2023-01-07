@@ -1,6 +1,6 @@
-import type { Client } from '#lib/database/client/client.js';
+import type DatabaseClient from '#lib/database/client/client.js';
 import { Manager } from '#lib/database/structures/manager.js';
-import { createComponentId, join, MessageContentBuilder, type SelectMenuBuilder } from '#lib/utilities';
+import { CustomId, join, MessageContentBuilder, type SelectMenuBuilder } from '#lib/utilities';
 import { bold } from '@discordjs/builders';
 import { Resolvers } from '@sapphire/framework';
 import { isNullOrUndefined } from '@sapphire/utilities';
@@ -8,7 +8,7 @@ import type { CommandInteraction, MessageEditOptions, MessageOptions, MessageSel
 import { DonationDeskSchema } from './donation-desk.schema.js';
 
 export class DonationDeskManager extends Manager<DonationDeskSchema> {
-  public constructor(client: Client) {
+  public constructor(client: DatabaseClient) {
     super({ client, name: 'dank-memer.donation-desk', holds: DonationDeskSchema });
   }
 
@@ -17,7 +17,7 @@ export class DonationDeskManager extends Manager<DonationDeskSchema> {
 
     const channel = Resolvers.resolveGuildTextChannel(db.channels.desk.id, command.guild);
     if (channel.isErr()) {
-      if (!isNullOrUndefined(db.channels.desk.id)) await db.run((db) => db.channels.desk.update({ id: null, message: null })).save();
+      if (!isNullOrUndefined(db.channels.desk.id)) await db.run((db) => db.channels.desk.setId(null).setMessage(null)).save();
       return false;
     }
 
@@ -35,7 +35,7 @@ export class DonationDeskManager extends Manager<DonationDeskSchema> {
       .addRow((row) =>
         row.addSelectMenuComponent((menu) =>
           menu
-            .setCustomId(createComponentId('menu').toString())
+            .setCustomId(new CustomId(command.createdAt).create('menu'))
             .setPlaceholder('Select a donation category')
             .setOptions(
               db.entries.entries.map(

@@ -1,16 +1,20 @@
-import type { OmitFunctions } from '#lib/utilities/common/index.js';
-import { PlayerDefaults, PlayerLimits, PlayerMasteryAddedLimits } from '#lib/utilities/constants/index.js';
-import { prop } from '#lib/database/structures/schema.js';
+import { PlayerDefaults, PlayerLimits, PlayerTierAddedLimits } from '#lib/utilities/constants/index.js';
+import { CreateNumberValueSchema, prop } from '#lib/database/structures/schema.js';
 
-export class PlayerMultiplierSchema {
-  @prop({ type: Number, default: PlayerDefaults.Multiplier })
-  public value!: number;
+export class PlayerMultiplierSchema extends CreateNumberValueSchema(PlayerDefaults.Multiplier) {
+  @prop({ type: Number, default: 0 })
+  public expire!: number;
 
-  public update(options: Partial<OmitFunctions<PlayerMultiplierSchema>>): this {
-    return Object.assign(this, options);
+  public isExpired() {
+    return Date.now() >= this.expire;
   }
 
-  public isMaximumValue(mastery: number) {
-    return this.value >= Math.round(PlayerLimits.Multiplier + PlayerMasteryAddedLimits.Multiplier * mastery);
+  public isMaxValue(mastery: number) {
+    return this.value >= Math.round(PlayerLimits.Multiplier + PlayerTierAddedLimits.Multiplier * mastery);
+  }
+
+  public setExpire(expire: Date | number) {
+    this.expire = expire instanceof Date ? expire.getTime() : expire;
+    return this;
   }
 }

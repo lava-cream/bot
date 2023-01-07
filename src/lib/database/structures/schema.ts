@@ -1,6 +1,7 @@
-import { type OmitFunctions, pushElement, resolveElement, removeElement } from '#lib/utilities';
+import { type OmitFunctions, pushElement, resolveElement, removeElement, toReadable, toCollection } from '#lib/utilities';
 import typegoose, { types } from '@typegoose/typegoose';
-import type { Ctor } from '@sapphire/utilities';
+import { Ctor, FirstArgument, isNullOrUndefined, Primitive } from '@sapphire/utilities';
+import type { Collection } from '@discordjs/collection';
 
 export const {
   prop,
@@ -19,8 +20,9 @@ export type CastDocument<T extends Schema> = typegoose.DocumentType<T>;
 /**
  * Creates a JSON type of the model.
  * @template T The {@link Schema schema} to cast.
+ * @version 6.0.0
  */
-export type CastJSON<T extends Schema> = Readonly<OmitFunctions<T>>;
+export type CastJSON<T> = { readonly [P in keyof OmitFunctions<T>]: T[P] extends Primitive ? T[P] : CastJSON<T[P]> };
 
 /**
  * Represents a union type of a document's id field type and the document type itself.
@@ -63,12 +65,12 @@ export class SubSchema {
   public readonly id!: string;
 
   /**
-   * The subschema's constructor
-   * @param id The id of this subschema.
+   * The sub-schema's constructor.
+   * @param id The id of this sub-schema.
    */
   public constructor(id: string) {
     this.id = id;
-  } 
+  }
 }
 
 /**
@@ -79,18 +81,32 @@ export class SubSchema {
  * @since 6.0.0
  */
 export function CreateSubSchemaManager<TSchema extends SubSchema, Args extends unknown[]>(SubSchema: Ctor<Args, TSchema>) {
-  class SubSchemaManager {
+  abstract class SubSchemaManager {
     /**
      * The entries of this manager.
      */
-    @prop({ type: () => [SubSchema], immutable: true, default: [] })
+    @prop({ type: () => [SubSchema], default: [] })
     public readonly entries!: TSchema[];
+
+    /**
+     * The manager's constructor.
+     */
+    public constructor() {
+      this.entries = [];
+    }
 
     /**
      * The "keys" of this manager are all entry ids.
      */
     public get keys() {
-      return this.entries.map(entry => entry.id);
+      return this.entries.map((entry) => entry.id);
+    }
+
+    /**
+     * The manager's entries in a collection.
+     */
+    public get collection(): Collection<string, TSchema> {
+      return toCollection(this.entries);
     }
 
     /**
@@ -98,7 +114,7 @@ export function CreateSubSchemaManager<TSchema extends SubSchema, Args extends u
      * @param args The constructor parameters.
      */
     public create(...args: ConstructorParameters<typeof SubSchema>) {
-      return pushElement(this.entries, new SubSchema(...args));
+      return pushElement(this.entries, Reflect.construct(SubSchema, args));
     }
 
     /**
@@ -110,13 +126,153 @@ export function CreateSubSchemaManager<TSchema extends SubSchema, Args extends u
     }
 
     /**
+     * Applies {@link Array#find} against the entries of this subschema manager.
+     * @param fn A function that must return a boolean based on the predicate.
+     * @returns The found element.
+     */
+    public find(fn: FirstArgument<TSchema[]['find']>) {
+      return resolveElement(this.entries, fn);
+    }
+
+    /**
      * Deletes an existing entry from this manager.
      * @param id The id of the entry to delete.
      */
     public delete(id: string): TSchema | null {
       return removeElement(this.entries, (entry) => entry.id === id);
     }
+
+    /**
+     * The manager's custom iterator.
+     * @returns The entries' iterator.
+     */
+    public [Symbol.iterator]() {
+      return this.entries.values();
+    }
   }
 
   return SubSchemaManager;
+}
+
+/**
+ * The allowed types of a value schema.
+ */
+export type ValueSchemaTypes = string | number | null;
+
+/**
+ * Creates a schema but only containing a `value` property.
+ * @param defaultValue The default value.
+ * @returns The {@link ValueSchema} class.
+ * @since 6.0.0
+ */
+export function CreateValueSchema<T extends ValueSchemaTypes = ValueSchemaTypes>(defaultValue?: T) {
+  abstract class ValueSchema {
+    /**
+     * The value of this schema.
+     */
+    @prop({ type: isNullOrUndefined(defaultValue) ? SchemaTypes.Mixed : typeof defaultValue === 'number' ? Number : String, default: defaultValue })
+    public value!: T;
+
+    /**
+     * Sets the new value of this schema.
+     * @param value The new value of this schema.
+     * @returns This schema.
+     */
+    public setValue(value: T): this {
+      this.value = value;
+      return this;
+    }
+
+    /**
+     * Resets this schema's value back to its default configured value.
+     * @returns This schema.
+     */
+    public resetValue(): this {
+      if (!isNullOrUndefined(defaultValue)) this.setValue(defaultValue);
+      return this;
+    }
+  }
+
+  return ValueSchema;
+}
+
+/**
+ * Creates a {@link ValueSchema} with a string value.
+ * @param defaultValue The default string value of the schema.
+ * @returns A schema.
+ * @since 6.0.0
+ */
+export function CreateStringValueSchema(defaultValue?: string) {
+  /**
+   * Represents a {@link ValueSchema} with a string value.
+   */
+  abstract class StringValueSchema extends CreateValueSchema(defaultValue) {
+    /**
+     * The trimmed version of this schema's value.
+     */
+    public get cleanValue() {
+      return this.value.trim();
+    }
+  }
+
+  return StringValueSchema;
+}
+
+/**
+ * Creates a {@link ValueSchema} with a number value.
+ * @param defaultValue The default number value of the schema.
+ * @returns A schema.
+ * @since 6.0.0
+ */
+export function CreateNumberValueSchema(defaultValue?: number) {
+  /**
+   * Represents a {@link ValueSchema} with a number value.
+   */
+  abstract class NumberValueSchema extends CreateValueSchema(defaultValue) {
+    /**
+     * Increments the current value of this schema.
+     * @param value The value to add.
+     * @returns This schema.
+     */
+    public addValue(value: number): this {
+      return this.setValue(this.value + value);
+    }
+
+    /**
+     * Decrements the current value of this schema.
+     * @param value The value to deduct.
+     * @returns This schema.
+     */
+    public subValue(value: number): this {
+      return this.setValue(this.value - value);
+    }
+
+    /**
+     * Formats this schema's value to its shorter and readable form.
+     * @param fractionDigits The decimal places to preserve.
+     * @returns The formatted string.
+     */
+    public toReadable(fractionDigits = 0) {
+      return toReadable(this.value, fractionDigits);
+    }
+
+    /**
+     * Defines the number's toString() behavior. In this case, it only transforms the value as string.
+     * @returns The value as a string primitive.
+     */
+    public override toString() {
+      return this.value.toString();
+    }
+
+    /**
+     * Defines the number's toLocaleString() behavior. In this case, it transforms the value to string and formatting it based from the locale.
+     * @param args The method's core arguments.
+     * @returns The value as a string primitive, formatted.
+     */
+    public override toLocaleString(...args: Parameters<number['toLocaleString']>) {
+      return this.value.toLocaleString(...args);
+    }
+  }
+
+  return NumberValueSchema;
 }

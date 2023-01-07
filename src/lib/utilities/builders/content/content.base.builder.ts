@@ -1,5 +1,5 @@
 import type { MessageFlagsString, MessageOptions, MessageMentionOptions, StickerResolvable, BitFieldResolvable } from 'discord.js';
-import type { MessageActionRowBuilderComponents, BuilderCallback } from '#lib/utilities';
+import { MessageActionRowBuilderComponents, BuilderCallback, removeElement } from '#lib/utilities';
 import { pushElement, Builder, MessageActionRowBuilder } from '#lib/utilities';
 import { MessageEmbed, MessageAttachment } from 'discord.js';
 
@@ -41,8 +41,20 @@ export abstract class BaseMessageContentBuilder<
     return this;
   }
 
+  public setEmbeds(...builders: BuilderCallback<MessageEmbed>[]): this {
+    removeElement((this.embeds ??= []), () => true);
+    for (const builder of builders) this.addEmbed(builder);
+    return this;
+  }
+
   public addEmbed(builder: BuilderCallback<MessageEmbed>): this {
     pushElement((this.embeds ??= []), Builder.build(new MessageEmbed(), builder));
+    return this;
+  }
+
+  public setRows(...builders: BuilderCallback<MessageActionRowBuilder<Components>>[]): this {
+    removeElement((this.components ??= []), () => true);
+    for (const builder of builders) this.addRow(builder);
     return this;
   }
 

@@ -1,35 +1,34 @@
 import type { Message, CommandInteraction, ContextMenuInteraction } from 'discord.js';
-import type { PieceContext } from '@sapphire/framework';
-import { Precondition } from '@sapphire/framework';
+import { AllFlowsPrecondition, PieceContext } from '@sapphire/framework';
 
 import { PreconditionNames } from '#lib/framework/preconditions/index.js';
 import { GuildSchemaStatus } from '#lib/database/models/primary/guild/index.js';
 
-export default class GuildBlockListener extends Precondition {
+export interface GuildStatusPreconditionContext {
+  status: GuildSchemaStatus;
+}
+
+export default class GuildBlockListener extends AllFlowsPrecondition {
   public constructor(context: PieceContext) {
     super(context, { name: PreconditionNames.GuildStatus, position: 2 });
   }
 
   private async sharedRun(guild: import('discord.js').Guild) {
-    const error = (message: string) => this.error({ identifier: this.name, message });
     const db = await this.container.db.guilds.fetch(guild.id);
 
-    switch(db.status) {
-      case GuildSchemaStatus.Unverified: {
-        return error("We're still processing for the verification of this guild.");
-      };
-
-      case GuildSchemaStatus.Suspended: {
-        return error('This guild was suspended by the developer. However, this is still revokeable.');
-      };
-
+    switch (db.status) {
+      case GuildSchemaStatus.Unverified:
+      case GuildSchemaStatus.Suspended:
       case GuildSchemaStatus.Terminated: {
-        return error("This guild was terminated by the developer. This is not revokeable.");
+        return this.error({ 
+          identifier: this.name, 
+          context: { status: db.status } satisfies GuildStatusPreconditionContext 
+        });
       }
 
       default: {
         return this.ok();
-      };
+      }
     }
   }
 
@@ -48,6 +47,6 @@ export default class GuildBlockListener extends Precondition {
 
 declare module '@sapphire/framework' {
   interface Preconditions {
-    [PreconditionNames.GuildStatus]: never;
+    [PreconditionNames.GuildStatus]: GuildStatusPreconditionContext;
   }
 }

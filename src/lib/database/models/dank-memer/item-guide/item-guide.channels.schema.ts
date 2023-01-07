@@ -1,6 +1,20 @@
 import type { OmitFunctions } from '#lib/utilities/common/index.js';
 import { prop, SchemaTypes } from '#lib/database/structures/schema.js';
 
+export class ItemGuideChannelsMainSchema {
+  @prop({ type: SchemaTypes.Mixed })
+  public id!: string | null;
+
+  public constructor(options: OmitFunctions<ItemGuideChannelsMainSchema>) {
+    this.id = options.id;
+  }
+
+  public setId(id: string | null): this {
+    this.id = id;
+    return this;
+  }
+}
+
 export class ItemGuideChannelsManagerSchema {
   @prop({ type: () => ItemGuideChannelsMainSchema, immutable: true })
   public readonly main!: ItemGuideChannelsMainSchema;
@@ -15,20 +29,6 @@ export class ItemGuideChannelsManagerSchema {
 
   public setUpdates(updates: string | null): this {
     this.updates = updates;
-    return this;
-  }
-}
-
-export class ItemGuideChannelsMainSchema {
-  @prop({ type: SchemaTypes.Mixed })
-  public id!: string | null;
-
-  public constructor(options: OmitFunctions<ItemGuideChannelsMainSchema>) {
-    this.id = options.id;
-  }
-
-  public setId(id: string | null): this {
-    this.id = id;
     return this;
   }
 }

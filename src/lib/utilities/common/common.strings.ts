@@ -1,22 +1,55 @@
 import type { HexColorString } from 'discord.js';
 import { DiscordSnowflake } from '@sapphire/snowflake';
-import { isNullOrUndefined } from '@sapphire/utilities';
+import { filterNullishAndEmpty, isNullOrUndefined } from '@sapphire/utilities';
 
-/**
- * Transforms a numerical value into something humans could easily read. 
- * The original {@link toReadable} util will be depreciated after the next minor release.
- * This makes use of the internal {@link Intl} global namespace. Credits to Fireship.
- * @param x The number to transform.
- * @returns A shorthand number string.
- * @since 6.0.0
- */
-export function toNearestReadable(x: number): string {
-  const formatter = Intl.NumberFormat('en-US', { notation: 'compact' });
-  return formatter.format(x);
+export enum InlineNumberCodeAlignment {
+  Left = 1,
+  Right = 3
+}
+
+export function toInlineNumberCode(numbers: number[], index: number, align: InlineNumberCodeAlignment): string {
+  const element = numbers
+    .map((number, _idx, stringArr) => {
+      const firstElem = stringArr.at(0)?.toLocaleString();
+      if (!firstElem) throw new Error('Empty Array');
+
+      const string = number.toLocaleString();
+
+      switch (align) {
+        case InlineNumberCodeAlignment.Left: {
+          return `${string.padStart(string.length + 1).padEnd(firstElem.length + 2)}`;
+        };
+
+        case InlineNumberCodeAlignment.Right: {
+          return `${string.padStart(firstElem.length + 1).padEnd(firstElem.length + 2)}`;
+        };
+
+        default: {
+          return `${string.padStart(string.length + 1).padEnd(string.length + 2)}`
+        }
+      }
+    })
+    .at(index);
+  
+  if (!element) throw new Error('Missing Number');
+  return element;
 }
 
 /**
- * Creates a "Now" identification string based on a specific date.
+ * Transforms a numerical value into something humans could easily read.
+ * The original {@link toReadable} util will be depreciated after the next minor release.
+ * This makes use of the internal {@link Intl} global namespace. Credits to Fireship.
+ * @param x The number to format.
+ * @param maximumFractionDigits The possible amount of decimals to show.
+ * @returns A shorthand number string.
+ * @since 6.0.0
+ */
+export function toReadable(x: number, maximumFractionDigits = 2): string {
+  return Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits }).format(x);
+}
+
+/**
+ * Creates a "Now" ID string.
  * A "Now" id string has the following characteristics:
  * * It's only 6 characters long.
  * * All characters are alphanumeric.
@@ -27,7 +60,10 @@ export function toNearestReadable(x: number): string {
  * @since 6.0.0
  */
 export function createNowId(date = new Date()): string {
-  return Math.round(date.getTime() * 0xffffff).toString(36).toUpperCase().slice(-7, -1);
+  return Math.round(date.getTime() * 0xffffff)
+    .toString(36)
+    .toUpperCase()
+    .slice(-7, -1);
 }
 
 /**
@@ -39,7 +75,7 @@ export function createNowId(date = new Date()): string {
  * @since 6.0.0
  */
 export function percent(value: number, base: number, decimals = 0): `${string}%` {
-  return `${Math.round((value / base) * 100).toFixed(decimals)}%`;
+  return `${(Math.round((value / base) * 100) || 0).toFixed(decimals)}%`;
 }
 
 /**
@@ -138,47 +174,6 @@ export function createDiscordSnowflake(timestamp = Date.now()): string {
 }
 
 /**
- * Transforms a number to some readable format.
- * @param x The number to transform.
- * @param decimals The decimals to retain.
- * @example
- * ```typescript
- *  const parsed = toReadable(420_200);
- *
- *  console.log(parsed); // 420.2K
- * ```
- * @example
- * ```typescript
- *  const parsed = toReadable(950_000);
- *
- *  console.log(parsed); // 0.95M
- * ```
- * @version 5.2.2
- * @since 4.3.0
- */
-export function toReadable(x: number, decimals = 1): string {
-  const format = (n: number, i: string) => {
-    const fixed = (x / n).toFixed(decimals);
-    return `${Number(fixed.endsWith('0') ? Number(fixed) * 1 : fixed)}${i}`;
-  };
-
-  const data = [
-    { point: 9 * 100e15, value: 100e18, suffix: 'QT' },
-    { point: 9 * 100e12, value: 100e15, suffix: 'QD' },
-    { point: 9 * 100e9, value: 1e12, suffix: 'T' },
-    { point: 9 * 100e6, value: 1e9, suffix: 'B' },
-    { point: 9 * 100e3, value: 1e6, suffix: 'M' },
-    { point: 9 * 100, value: 1e3, suffix: 'K' }
-  ] as const;
-
-  for (const { point, value, suffix } of data) {
-    if (x >= point) return format(value, suffix);
-  }
-
-  return x.toString();
-}
-
-/**
  * Joins an array of strings to commas but leaving the last 2 items separated with "and".
  * @template T Array of strings to join.
  * @param array The array to join with.
@@ -212,7 +207,13 @@ function isSingleParamArray(strings: unknown[]): strings is [string[]] {
 export function join(strings: string[]): string;
 export function join(...strings: string[]): string;
 export function join(...strings: [string[]] | string[]): string {
-  return isSingleParamArray(strings) ? (!isNullOrUndefined(strings.at(0)) ? strings.at(0)!.join('\n') : '') : strings.join('\n');
+  return isSingleParamArray(strings)
+    ? (
+      !isNullOrUndefined(strings.at(0))
+        ? strings.at(0)!.filter(filterNullishAndEmpty).join('\n')
+        : ''
+    )
+    : strings.filter(filterNullishAndEmpty).join('\n');
 }
 
 /**

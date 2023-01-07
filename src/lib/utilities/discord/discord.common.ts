@@ -16,11 +16,61 @@ import {
 } from 'discord.js';
 import { isNullOrUndefined } from '@sapphire/utilities';
 import type { APIInteraction, APIMessage } from 'discord.js/node_modules/discord-api-types/v9.js';
-import { Args, Result } from '@sapphire/framework';
+import { Args, Result, SapphireClient } from '@sapphire/framework';
 import { minutes, regexHasGroup, StrictSnowflake } from '#lib/utilities/common/index.js';
 import { SnowflakeRegex } from '@sapphire/discord-utilities';
 import { fetch, FetchResultTypes } from '@sapphire/fetch';
 import { DiscordSnowflake } from '@sapphire/snowflake';
+
+/**
+ * Asserts the working client as ready.
+ * @param client The discord client to check for.
+ * @since 6.0.0
+ */
+export function checkClientReadyStatus<T extends SapphireClient>(client: T): asserts client is typeof client & SapphireClient<true> {
+  if (!client.isReady()) {
+    throw new Error('The active client is not ready.');
+  }
+}
+
+/**
+ * Create a unique message component custom identifier. 
+ * @since 6.0.0
+ */
+export class CustomId {
+  /**
+   * The discord snowflake to use for the custom ID.
+   */
+  public snowflake: bigint;
+
+  /**
+   * The utility's constructor.
+   * @param date The date. This is the basis of the snowflake.
+   */
+  public constructor(public date = new Date()) {
+    this.snowflake = DiscordSnowflake.generate({ timestamp: this.date.getTime() });
+  }
+  
+  /**
+   * Sets the new date context.
+   * @param date The new date object to set.
+   * @returns This util.
+   */
+  public setDate(date: Date): this {
+    this.date = date;
+    this.snowflake = DiscordSnowflake.generate({ timestamp: date.getTime() });
+    return this;
+  }
+
+  /**
+   * Creates an ID with a snowflake assigned in it.
+   * @param id The id to create.
+   * @returns A {@link CustomIdentifier} string.
+   */
+  public create<Id extends string>(id: Id): CustomIdentifier<Id> {
+    return `${this.snowflake}:${id}`;
+  }
+}
 
 /**
  * Checks if a command contains a subcommand group.
@@ -47,8 +97,8 @@ export function isCommandInteractionExpired<Cached extends CacheType>(command: C
  * Checks if an option from a subcommand in a command interaction exists.
  * @template Cached The command interaction's cached type.
  * @param command The source command interaction.
- * @param subcommand The subcommand to check it from.
- * @param name The name of the option to check.
+ * @param subcommandGroup The subcommand group to check it from.
+ * @param subcommand The name of the subcommand to check.
  * @since 6.0.0
  */
 export function commandHasSubcommandOption<Cached extends CacheType>(
@@ -76,30 +126,10 @@ export function commandHasOption<Cached extends CacheType>(
 }
 
 /**
- * Creates a unique component custom id that uses the `snowflake:customId` format.
- * @param id The value of the component id.
- * @param date The date to create the snowflake from.
+ * A unique customId for a message component.
  * @since 6.0.0
  */
-export function createComponentId<Id extends string = string>(id: Id, date = new Date()): CustomId<Id> {
-  return { 
-    id, 
-    snowflake: DiscordSnowflake.generate({ timestamp: date.getTime() }), 
-    toString() {
-      return `${this.snowflake}:${this.id}` as const;
-    } 
-  };
-}
-
-/**
- * The returned value of the {@link createComponentId} function.
- * @since 6.0.0
- */
-export interface CustomId<out Id extends string> {
-  id: Id;
-  snowflake: bigint;
-  toString(): `${bigint}:${Id}`;
-}
+export type CustomIdentifier<Id extends string> = `${bigint}:${Id}`;
 
 /**
  * Creates an attachment based from the attachment or url of the attachment provided.
@@ -122,7 +152,8 @@ export async function fromAttachment(attachmentOrUrl: MessageAttachment | string
 export function fromGuildResolvable(resolvable: GuildResolvable): string {
   if (typeof resolvable === 'string') return resolvable;
   if (resolvable instanceof Guild) return resolvable.id;
-  return resolvable.guild!.id;
+  if (isNullOrUndefined(resolvable.guild)) throw new Error();
+  return resolvable.guild.id;
 }
 
 /**
@@ -196,7 +227,7 @@ export async function getReferencedUser(message: Message, args: Args): Promise<U
  * @returns The guild icon or `null` if none.
  */
 export function getGuildIconURL(guild: Guild, ...args: Parameters<Guild['iconURL']>): string | null {
-  return guild.iconURL({ dynamic: true, ...args[0] }) ?? null;
+  return guild.iconURL({ dynamic: true, ...args.at(0) }) ?? null;
 }
 
 /**
@@ -242,5 +273,5 @@ export function disableMessageComponents(rows: MessageActionRow[]): MessageActio
  * @returns The user's avatar URL.
  */
 export function getUserAvatarURL(user: User, ...args: Parameters<User['avatarURL']>): string {
-  return user.avatarURL({ dynamic: true, ...args[0] }) ?? user.defaultAvatarURL;
+  return user.avatarURL({ dynamic: true, ...args.at(0) }) ?? user.defaultAvatarURL;
 }

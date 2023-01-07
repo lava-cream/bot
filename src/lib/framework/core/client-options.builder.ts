@@ -43,6 +43,10 @@ export class ClientOptionsBuilder implements ClientOptions, SapphireClientOption
 
   public supportGuild!: ClientOptions['supportGuild'];
 
+  public constructor(options?: ClientOptions & SapphireClientOptions) {
+    if (options) Object.assign(this, options);
+  }
+
   public setShardOptions(options: Pick<this, 'shards' | 'shardCount'>): this {
     if (options.shards) this.shards = options.shards;
     if (options.shardCount) this.shardCount = options.shardCount;

@@ -20,7 +20,7 @@ export const enum UserFriendStatus {
   Pending = 1,
   // Pretty self-explanatory.
   Friend = 2,
-  // Pretty self-explanatory. 
+  // Pretty self-explanatory.
   Blocked = 3
 }
 

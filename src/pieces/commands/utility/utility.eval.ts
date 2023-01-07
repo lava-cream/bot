@@ -1,10 +1,18 @@
 import { ApplicationCommandRegistry, Command, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
-import type { CommandInteraction } from 'discord.js';
 
 import { Constants } from 'discord.js';
-import { Collector, MessageContentBuilder, createComponentId } from '#lib/utilities/discord/index.js';
-import { fromAsync } from '@sapphire/result';
+import {
+  Collector,
+  MessageContentBuilder,
+  InteractionMessageContentBuilder,
+  CustomId,
+  edit,
+  unsend,
+  send,
+  EmbedTemplates
+} from '#lib/utilities';
+import { Result } from '@sapphire/result';
 import { Stopwatch } from '@sapphire/stopwatch';
 import { codeBlock } from '@discordjs/builders';
 import { seconds } from '#lib/utilities/common/index.js';
@@ -40,51 +48,50 @@ export default class EvalCommand extends Command {
     return evaled;
   }
 
-  public override async chatInputRun(command: CommandInteraction<'cached'>) {
+  public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     const code = command.options.getString('code', true);
-    const session = {
-      watch: new Stopwatch(),
-      evaled: '',
-      evalTime: 0
-    };
+    const dm = command.options.getBoolean('dm') ?? false;
+    const customId = new CustomId(new Date(command.createdTimestamp));
+    const context = { watch: new Stopwatch(), evaled: '' };
 
-    await command.reply('Evaluating...');
-    session.watch.start();
+    await send(command, (content) => content.addEmbed((embed) => embed.setDescription('Please wait...').setColor(Constants.Colors.DARK_BUT_NOT_BLACK)));
+    context.watch.start();
 
     const evaluate = async () => {
-      session.watch.restart();
+      context.watch.restart();
 
-      const evaled = await fromAsync<string, EvalError>(async () => {
+      const evaled = await Result.fromAsync<string, EvalError>(async () => {
         const inspected = inspect(await eval(this.getCode(code)), {
           breakLength: 1900,
           depth: 0,
-          compact: false
+          compact: false,
         });
 
         return this.sanitise(inspected);
       });
 
-      session.watch.stop();
-      return (session.evaled = evaled.success ? evaled.value : evaled.error.message);
+      evaled.inspectErr(err => Reflect.set(context, 'evaled', err.message));
+      evaled.inspect(evaled => Reflect.set(context, 'evaled', evaled));
+      context.watch.stop();
+
+      return context.evaled;
     };
 
     const renderContent = (done: boolean) => {
-      return new MessageContentBuilder()
-        .setContent(null)
-        .addEmbed((embed) =>
-          embed
-            .setColor(done ? Constants.Colors.NOT_QUITE_BLACK : Constants.Colors.BLURPLE)
-            .setDescription(codeBlock('js', session.evaled))
-            .setFooter(`Duration: ${session.watch.duration.toFixed(2)}ms`)
+      return new InteractionMessageContentBuilder()
+        .addEmbed(() =>
+          EmbedTemplates.createCamouflaged()
+            .setDescription(codeBlock('js', context.evaled))
+            .setFooter({ text: `Duration: ${context.watch.toString()}` })
         )
-        .addComponentRow((row) =>
+        .addRow((row) =>
           Object.values(EvalControls).reduce(
-            (row, customId) =>
+            (row, control) =>
               row.addButtonComponent((btn) =>
                 btn
-                  .setCustomId(createComponentId({ customId, date: new Date(command.createdTimestamp) }).customId)
-                  .setStyle(done ? Constants.MessageButtonStyles.SECONDARY : Constants.MessageButtonStyles.PRIMARY)
-                  .setLabel(toTitleCase(customId))
+                  .setCustomId(customId.create(control))
+                  .setStyle(Constants.MessageButtonStyles.SECONDARY)
+                  .setLabel(toTitleCase(control))
                   .setDisabled(done)
               ),
             row
@@ -93,40 +100,39 @@ export default class EvalCommand extends Command {
     };
 
     const renderEvaluatedCodeMessage = () => {
-      return new MessageContentBuilder().addEmbed((embed) =>
-        embed.setTitle('Evaluated Code').setColor(Constants.Colors.BLURPLE).setDescription(codeBlock('js', code))
+      return new MessageContentBuilder().addEmbed(() =>
+        EmbedTemplates.createSimple(codeBlock('js', code)).setTitle('Evaluated Code')
       );
     };
 
     await evaluate();
 
     const collector = new Collector({
-      message: await command.editReply(renderContent(false)),
+      message: await edit(command, renderContent(false)),
       componentType: 'BUTTON',
-      time: seconds(30),
+      time: seconds(10),
       max: Infinity,
+      actions: {
+        [customId.create(EvalControls.Repeat)]: async (ctx) => {
+          await evaluate();
+          await edit(ctx.interaction, renderContent(false));
+          return ctx.collector.resetTimer();
+        },
+        [customId.create(EvalControls.Delete)]: async (ctx) => {
+          await unsend(command).catch(noop);
+          await unsend(ctx.interaction).catch(noop);
+          return ctx.stop();
+        }
+      },
       filter: async (button) => {
         const context = button.user.id === command.user.id;
         await button.deferUpdate();
         return context;
+      },
+      end: async () => {
+        await edit(command, renderContent(true)).catch(noop);
+        if (dm) await command.user.send(renderEvaluatedCodeMessage()).catch(noop);
       }
-    });
-
-    collector.setEndAction(async (ctx) => {
-      await ctx.message.edit(renderContent(true)).catch(noop);
-      await command.user.send(renderEvaluatedCodeMessage()).catch(noop);
-    });
-
-    collector.actions.add(EvalControls.Repeat.toLowerCase(), async (ctx) => {
-      ctx.collector.resetTimer();
-      await evaluate();
-      await ctx.interaction.editReply(renderContent(false));
-    });
-
-    collector.actions.add(EvalControls.Delete.toLowerCase(), async (ctx) => {
-      await command.deleteReply().catch(noop);
-      await ctx.interaction.deleteReply().catch(noop);
-      ctx.collector.stop(ctx.interaction.customId);
     });
 
     await collector.start();
@@ -138,6 +144,7 @@ export default class EvalCommand extends Command {
         .setName(this.name)
         .setDescription(this.description)
         .addStringOption((string) => string.setName('code').setDescription('The code to evaluate.').setRequired(true))
+        .addBooleanOption((boolean) => boolean.setName('dm').setDescription('If the bot will DM you the code you ran.'))
     );
   }
 }

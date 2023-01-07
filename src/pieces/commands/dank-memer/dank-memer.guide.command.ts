@@ -14,11 +14,11 @@ import {
   send,
   edit,
   parseNumber,
-  modalActionRow
+  createModalActionRow
 } from '#lib/utilities';
 import { type TextChannel, Constants, Modal } from 'discord.js';
 import { toTitleCase, isNullOrUndefined, chunk } from '@sapphire/utilities';
-import { type Result, fromAsync } from '@sapphire/result';
+import { Result } from '@sapphire/result';
 import { bold, inlineCode, channelMention } from '@discordjs/builders';
 import { ChannelType } from 'discord.js/node_modules/discord-api-types/v9.js';
 
@@ -123,9 +123,9 @@ export default class GuideCommand extends Command {
         if (!(await checkGuideCategories())) return;
 
         const category = await this.awaitGuideCategory(command, db.categories.entries, 1);
-        if (!category.success) return await send(command, 'Lmao you have to choose something to delete.');
+        if (category.isErr()) return await send(command, 'Lmao you have to choose something to delete.');
 
-        const selection = category.value.at(0);
+        const selection = category.unwrap().at(0);
         if (isNullOrUndefined(selection)) return await send(command, "Hmm something's not right here.");
 
         await db.run((db) => db.categories.delete(selection.id)).save();
@@ -140,10 +140,10 @@ export default class GuideCommand extends Command {
         const channel = command.options.getChannel(Channel, true) as TextChannel;
 
         const categories = await this.awaitGuideCategory(command, db.categories.entries, Math.min(5, db.categories.entries.length));
-        if (!categories.success) return await send(command, 'Lmao you have to choose multiple guides to generate...');
+        if (categories.isErr()) return await send(command, 'Lmao you have to choose multiple guides to generate...');
 
         const message = await channel.send(
-          categories.value.reduce(
+          categories.unwrap().reduce(
             (builder, category) =>
               builder.addEmbed((embed) =>
                 embed
@@ -156,7 +156,7 @@ export default class GuideCommand extends Command {
         );
 
         await db.run((db) => db.channels.main.setId(message.id)).save();
-        return await send(command, `Successfully sent ${bold(categories.value.length.toString())} item guides to ${channelMention(channel.id)}`);
+        return await send(command, `Successfully sent ${bold(categories.unwrap().length.toString())} item guides to ${channelMention(channel.id)}`);
       }
 
       case SubCommands.Rename.name: {
@@ -167,14 +167,14 @@ export default class GuideCommand extends Command {
         const name = command.options.getString(Name, true);
 
         const category = await this.awaitGuideCategory(command, db.categories.entries, 1);
-        if (!category.success) return await send(command, 'Lmao you need to choose something to delete.');
+        if (category.isErr()) return await send(command, 'Lmao you need to choose something to delete.');
 
-        const selection = category.value.at(0);
+        const selection = category.unwrap().at(0);
         if (isNullOrUndefined(selection)) return await send(command, 'Hmm somethings not right...');
 
         const { name: oldName } = selection;
 
-        await db.run((db) => db.categories.resolve(selection.id)?.update({ name })).save();
+        await db.run((db) => db.categories.resolve(selection.id)?.setName(name)).save();
         return await send(command, `Successfully renamed the ${bold(oldName)} item guide to ${bold(name)}.`);
       }
 
@@ -182,22 +182,23 @@ export default class GuideCommand extends Command {
         if (!(await checkGuideCategories())) return;
 
         const category = await this.awaitGuideCategory(command, db.categories.entries, 1);
-        if (!category.success) return await send(command, 'Lmao you have to choose something to manage.');
+        if (category.isErr()) return await send(command, 'Lmao you have to choose something to manage.');
 
-        const categorySelection = category.value.at(0);
+        const categorySelection = category.unwrap().at(0);
         if (isNullOrUndefined(categorySelection)) return await send(command, 'Hmm somethings not right...');
 
         if (!(await checkGuideItems(categorySelection))) return;
 
-        const item = await this.awaitGuideCategoryItem(command, categorySelection);
-        if (!item.success) return await send(command, 'Lol you have to choose an item to manage.');
+        const selectedItem = await this.awaitGuideCategoryItem(command, categorySelection);
+        if (selectedItem.isErr()) return await send(command, 'Lol you have to choose an item to manage.');
 
+        const item = selectedItem.unwrap();
         const message = await send(command, (content) =>
           content.addEmbed((embed) =>
             embed
               .setTitle('Item Manager')
               .setColor(Constants.Colors.NOT_QUITE_BLACK)
-              .setDescription(`Use the buttons below to manage the ${bold(item.value.name)} item.`)
+              .setDescription(`Use the buttons below to manage the ${bold(item.name)} item.`)
           )
         );
 
@@ -222,10 +223,12 @@ export default class GuideCommand extends Command {
                         .setTitle('Item Editor')
                         .setColor(ended ? Constants.Colors.NOT_QUITE_BLACK : Constants.Colors.BLURPLE)
                         .setDescription('Choose an item property to edit. Changes are automatically saved.')
-                        .addField('ID', inlineCode(item.value.id), false)
-                        .addField('Name', item.value.name, true)
-                        .addField('Price', item.value.price.toLocaleString(), true)
-                        .addField('Hidden', `${item.value.hidden}`, true)
+                        .addFields(
+                          { name: 'ID', value: inlineCode(item.id), inline: false },
+                          { name: 'Name', value: item.name, inline: true },
+                          { name: 'Price', value: item.price.toLocaleString(), inline: true },
+                          { name: 'Hidden', value: `${item.hidden}`, inline: true }
+                        )
                     )
                     .addRow((row) =>
                       Object.values(CategoryItemManagerEditControl).reduce(
@@ -242,7 +245,7 @@ export default class GuideCommand extends Command {
                     );
                 };
 
-                const op = await fromAsync<void>(async function run() {
+                const op = await Result.fromAsync<void>(async function run() {
                   const message2 = await edit(click, renderContent(false));
                   const click2 = await message2.awaitMessageComponent({
                     componentType: 'BUTTON',
@@ -259,7 +262,7 @@ export default class GuideCommand extends Command {
                       .setTitle(`New Item's ${toTitleCase(click2.customId)}`)
                       .setCustomId(click2.customId)
                       .addComponents(
-                        modalActionRow((row) =>
+                        createModalActionRow((row) =>
                           row.addTextInputComponent((txtInp) =>
                             txtInp
                               .setCustomId(click2.customId)
@@ -271,7 +274,7 @@ export default class GuideCommand extends Command {
                       )
                   );
 
-                  const op2 = await fromAsync<void, null>(async () => {
+                  const op2 = await Result.fromAsync<void, null>(async () => {
                     const modal = await click2.awaitModalSubmit({
                       componentType: 'TEXT_INPUT',
                       time: seconds(60),
@@ -282,7 +285,7 @@ export default class GuideCommand extends Command {
 
                     switch (click2.customId) {
                       case CategoryItemManagerEditControl.Name: {
-                        await db.run(() => item.value.setName(input)).save();
+                        await db.run(() => item.setName(input)).save();
                         await edit(click2, renderContent(false));
 
                         return await run();
@@ -294,7 +297,7 @@ export default class GuideCommand extends Command {
                         if (isNullOrUndefined(parsedInput)) {
                           await modal.reply('You entered a wrong amount!');
                         } else {
-                          await db.run(() => item.value.setPrice(parsedInput)).save();
+                          await db.run(() => item.setPrice(parsedInput)).save();
                           await edit(click2, renderContent(false));
                         }
 
@@ -303,13 +306,13 @@ export default class GuideCommand extends Command {
                     }
                   });
 
-                  if (!op2.success) {
+                  if (op2.isErr()) {
                     await edit(click2, renderContent(true));
                     await send(click2, 'Something went wrong :c');
                   }
                 });
 
-                if (!op.success) await send(click, 'Something went wrong :c');
+                if (op.isErr()) await send(click, 'Something went wrong :c');
                 break;
               }
 
@@ -322,9 +325,9 @@ export default class GuideCommand extends Command {
                         .setColor(isNullOrUndefined(confirmed) ? Constants.Colors.BLURPLE : confirmed ? Constants.Colors.GREEN : Constants.Colors.RED)
                         .setDescription(
                           isNullOrUndefined(confirmed)
-                            ? `Do you want to delete ${bold(item.value.name)}?`
+                            ? `Do you want to delete ${bold(item.name)}?`
                             : confirmed
-                            ? `Successfully deleted ${bold(item.value.name)} from the ${bold(categorySelection.name)} item guide.`
+                            ? `Successfully deleted ${bold(item.name)} from the ${bold(categorySelection.name)} item guide.`
                             : 'Ok then.'
                         )
                         .setFooter({ text: `Item Guide: ${categorySelection.name}` })
@@ -351,7 +354,7 @@ export default class GuideCommand extends Command {
                     );
                 };
 
-                const op = await fromAsync<void>(async () => {
+                const op = await Result.fromAsync<void>(async () => {
                   const message2 = await edit(click, renderContent(null));
                   const click2 = await message2.awaitMessageComponent({
                     componentType: 'BUTTON',
@@ -365,7 +368,7 @@ export default class GuideCommand extends Command {
 
                   switch (click2.customId) {
                     case CategoryItemManagerDeleteControl.Confirm: {
-                      await db.run(() => categorySelection.items.delete(item.value.id)).save();
+                      await db.run(() => categorySelection.items.delete(item.id)).save();
                       await edit(click2, renderContent(true));
                       break;
                     }
@@ -377,7 +380,7 @@ export default class GuideCommand extends Command {
                   }
                 });
 
-                if (!op.success) await send(click, 'Something went wrong :c');
+                if (op.isErr()) await send(click, 'Something went wrong :c');
                 break;
               }
             }
@@ -415,7 +418,7 @@ export default class GuideCommand extends Command {
     limit: number,
     filterBlank = false
   ): Promise<Result<ItemGuideCategorySchema[], null>> {
-    return fromAsync(async () => {
+    return Result.fromAsync(async () => {
       try {
         return await new Promise(async (resolve, reject) => {
           const selections: ItemGuideCategorySchema[] = [];
@@ -533,7 +536,7 @@ export default class GuideCommand extends Command {
     category: ItemGuideCategorySchema,
     pageFocused = 0
   ): Promise<Result<ItemGuideCategoryItemSchema, null>> {
-    return fromAsync(async () => {
+    return Result.fromAsync(async () => {
       try {
         return await new Promise(async (resolve, reject) => {
           const collector = new Collector({

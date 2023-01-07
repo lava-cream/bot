@@ -1,8 +1,8 @@
 import type { Message, MessagePayload, TextChannel, Awaitable, ClientEvents as _ClientEvents, MessageOptions, Guild } from 'discord.js';
 import type { Loggers } from './logger.entries';
-import { Piece, Resolvers } from '@sapphire/framework';
+import { Piece, Resolvers, Result } from '@sapphire/framework';
 import { isNullOrUndefined } from '@sapphire/utilities';
-import { resolveElement } from '#lib/utilities';
+import { MessageContentBuilder, resolveElement } from '#lib/utilities';
 
 /**
  * Represents a logger handler. A logger handler is an own instance of a guild that has it's own logger channel linked allowing us to:
@@ -14,14 +14,14 @@ export class LoggerHandler {
    * @param guild The guild where the log is belong to.
    * @param channelId The id of the logger channel.
    */
-  protected constructor(public readonly guild: Guild, public readonly channelId: string) {}
+  public constructor(public readonly guild: Guild, public readonly channelId: string) {}
 
   /**
-   * Fetches the text channel logger from the guild.
+   * The text channel logger from the guild.
    * @returns The text channel.
    */
-  public async fetchChannel(): Promise<TextChannel | null> {
-    const channel = await Resolvers.resolveGuildTextChannel(this.channelId, this.guild);
+  public get channel(): TextChannel | null {
+    const channel = Resolvers.resolveGuildTextChannel(this.channelId, this.guild);
     return channel.isOk() ? channel.unwrap() : null;
   }
 
@@ -29,18 +29,14 @@ export class LoggerHandler {
    * Posts the message in the logger channel.
    * @param content The message content.
    */
-  public async postMessage(content: MessageOptions | MessagePayload): Promise<Message<true> | null> {
-    const message = await (await this.fetchChannel())?.send(content);
-    if (isNullOrUndefined(message) || !message.inGuild()) return null;
+  public async post(content: MessageOptions | MessagePayload): Promise<Message<true> | null> {
+    if (isNullOrUndefined(this.channel)) return null;
 
-    return message;
-  }
+    const resolvedMessage = await Result.fromAsync(this.channel.send(content));
+    if (resolvedMessage.isErr()) return null;
 
-  /**
-   * Creates a {@link LoggerHandler} instance.
-   */
-  public static create(guild: Guild, channelId: string) {
-    return new LoggerHandler(guild, channelId);
+    const message = resolvedMessage.unwrap();
+    return message.inGuild() ? message : null;
   }
 }
 
@@ -75,15 +71,13 @@ export abstract class Logger<K extends Loggers.Keys> extends Piece<LoggerOptions
    * The {@link LoggerHandler handlers}.
    */
   public readonly handlers: LoggerHandler[] = [];
-  public constructor(context: Piece.Context, options: LoggerOptions<K>) {
-    super(context, options);
-  }
-
   /**
    * The id of this logger.
    */
-  public get id() {
-    return this.options.id;
+  public readonly id: K;
+  public constructor(context: Piece.Context, options: LoggerOptions<K>) {
+    super(context, options);
+    this.id = options.id;
   }
 
   /**
@@ -91,19 +85,22 @@ export abstract class Logger<K extends Loggers.Keys> extends Piece<LoggerOptions
    * @param guildId The id of the guild.
    * @param guildId The id of the logger channel.
    */
-  public createHandler(guildId: string, channelId: string): boolean {
+  protected createHandler(guildId: string, channelId: string): boolean {
     const guild = this.container.client.guilds.resolve(guildId);
-    if (!guild) return false;
 
-    this.handlers.push(this.resolveHandler(guild.id) ?? LoggerHandler.create(guild, channelId));
-    return true;
+    if (!isNullOrUndefined(guild)) {
+      const handler = this.resolveHandler(guild.id) ?? new LoggerHandler(guild, channelId);
+      this.handlers.push(handler);
+    }
+    
+    return !isNullOrUndefined(guild);
   }
 
   /**
    * Resolves an existing handler.
    * @param guildId The id of the guild.
    */
-  public resolveHandler(guildId: string): LoggerHandler | null {
+  protected resolveHandler(guildId: string): LoggerHandler | null {
     return resolveElement(this.handlers, (handler) => handler.guild.id === guildId);
   }
 
@@ -111,24 +108,25 @@ export abstract class Logger<K extends Loggers.Keys> extends Piece<LoggerOptions
    * Renders the logger's message content.
    * @param options Options to log the message.
    */
-  public abstract renderContent(options: Loggers[K]): Awaitable<MessageOptions | MessagePayload>;
+  public abstract buildMessageContent(options: Loggers[K], builder: MessageContentBuilder): Awaitable<void>;
 
   /**
    * Syncs the log channel for a specific guild.
    * @param guild The guild to sync for.
    */
-  public abstract sync(guild: Guild): Awaitable<unknown>;
+  public abstract syncLogChannel(guild: Guild): Awaitable<unknown>;
 
   /**
    * Creates a log message into the logger channel.
    * @param options Options to log the message.
    */
-  public async log(options: Loggers[K]) {
+  public async createLog(options: Loggers[K]) {
     const handler = this.resolveHandler(options.guild.id);
 
     if (handler) {
-      const content = await this.renderContent(options);
-      await handler.postMessage(content);
+      const contentBuilder = new MessageContentBuilder();
+      await this.buildMessageContent(options, contentBuilder);
+      await handler.post(contentBuilder);
     }
 
     return;

@@ -2,7 +2,5 @@ import type { ChatInputOrContextMenuInteraction, PaginatedMessagePage } from '@s
 import { PaginatedMessage } from '@sapphire/discord.js-utilities';
 
 export async function paginate(interaction: ChatInputOrContextMenuInteraction, pages: PaginatedMessagePage[]): Promise<void> {
-  await new PaginatedMessage({ embedFooterSeparator: '—' })
-    .addPages(pages)
-    .run(interaction);
+  await new PaginatedMessage({ embedFooterSeparator: '—' }).addPages(pages).run(interaction);
 }

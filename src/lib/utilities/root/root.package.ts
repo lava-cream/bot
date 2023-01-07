@@ -12,6 +12,6 @@ export { Package };
 
 declare module '@sapphire/pieces' {
   interface Container {
-    package: typeof Package;
+    package: Readonly<typeof Package>;
   }
 }

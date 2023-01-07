@@ -1,13 +1,13 @@
 import { Game } from '#lib/framework/index.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { getUserAvatarURL, createComponentId, join, MessageActionRowBuilder, seconds } from '#lib/utilities';
-import { Collector } from '#lib/utilities/discord/index.js';
+import { getUserAvatarURL, join, seconds, InteractionMessageContentBuilder, roundZero } from '#lib/utilities';
+import { checkClientReadyStatus, Collector, edit } from '#lib/utilities/discord/index.js';
 import * as Blackjack from '#lib/utilities/games/blackjack/index.js';
 import { bold, hyperlink, inlineCode } from '@discordjs/builders';
 import { isNullOrUndefined, toTitleCase } from '@sapphire/utilities';
-import type { ButtonInteraction, InteractionReplyOptions, MessageEditOptions, WebhookEditMessageOptions } from 'discord.js';
-import { Constants, MessageEmbed } from 'discord.js';
+import type { ButtonInteraction } from 'discord.js';
+import { Constants } from 'discord.js';
 
 enum Control {
   HIT = 'hit',
@@ -30,17 +30,25 @@ declare module '#lib/framework/structures/game/game.types' {
 })
 export default class BlackjackGame extends Game {
   public async play(context: Game.Context) {
-    const game = new Blackjack.Logic(context.command.user, context.command.client!.user!);
+    checkClientReadyStatus(context.command.client);
+
+    const game = new Blackjack.Logic(context.command.user, context.command.client.user).start();
     const collector = new Collector({
-      message: await context.respond(<InteractionReplyOptions>BlackjackGame.renderMainContent(context, game)),
+      message: await context.responder.send(() => BlackjackGame.renderContent(context, game)),
       time: seconds(10),
-      idle: seconds(10),
       componentType: 'BUTTON',
       max: Infinity,
       filter: async (button) => {
         const contextual = button.user.id === context.command.user.id;
         await button.deferUpdate();
         return contextual;
+      },
+      end: async (ctx) => {
+        if (ctx.wasInternallyStopped()) {
+          game.setOutcome(Blackjack.Outcome.OTHER, "You didn't respond in time.");
+          await context.responder.edit(() => BlackjackGame.renderContent(context, game));
+          await context.end(true);
+        }
       }
     });
 
@@ -49,31 +57,38 @@ export default class BlackjackGame extends Game {
 
       switch (game.outcome?.outcome) {
         case Blackjack.Outcome.WIN: {
-          const { final } = Game.calculateWinnings({
-            base: 0.4,
-            bet: context.db.bet.value,
-            multiplier: context.db.multiplier.value
-          });
+          const winnings = roundZero(context.winnings
+            .setBase(0.1)
+            .setMultiplier(context.db.multiplier.value)
+            .setRandom(Math.random() * 1.8)
+            .calculate(context.db.bet.value))
 
           await context.db
             .run((db) => {
-              db.wallet.update({ value: db.wallet.value + final });
-              if (!db.energy.isMaximumStars()) db.energy.update({ stars: db.energy.stars + 1 });
+              context.schema.win(winnings);
+              db.wallet.addValue(winnings);
+              db.bank.space.addValue(winnings);
+              db.energy.addValue();
             })
             .save();
-          game.outcome.extra = `You won ${bold(final.toLocaleString())} coins. You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`;
+          game.outcome.extra = `You won ${bold(winnings.toLocaleString())} coins. You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`;
 
           break;
         }
 
         case Blackjack.Outcome.OTHER: {
-          await context.db.run((db) => db.wallet.update({ value: db.wallet.value - db.bet.value })).save();
-          game.outcome.extra = 'The dealer is keeping your money to deal with your bullcrap.';
+          game.outcome.extra = "I won't bother with your stuff. You are keeping your money.";
           break;
         }
 
         case Blackjack.Outcome.LOSS: {
-          await context.db.run((db) => db.wallet.update({ value: db.wallet.value - db.bet.value })).save();
+          await context.db
+            .run((db) => {
+              context.schema.lose(db.bet.value);
+              db.wallet.subValue(db.bet.value);
+              db.energy.subValue();
+            })
+            .save();
           game.outcome.extra = `You lost ${bold(context.db.bet.value.toLocaleString())} coins. You now have ${bold(
             context.db.wallet.value.toLocaleString()
           )} coins.`;
@@ -86,18 +101,17 @@ export default class BlackjackGame extends Game {
         }
       }
 
-      await button.editReply(<WebhookEditMessageOptions>BlackjackGame.renderMainContent(context, game));
+      await edit(button, BlackjackGame.renderContent(context, game));
+
       if (!isNullOrUndefined(game.outcome)) {
         collector.collector!.stop('outcome');
         await context.end();
       }
     };
 
-    for (const customId of Object.values(Control)) {
-      const componentId = createComponentId({ customId, date: new Date(context.command.createdTimestamp) });
-
-      collector.actions.add(componentId.customId, async (ctx) => {
-        switch (customId) {
+    for (const componentId of Object.values(Control)) {
+      collector.actions.add(context.customId.create(componentId), async (ctx) => {
+        switch (componentId) {
           case Control.HIT: {
             ctx.collector.resetTimer();
 
@@ -113,7 +127,7 @@ export default class BlackjackGame extends Game {
             }
 
             await update(ctx.interaction);
-            ctx.collector.stop('stood');
+            ctx.stop();
             break;
           }
 
@@ -121,7 +135,7 @@ export default class BlackjackGame extends Game {
             game.setOutcome(Blackjack.Outcome.OTHER, 'You ended the game.');
 
             await update(ctx.interaction);
-            ctx.collector.stop('forfeit');
+            ctx.stop();
 
             await context.end(true);
             break;
@@ -130,21 +144,10 @@ export default class BlackjackGame extends Game {
       });
     }
 
-    collector.setEndAction(async (ctx) => {
-      if (ctx.wasInternallyStopped()) {
-        game.setOutcome(Blackjack.Outcome.OTHER, "You didn't respond in time.");
-        await ctx.message.edit(<MessageEditOptions>BlackjackGame.renderMainContent(context, game));
-        await context.end(true);
-      }
-    });
-
     await collector.start();
   }
 
-  private static renderMainContent(
-    context: Game.Context,
-    game: Blackjack.Logic
-  ): WebhookEditMessageOptions | InteractionReplyOptions | MessageEditOptions {
+  private static renderContent(context: Game.Context, game: Blackjack.Logic) {
     const renderCard = (card: Blackjack.Card, index: number, hide: boolean): string => {
       return hyperlink(`${inlineCode(index > 0 && hide ? '?' : `${card.suit} ${card.face}`)}`, 'https://discord.gg/memer');
     };
@@ -155,43 +158,53 @@ export default class BlackjackGame extends Game {
       ]);
     };
 
-    const embeds = [
-      new MessageEmbed()
-        .setAuthor({
-          name: `${game.player.user.username}'s blackjack game`,
-          iconURL: getUserAvatarURL(game.player.user)
-        })
-        .setColor(!isNullOrUndefined(game.outcome) ? Blackjack.Outcomes[game.outcome.outcome].color() : Constants.Colors.BLURPLE)
-        .setDescription(
-          isNullOrUndefined(game.outcome)
-            ? ''
-            : join([bold(`${Blackjack.Outcomes[game.outcome.outcome].message} ${game.outcome.reason}`), game.outcome.extra ?? ''])
-        )
-        .addField(`${game.player.user.username} (Player)`, renderHand(game.player, false), true)
-        .addField(
-          `${game.dealer.user.username} (Dealer)`,
-          renderHand(game.dealer, !isNullOrUndefined(game.outcome) ? false : !game.player.stood),
-          true
-        )
-        .setFooter({
-          text: isNullOrUndefined(game.outcome) ? 'K, Q, J = 10  |  A = 1 OR 11' : ''
-        })
-    ];
-
-    const components = [
-      Object.values(Control).reduce(
-        (row, customId) =>
-          row.addButtonComponent((btn) =>
-            btn
-              .setCustomId(createComponentId({ customId, date: new Date(context.command.createdTimestamp) }).customId)
-              .setDisabled(!isNullOrUndefined(game.outcome))
-              .setStyle(isNullOrUndefined(game.outcome) ? Constants.MessageButtonStyles.PRIMARY : Constants.MessageButtonStyles.SECONDARY)
-              .setLabel(toTitleCase(customId))
-          ),
-        new MessageActionRowBuilder()
+    return new InteractionMessageContentBuilder()
+      .addEmbed((embed) =>
+        embed
+          .setAuthor({
+            name: `${game.player.user.username}'s blackjack game`,
+            iconURL: getUserAvatarURL(game.player.user)
+          })
+          .setColor(!isNullOrUndefined(game.outcome) ? Blackjack.Outcomes[game.outcome.outcome].color() : Constants.Colors.BLURPLE)
+          .setDescription(
+            isNullOrUndefined(game.outcome)
+              ? ''
+              : join([bold(`${Blackjack.Outcomes[game.outcome.outcome].message} ${game.outcome.reason}`), game.outcome.extra ?? ''])
+          )
+          .addFields(
+            {
+              name: `${game.player.user.username} (Player)`,
+              value: renderHand(game.player, false),
+              inline: true
+            },
+            {
+              name: `${game.dealer.user.username} (Dealer)`,
+              value: renderHand(game.dealer, !isNullOrUndefined(game.outcome) ? false : !game.player.stood),
+              inline: true
+            }
+          )
+          .setFooter({
+            text: isNullOrUndefined(game.outcome) 
+              ? 'K, Q, J = 10  |  A = 1 OR 11' 
+              : game.outcome.outcome === Blackjack.Outcome.WIN && context.schema.wins.streak.isActive()
+                ? `Win Streak: ${context.schema.wins.streak.display}`
+                : game.outcome.outcome === Blackjack.Outcome.LOSS && context.schema.loses.streak.isActive()
+                  ? `Lose Streak: ${context.schema.loses.streak.display}`
+                  : ''
+          })
       )
-    ];
-
-    return { embeds, components };
+      .addRow((row) =>
+        Object.values(Control).reduce(
+          (row, customId) =>
+            row.addButtonComponent((btn) =>
+              btn
+                .setCustomId(context.customId.create(customId))
+                .setDisabled(!isNullOrUndefined(game.outcome))
+                .setStyle(isNullOrUndefined(game.outcome) ? Constants.MessageButtonStyles.PRIMARY : Constants.MessageButtonStyles.SECONDARY)
+                .setLabel(toTitleCase(customId))
+            ),
+          row
+        )
+      );
   }
 }

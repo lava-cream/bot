@@ -3,11 +3,11 @@ import { ApplyOptions } from '@sapphire/decorators';
 
 import * as Common from '#lib/utilities/common/index.js';
 import * as Discord from '#lib/utilities/discord/index.js';
-import { MessageContentBuilder } from '#lib/utilities/discord/index.js';
 import * as Coinflip from '#lib/utilities/games/coinflip/index.js';
 import { bold } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
+import { checkClientReadyStatus, edit, InteractionMessageContentBuilder, percent, roundZero } from '#lib/utilities';
 
 declare module '#lib/framework/structures/game/game.types' {
   interface Games {
@@ -23,9 +23,11 @@ declare module '#lib/framework/structures/game/game.types' {
 })
 export default class CoinFlipGame extends Game {
   public async play(context: Game.Context) {
-    const game = new Coinflip.Logic(context.command.user, context.command.client.user!);
+    checkClientReadyStatus(context.command.client);
+
+    const game = new Coinflip.Logic(context.command.user, context.command.client.user);
     const collector = new Discord.Collector({
-      message: await context.respond(this.renderMainContent(context, game, false)),
+      message: await context.responder.send(() => CoinFlipGame.renderContent(context, game, false)),
       componentType: 'BUTTON',
       max: Infinity,
       time: Common.seconds(10),
@@ -33,58 +35,65 @@ export default class CoinFlipGame extends Game {
         const contextual = button.user.id === context.command.user.id;
         await button.deferUpdate();
         return contextual;
+      },
+      end: async (ctx) => {
+        if (ctx.wasInternallyStopped()) {
+          await context.responder.edit(() => CoinFlipGame.renderContent(context, game, true));
+          await context.end(true);
+          return;
+        }
+
+        await context.end();
       }
     });
 
-    for (const customId of Object.values(Coinflip.Side)) {
-      const componentId = Discord.createComponentId({ customId, date: new Date(context.command.createdTimestamp) });
-
-      collector.actions.add(componentId.customId, async (ctx) => {
-        game.pick.call(game, customId);
+    for (const side of Object.values(Coinflip.Side)) {
+      collector.actions.add(context.customId.create(side), async (ctx) => {
+        game.pick.call(game, side);
 
         switch (true) {
           case game.isWin(): {
-            const won = Game.calculateWinnings({
-              base: 0.1,
-              multiplier: context.db.multiplier.value,
-              bet: context.db.bet.value,
-              random: Common.randomNumber(0, 10) / 10
-            });
+            const winnings = roundZero(context.winnings
+              .setBase(0.9)
+              .setMultiplier(context.db.multiplier.value)
+              .setRandom(Math.random() * 0.2)
+              .calculate(context.db.bet.value));
 
             await context.db
               .run((db) => {
-                db.wallet.update({ value: db.wallet.value + won.final });
-                if (!db.energy.isMaximumStars()) db.energy.update({ stars: db.energy.stars + 1 });
+                context.schema.win(winnings);
+                db.wallet.addValue(winnings);
+                db.bank.space.addValue(winnings);
+                db.energy.addValue();
               })
               .save();
 
-            await ctx.interaction.editReply(this.renderMainContent(context, game, true, won.final));
+            await edit(ctx.interaction, CoinFlipGame.renderContent(context, game, true, winnings));
             break;
           }
 
           case game.isLose(): {
-            await context.db.run((db) => db.wallet.update({ value: db.wallet.value + db.bet.value })).save();
-            await ctx.interaction.editReply(this.renderMainContent(context, game, true));
+            await context.db
+              .run((db) => {
+                context.schema.lose(db.bet.value);
+                db.wallet.subValue(db.bet.value);
+                db.energy.subValue();
+              })
+              .save();
+            await edit(ctx.interaction, CoinFlipGame.renderContent(context, game, true));
             break;
           }
         }
 
-        ctx.collector.stop('called');
+        return ctx.stop();
       });
     }
-
-    collector.setEndAction(async (ctx) => {
-      if (ctx.wasInternallyStopped()) {
-        await ctx.message.edit(this.renderMainContent(context, game, true));
-        await context.end(true);
-      }
-    });
 
     await collector.start();
   }
 
-  private renderMainContent(context: Game.Context, game: Coinflip.Logic, ended: boolean, won = 0): MessageContentBuilder {
-    return new MessageContentBuilder()
+  private static renderContent(context: Game.Context, game: Coinflip.Logic, ended: boolean, won = 0) {
+    return new InteractionMessageContentBuilder()
       .addEmbed((embed) =>
         embed
           .setAuthor({
@@ -93,32 +102,57 @@ export default class CoinFlipGame extends Game {
           })
           .setDescription(
             Common.join(
-              !game.isWin() && !game.isLose()
-                ? 'Guess what side of the coin it would flip upon.'
-                : Common.join(
-                    `You ${game.isWin() ? 'won' : 'lost'} ${bold((game.isWin() ? won : context.db.bet.value).toLocaleString())} coins.\n`,
-                    `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}.`
+              !game.hasPicked()
+                ? !ended
+                  ? Common.join(
+                    'Guess what side of the coin it would flip up to.',
+                    `You placed ${bold(context.db.bet.value.toLocaleString())} coins.`
                   )
+                  : Common.join(
+                    "You didn't respond in time. You are keeping your money.\n",
+                    `${bold('Your Balance:')} ${context.db.wallet.value.toLocaleString()}`
+                  )
+                : Common.join(
+                  `It was ${bold(game.opponent.value)}${game.isWin() ? '!' : '.'} You ${game.isWin() ? 'won' : 'lost'} ${bold((game.isWin() ? won : context.db.bet.value).toLocaleString())} coins.\n`,
+                  game.isWin() ? `${bold('Percent Won:')} ${percent(won, context.db.bet.value)}` : '',
+                  `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}.`
+                )
             )
           )
-          .setColor(!ended ? Constants.Colors.BLURPLE : game.isWin() ? Constants.Colors.GREEN : Constants.Colors.RED)
+          .setColor(
+            !game.hasPicked()
+              ? !ended
+                ? Constants.Colors.BLURPLE
+                : Constants.Colors.NOT_QUITE_BLACK
+              : game.isWin()
+                ? Constants.Colors.GREEN
+                : Constants.Colors.RED
+          )
+          .setFooter(
+            !game.hasPicked()
+              ? null 
+              : context.schema.wins.streak.isActive() || context.schema.loses.streak.isActive()
+                ? { text: `${game.isWin() ? 'Win' : 'Lose'} Streak: ${Reflect.get(context.schema, game.isWin() ? 'wins' : 'loses').streak.display}` }
+                : null
+          )
       )
-      .addComponentRow((row) =>
+      .addRow((row) =>
         Object.values(Coinflip.Side).reduce(
           (row, customId) =>
             row.addButtonComponent((btn) =>
               btn
-                .setCustomId(Discord.createComponentId({ customId, date: new Date(context.command.createdTimestamp) }).customId)
+                .setCustomId(context.customId.create(customId))
                 .setLabel(toTitleCase(customId))
                 .setDisabled(ended)
                 .setStyle(
-                  !ended
+                  !game.hasPicked() && !ended
                     ? Constants.MessageButtonStyles.PRIMARY
-                    : game.isWin()
-                    ? game.opponent.value === customId
-                      ? Constants.MessageButtonStyles.SUCCESS
-                      : Constants.MessageButtonStyles.DANGER
-                    : Constants.MessageButtonStyles.DANGER
+                    : (game.player.value === Coinflip.Side.HEADS && customId === Coinflip.Side.HEADS) ||
+                      (game.player.value === Coinflip.Side.TAILS && customId === Coinflip.Side.TAILS)
+                      ? game.isWin()
+                        ? Constants.MessageButtonStyles.SUCCESS
+                        : Constants.MessageButtonStyles.DANGER
+                      : Constants.MessageButtonStyles.SECONDARY
                 )
             ),
           row

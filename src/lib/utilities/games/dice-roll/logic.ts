@@ -7,7 +7,7 @@ export class Player {
 
   public constructor(public readonly user: User) {}
 
-  public roll(min = 1, max = 6): asserts this is Player.Rolled {
+  public roll(min: number, max: number): asserts this is Player.Rolled {
     this.value = randomNumber(min, max);
   }
 
@@ -53,9 +53,9 @@ export class Logic {
     this.opponent = new Player(opponent);
   }
 
-  public roll(): asserts this is Logic.Rolled {
-    this.player.roll();
-    this.opponent.roll();
+  public roll(min = 1, max = 12): asserts this is Logic.Rolled {
+    this.player.roll(min, max);
+    this.opponent.roll(min, max);
   }
 
   public hasBothRolled(): this is Logic.Rolled {
@@ -92,6 +92,10 @@ export class Logic {
 
   public isLose(): this is Logic.Rolled {
     return this.outcome === Outcome.LOSE;
+  }
+
+  public isNone(): this is this {
+    return this.outcome === Outcome.NONE;
   }
 }
 

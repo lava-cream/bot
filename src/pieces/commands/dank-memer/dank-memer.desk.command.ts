@@ -3,12 +3,13 @@ import { ApplicationCommandRegistry, Command, CommandOptionsRunTypeEnum } from '
 import type { CommandInteraction } from 'discord.js';
 
 import type { DonationDeskEntrySchema } from '#lib/database';
-import { Collector, commandHasOption, MessageActionRowBuilder, seconds } from '#lib/utilities';
-import { fromAsync, Result } from '@sapphire/result';
+import { Collector, commandHasOption, edit, InteractionMessageContentBuilder, seconds } from '#lib/utilities';
+import { Result } from '@sapphire/result';
 import { isNullOrUndefined } from '@sapphire/utilities';
-import type { TextChannel, WebhookEditMessageOptions } from 'discord.js';
-import { Constants, MessageEmbed } from 'discord.js';
+import type { TextChannel } from 'discord.js';
+import { Constants } from 'discord.js';
 import { ChannelType } from 'discord.js/node_modules/discord-api-types/v9.js';
+import { CommandError } from '#lib/framework';
 
 /**
  * Command Usage:
@@ -73,85 +74,75 @@ export default class DeskCommand extends Command {
         const name = command.options.getString(Name, true);
         const description = command.options.getString(Description, true);
 
-        if (db.entries.resolve(id)) {
-          return await command.editReply('Lmao that entry with that id exists already.');
-        }
+        if (db.entries.resolve(id)) throw new CommandError('Lmao that entry with that ID exists already.');
 
         await db.run((db) => db.entries.create({ id, name, description })).save();
         await this.container.db.desks.sendOrUpdateMessage(db, command);
 
-        return await command.editReply('Done.');
+        return await edit(command, 'Done.');
       }
 
       case SubCommands.Config.name: {
         const { AccessChannel, AccessRole, StaffRole } = SubCommands.Config.options;
 
-        if (!db.entries.entries.length) {
-          return await command.editReply("This server don't have any desk entries to configure.");
-        }
+        if (!db.entries.entries.length) throw new CommandError("This server don't have any desk entries to configure.");
 
         const accessChannel = commandHasOption(command, AccessChannel, 'CHANNEL') ? (command.options.getChannel(AccessChannel) as TextChannel) : null;
         const accessRole = commandHasOption(command, AccessRole, 'ROLE') ? command.options.getRole(AccessRole) : null;
         const staffRole = commandHasOption(command, StaffRole, 'ROLE') ? command.options.getRole(StaffRole) : null;
 
-        if ([accessChannel, accessRole, staffRole].every(isNullOrUndefined)) {
-          return await command.editReply('You gotta select at least one option lmao.');
-        }
+        if ([accessChannel, accessRole, staffRole].every(isNullOrUndefined)) throw new CommandError('You gotta select at least one option lmao.');
 
         const desk = await this.awaitDeskEntry(command, db.entries.entries);
-        if (!desk.success) {
-          return await command.editReply({ content: 'Lmao you have to respond, idiot.', embeds: [], components: [] });
-        }
+        if (!desk.isOk()) throw new CommandError('Lmao you have to respond, idiot.');
 
-        if (!isNullOrUndefined(accessRole)) desk.value.roles.update({ access: accessRole.id });
-        if (!isNullOrUndefined(staffRole)) desk.value.roles.update({ staff: staffRole.id });
-        if (!isNullOrUndefined(accessChannel)) db.channels.update({ access: accessChannel.id });
+        desk.inspect((desk) => {
+          if (!isNullOrUndefined(accessRole)) desk.roles.setAccess(accessRole.id);
+          if (!isNullOrUndefined(staffRole)) desk.roles.setStaff(staffRole.id);
+          if (!isNullOrUndefined(accessChannel)) db.channels.setAccess(accessChannel.id);
+        });
 
         await db.save();
         await this.container.db.desks.sendOrUpdateMessage(db, command);
 
-        return await command.editReply({ content: 'Done.', components: [], embeds: [] });
+        return await edit(command, (builder) => builder.setContent('Done.').setRows().setEmbeds());
       }
 
       case SubCommands.Edit.name: {
         const { Identifier, Name, Description } = SubCommands.Edit.options;
 
-        if (!db.entries.entries.length) {
-          return await command.editReply("This server don't have any desk entries to configure.");
-        }
+        if (!db.entries.entries.length) throw new CommandError("This server don't have any desk entries to configure.");
 
         const desk = await this.awaitDeskEntry(command, db.entries.entries);
-        if (!desk.success) return await command.followUp('Lmao waiting here is illegal.');
+        if (!desk.isOk()) throw new CommandError('Lmao waiting here is illegal.');
 
         const id = commandHasOption(command, Identifier, 'STRING') ? command.options.getString(Identifier) : null;
         const name = commandHasOption(command, Name, 'STRING') ? command.options.getString(Name) : null;
         const description = commandHasOption(command, Description, 'STRING') ? command.options.getString(Description) : null;
 
-        if ([id, name, description].every(isNullOrUndefined)) {
-          return await command.editReply({ content: 'You gotta select at least one option lmao.', components: [], embeds: [] });
-        }
+        if ([id, name, description].every(isNullOrUndefined)) throw new CommandError('You gotta select at least one option lmao.');
 
-        if (!isNullOrUndefined(name)) desk.value.update({ name });
-        if (!isNullOrUndefined(description)) desk.value.update({ description });
+        desk.inspect((desk) => {
+          if (!isNullOrUndefined(name)) desk.setName(name);
+          if (!isNullOrUndefined(description)) desk.setDescription(description);
+        });
 
         await db.save();
         await this.container.db.desks.sendOrUpdateMessage(db, command);
 
-        return await command.editReply({ content: 'Done.', components: [], embeds: [] });
+        return await edit(command, (builder) => builder.setContent('Done.').setRows().setEmbeds());
       }
 
       case SubCommands.Delete: {
-        if (!db.entries.entries.length) {
-          return await command.editReply("This server don't have any desk entries to configure.");
-        }
+        if (!db.entries.entries.length) throw new CommandError("This server don't have any desk entries to configure.");
 
         const desk = await this.awaitDeskEntry(command, db.entries.entries);
-        if (!desk.success) return await command.followUp('Lmao you have to pick an entry to delete SMH.');
+        if (!desk.isOk()) throw new CommandError('Lmao you have to choose an entry to delete SMH.');
 
-        await db.run((db) => db.entries.delete(desk.value.id)).save();
+        await db.run((db) => db.entries.delete(desk.unwrap().id)).save();
         await this.container.db.desks.sendOrUpdateMessage(db, command);
 
-        return await command.editReply({ content: 'Done.', components: [], embeds: [] });
+        return await edit(command, (builder) => builder.setContent('Done.').setRows().setEmbeds());
       }
     }
 
@@ -162,11 +153,11 @@ export default class DeskCommand extends Command {
     command: CommandInteraction<'cached'>,
     entries: DonationDeskEntrySchema[]
   ): Promise<Result<DonationDeskEntrySchema, null>> {
-    return fromAsync(async () => {
+    return Result.fromAsync(async () => {
       try {
         return await new Promise(async (resolve, reject) => {
           const collector = new Collector({
-            message: await command.editReply(this.renderPickerContent(entries, false)),
+            message: await edit(command, this.renderPickerContent(entries, false)),
             componentType: 'BUTTON',
             time: seconds(30),
             max: Infinity,
@@ -174,6 +165,12 @@ export default class DeskCommand extends Command {
               const contextual = button.user.id === command.user.id;
               await button.deferUpdate();
               return contextual;
+            },
+            end: async (ctx) => {
+              if (ctx.wasInternallyStopped()) {
+                await edit(command, this.renderPickerContent(entries, true));
+                return reject(null);
+              }
             }
           });
 
@@ -184,13 +181,6 @@ export default class DeskCommand extends Command {
             });
           }
 
-          collector.setEndAction(async (ctx) => {
-            if (ctx.wasInternallyStopped()) {
-              await command.editReply(this.renderPickerContent(entries, true));
-              return reject(null);
-            }
-          });
-
           await collector.start();
         });
       } catch {
@@ -199,24 +189,23 @@ export default class DeskCommand extends Command {
     });
   }
 
-  private renderPickerContent(entries: DonationDeskEntrySchema[], failed: boolean): WebhookEditMessageOptions {
-    return {
-      embeds: [
-        new MessageEmbed()
+  private renderPickerContent(entries: DonationDeskEntrySchema[], failed: boolean): InteractionMessageContentBuilder {
+    return new InteractionMessageContentBuilder()
+      .addEmbed((embed) =>
+        embed
           .setTitle('Desk Entry Picker')
           .setColor(failed ? Constants.Colors.RED : Constants.Colors.NOT_QUITE_BLACK)
           .setDescription(failed ? 'SMH stop wasting my time.' : 'Please select an entry below to continue.')
-      ],
-      components: [
+      )
+      .addRow((row) =>
         entries.reduce(
           (row, entry) =>
             row.addButtonComponent((btn) =>
               btn.setCustomId(entry.id).setLabel(entry.name).setStyle(Constants.MessageButtonStyles.SECONDARY).setDisabled(failed)
             ),
-          new MessageActionRowBuilder()
+          row
         )
-      ]
-    };
+      );
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

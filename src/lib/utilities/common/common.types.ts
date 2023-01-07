@@ -3,13 +3,19 @@ import type { PickByValue, Ctor } from '@sapphire/utilities';
 import type { Awaitable } from 'discord.js';
 
 /**
+ * Omits the first argument of a function.
+ * @template T The function.
+ */
+export type OmitFirstArgument<T> = T extends (arg1: unknown, ...args: infer U) => infer R ? (...args: U) => R : never;
+
+/**
  * Creates a callback function type.
  * @template A The arguments of the function.
  * @template R The return type.
  * @template This The `this` type.
  * @since 6.0.0
  */
-export type Callback<A extends unknown[], R, This> = (this: This, ...args: A) => R;
+export type Callback<A extends unknown[], R> = (...args: A) => R;
 
 /**
  * Extracts the piece's type from a store.
@@ -21,6 +27,7 @@ export type ExtractPieceType<S> = S extends Store<infer P> | AliasStore<infer P>
 
 /**
  * Represents the stricter type of a discord snowflake which is, a stringified bigint.
+ * Once upon a time discord.js used to have this type for {@link import('discord.js').Snowflake} but a lot of TS developers don't understand so it was reverted back.
  * @since 5.1.0
  */
 export type StrictSnowflake = `${bigint}`;
@@ -38,10 +45,10 @@ export type { If } from 'discord.js';
 /**
  * Extracts the value from a promise.
  * @template V A resolvable promise.
- * @version 6.0.0 - Add support for `PromiseLike` and `Awaitable` types.
+ * @version 6.0.0 - Add support for `Awaitable` types.
  * @since 4.3.0
  */
-export type ExtractPromiseType<V> = V extends Promise<infer P> | PromiseLike<infer P> | Awaitable<infer P> ? P : never;
+export type ExtractPromiseType<V> = V extends Promise<infer P> | Awaitable<infer P> ? P : never;
 
 /**
  * Creates a function type.

@@ -1,16 +1,51 @@
-import type { OmitFunctions } from '#lib/utilities/common/index.js';
-import { PlayerLevel } from '#lib/utilities/constants/index.js';
-import { prop } from '#lib/database/structures/schema.js';
+import { PlayerLimits } from '#lib/utilities/constants/index.js';
+import { CreateNumberValueSchema } from '#lib/database/structures/schema.js';
 
-export class PlayerLevelsSchema {
-  @prop({ type: Number, default: 0 })
-  public xp!: number;
+/**
+ * Represents the player's level information.
+ * @since 6.0.0
+ */
+export class PlayerLevelsSchema extends CreateNumberValueSchema(0) {
+  /**
+   * The XP points.
+   */
+  public declare value: number;
 
-  public update(options: Partial<OmitFunctions<Omit<PlayerLevelsSchema, 'level'>>>): this {
-    return Object.assign(this, options);
+  /**
+   * The approximate level of the player.
+   */
+  public get level() {
+    return Math.trunc(Math.sqrt(this.value / 100));
   }
 
-  public get level() {
-    return Math.trunc(this.xp / PlayerLevel.ExperienceRatio);
+  /**
+   * The current level's XP target.
+   */
+  public get levelXPTarget() {
+    return this.calcLevelXPTarget(this.level);
+  }
+
+  /**
+   * The next level's XP target.
+   */
+  public get nextLevelXPTarget() {
+    return this.calcLevelXPTarget(this.level + 1);
+  }
+
+  /**
+   * Checks if the level of the player is already at max.
+   * @returns A boolean.
+   */
+  public isMaxLevel() {
+    return this.level >= PlayerLimits.Level;
+  }
+
+  /**
+   * Calculates the XP target of a specific level.
+   * @param level The level.
+   * @returns The calculated value.
+   */
+  public calcLevelXPTarget(level: number) {
+    return Math.trunc(level ** 2 * 100);
   }
 }

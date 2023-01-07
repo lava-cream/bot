@@ -1,30 +1,35 @@
-import '@sapphire/plugin-editable-commands/register';
+// Quick Setup
+import '@sapphire/plugin-subcommands/register';
 import '#lib/utilities/root/root.setup.js';
 
-import { CLIENT_OPTIONS } from '#lib/framework/core/client-options.js';
-import { AmariClient } from '#lib/apis/amari-bot/client/amari.client.js';
-import { Client } from '#lib/database/client/client.js';
-import { container, Result } from '@sapphire/framework';
+// Clients
 import MemersClient from '#lib/framework/core/client.js';
+import DatabaseClient from '#lib/database/client/client.js';
+import AmariClient from '#lib/apis/amari-bot/client/amari.client.js';
 
-const exitWithError = (tag: string, ...message: any[]) => {
-  container.logger.error(`[${tag}]`, ...message);
-  return process.exit(1);
-}
+// Misc
+import { CLIENT_OPTIONS } from '#lib/framework/core/client-options.js';
+import { container, Result } from '@sapphire/framework';
+import { LogLevels, setLogLevel } from '@typegoose/typegoose';
+import chalk from 'chalk';
 
-new AmariClient({ token: process.env.AMARI_API_KEY });
+setLogLevel(LogLevels.SILENT);
 
-const [login, db] = await Promise.all([
-  await Result.fromAsync(new MemersClient(CLIENT_OPTIONS).login()),
-  await Result.fromAsync(
-    new Client({
+await Result.fromAsync(Reflect.construct(MemersClient, [CLIENT_OPTIONS]).login()).then((result) =>
+  result.inspectErr((err) => container.logger.fatal(chalk.redBright(err)))
+);
+
+Result.from(new AmariClient({ token: process.env.AMARI_API_KEY }))
+  .inspectErr(() => container.logger.info(chalk.redBright(`Failed to create ${AmariClient.name} instance.`)))
+  .inspect((amari) => container.logger.info(chalk.yellowBright(`[${amari.constructor.name.toUpperCase()}] Instance created.`)));
+
+await Result.fromAsync(
+  Reflect.construct(DatabaseClient, [
+    {
       connectionUri: process.env.MONGO_URI,
       username: process.env.MONGO_USER,
       password: process.env.MONGO_PASS,
       databaseName: process.env.MONGO_DB_NAME
-    }).connect()
-  )
-] as const);
-
-if (login.isErr()) exitWithError('CLIENT', 'Unable to connect to Discord.', login.unwrapErr());
-if (db.isErr()) exitWithError('DATABASE', 'Unable to connect to the database.', db.unwrapErr());
+    }
+  ]).connect()
+).then((result) => result.inspectErr((err) => container.logger.fatal(chalk.redBright(err))));

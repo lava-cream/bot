@@ -1,26 +1,49 @@
-import type { ChatInputCommandErrorPayload, UserError } from '@sapphire/framework';
+import { type ChatInputCommandErrorPayload, UserError } from '@sapphire/framework';
 import { Listener, Events } from '@sapphire/framework';
 
-import { Constants, InteractionReplyOptions } from 'discord.js';
-import { bold } from '@discordjs/builders';
+import { Constants } from 'discord.js';
+import { createEmbed, Responder } from '#lib/utilities';
+
+import { ChatInputSubcommandErrorPayload, SubcommandPluginEvents } from '@sapphire/plugin-subcommands';
 
 export class ChatInputCommandErrorListener extends Listener<typeof Events.ChatInputCommandError> {
   public constructor(context: Listener.Context) {
-    super(context, { name: Events.ChatInputCommandError });
+    super(context, { event: Events.ChatInputCommandError });
   }
 
-  private getContent = (_error: UserError, _payload: ChatInputCommandErrorPayload): InteractionReplyOptions => ({
-    embeds: [
-      {
-        title: 'Error Encountered',
-        color: Constants.Colors.RED,
-        description: `OOPS We ran through an error. Please yell at my owner ${bold(this.container.client.owner!.tag)} to fix this problem.`
-      }
-    ]
-  });
+  public async run(error: unknown, payload: ChatInputCommandErrorPayload): Promise<void> {
+    const responder = new Responder(payload.interaction);
+    const embed = createEmbed(embed =>
+      embed
+        .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
+        .setDescription('An unknown error occured.')
+    );
 
-  public async run(error: UserError, payload: ChatInputCommandErrorPayload): Promise<void> {
-    this.container.logger.error(`[COMMAND] ${payload.command.name} ran into an error:`, error.stack ?? error);
-    await payload.interaction.webhook.send(this.getContent(error, payload));
+    if (error instanceof UserError) {
+      await responder.send(content => content.addEmbed(() => embed.setDescription(error.message)));
+    }
+
+    this.container.logger.error('[CLIENT => COMMAND-HANDLER]', error);
+  }
+}
+
+export class ChatInputSubcommandErrorListener extends Listener<typeof SubcommandPluginEvents.ChatInputSubcommandError> {
+  public constructor(context: Listener.Context) {
+    super(context, { event: SubcommandPluginEvents.ChatInputSubcommandError });
+  }
+
+  public async run(error: unknown, payload: ChatInputSubcommandErrorPayload) {
+    const responder = new Responder(payload.interaction);
+    const embed = createEmbed(embed =>
+      embed
+        .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
+        .setDescription('An unknown error occured.')
+    );
+
+    if (error instanceof UserError) {
+      await responder.send(content => content.addEmbed(() => embed.setDescription(error.message)));
+    }
+
+    this.container.logger.error('[CLIENT => COMMAND-HANDLER]', error);
   }
 }

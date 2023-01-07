@@ -5,7 +5,7 @@ import { container } from '@sapphire/framework';
 import { BaseClient } from './client.base.js';
 import type { ClientOptions } from './client.options.js';
 
-export class Client extends BaseClient {
+export default class DatabaseClient extends BaseClient {
   public readonly guides = new ItemGuideManager(this);
   public readonly desks = new DonationDeskManager(this);
   public readonly trackers = new DonationTrackerManager(this);
@@ -25,6 +25,6 @@ export class Client extends BaseClient {
 
 declare module '@sapphire/pieces' {
   interface Container {
-    db: Client;
+    db: DatabaseClient;
   }
 }

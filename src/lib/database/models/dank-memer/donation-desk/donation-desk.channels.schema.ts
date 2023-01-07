@@ -1,24 +1,6 @@
 import type { OmitFunctions } from '#lib/utilities/common/common.types';
 import { prop, SchemaTypes } from '#lib/database/structures/schema.js';
 
-export class DonationDeskChannelsSchema {
-  @prop({ type: () => DonationDeskChannelsDeskSchema, immutable: true })
-  public readonly desk!: DonationDeskChannelsDeskSchema;
-
-  @prop({ type: SchemaTypes.Mixed })
-  public access!: string | null;
-
-  public constructor(options: OmitFunctions<Omit<DonationDeskChannelsSchema, 'desk'>>) {
-    this.desk = new DonationDeskChannelsDeskSchema({ id: null, message: null });
-    this.access = options.access;
-  }
-
-  public setAccess(access: string | null): this {
-    this.access = access;
-    return this;
-  }
-}
-
 export class DonationDeskChannelsDeskSchema {
   @prop({ type: SchemaTypes.Mixed })
   public id!: string | null;
@@ -38,6 +20,24 @@ export class DonationDeskChannelsDeskSchema {
 
   public setMessage(message: string | null): this {
     this.message = message;
+    return this;
+  }
+}
+
+export class DonationDeskChannelsSchema {
+  @prop({ type: () => DonationDeskChannelsDeskSchema, immutable: true })
+  public readonly desk!: DonationDeskChannelsDeskSchema;
+
+  @prop({ type: SchemaTypes.Mixed })
+  public access!: string | null;
+
+  public constructor(options: OmitFunctions<Omit<DonationDeskChannelsSchema, 'desk'>>) {
+    this.desk = new DonationDeskChannelsDeskSchema({ id: null, message: null });
+    this.access = options.access;
+  }
+
+  public setAccess(access: string | null): this {
+    this.access = access;
     return this;
   }
 }

@@ -1,10 +1,16 @@
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { Collector, seconds, createComponentId, getUserAvatarURL, join, MessageContentBuilder } from '#lib/utilities';
+import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, randomItem, createEmbed, createButton, toReadable, roundZero } from '#lib/utilities';
 import { Game } from '#lib/framework/index.js';
-import { Constants, MessageEmbed } from 'discord.js';
+import { Constants } from 'discord.js';
 import { bold } from '@discordjs/builders';
 import * as EmojiPair from '#lib/utilities/games/emoji-pair/index.js';
+
+declare module '#lib/framework/structures/game/game.types' {
+  interface Games {
+    emojipair: never;
+  }
+}
 
 @ApplyOptions<Game.Options>({
   id: 'emojipair',
@@ -12,97 +18,101 @@ import * as EmojiPair from '#lib/utilities/games/emoji-pair/index.js';
   description: 'Just pair it!',
   detailedDescription: 'Get an exact pair of the same emoji. The mood behind the emoji signifies how big you had won.'
 })
-export class EmojiPairGame extends Game {
-  public async play(ctx: Game.Context) {
+export default class EmojiPairGame extends Game {
+  public async play(context: Game.Context) {
     const logic = new EmojiPair.Logic(EmojiPairGame.pairs);
-
-    try {
-      await EmojiPairGame.runCollector(logic, ctx);
-      await ctx.edit(EmojiPairGame.renderContent(logic, ctx, true));
-      await ctx.db.save();
-      await ctx.end();
-    } catch {
-      await ctx.end(true);
-    }
-  }
-
-  private static runCollector(logic: EmojiPair.Logic, ctx: Game.Context): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      const collector = new Collector({
-        componentType: 'BUTTON',
-        message: await ctx.respond(EmojiPairGame.renderContent(logic, ctx, false)),
-        time: seconds(10),
-        max: Infinity,
-        filter: async (button) => {
-          const context = button.user.id === ctx.command.user.id;
-          await button.deferUpdate();
-          return context;
+    const collector = new Collector({
+      componentType: 'BUTTON',
+      message: await context.responder.send(() => EmojiPairGame.renderContentAndUpdate(logic, context, false)),
+      time: seconds(10),
+      max: Infinity,
+      actions: {
+        [context.customId.create('reveal')]: async (ctx) => {
+          await edit(ctx.interaction, EmojiPairGame.renderContentAndUpdate(logic.reveal(), context, true));
+          return ctx.stop();
         }
-      });
+      },
+      filter: async (button) => {
+        const contextual = button.user.id === context.command.user.id;
+        await button.deferUpdate();
+        return contextual;
+      },
+      end: async (ctx) => {
+        if (ctx.wasInternallyStopped()) {
+          await context.responder.edit(() => EmojiPairGame.renderContentAndUpdate(logic, context, true));
+          await context.end(true);
+          return;
+        }
 
-      collector.actions.add(createComponentId({ date: new Date(ctx.command.createdTimestamp), customId: 'reveal' }).customId, (ctx) =>
-        ctx.collector.stop(ctx.interaction.customId)
-      );
-      collector.setEndAction((ctx) => (ctx.wasInternallyStopped() ? resolve() : reject()));
-
-      await collector.start();
+        await context.end();
+      }
     });
+
+    await collector.start();
   }
 
-  private static renderContent(logic: EmojiPair.Logic, ctx: Game.Context, ended: boolean) {
-    const embed = new MessageEmbed().setAuthor({ name: `${ctx.command.user.username}'s pairing game`, iconURL: getUserAvatarURL(ctx.command.user) });
-    const builder = new MessageContentBuilder().addComponentRow((row) =>
-      row.addButtonComponent((btn) =>
-        btn
-          .setCustomId(createComponentId({ date: new Date(ctx.command.createdTimestamp), customId: 'reveal' }).customId)
-          .setLabel('Reveal')
-          .setDisabled(ended)
-          .setStyle(
-            ended
-              ? logic.isWin()
-                ? Constants.MessageButtonStyles.SUCCESS
-                : Constants.MessageButtonStyles.DANGER
-              : Constants.MessageButtonStyles.PRIMARY
-          )
-      )
-    );
-
+  private static renderContentAndUpdate(logic: EmojiPair.Logic, ctx: Game.Context, ended: boolean) {
+    const embed = createEmbed(embed => embed.setAuthor({ name: `${ctx.command.user.username}'s pairing game`, iconURL: getUserAvatarURL(ctx.command.user) }));
+    const button = createButton(button => button.setCustomId(ctx.customId.create('reveal')).setDisabled(logic.revealed || ended));
     const description: string[] = [];
-    description.push(logic.pair.map((p, idx) => (ended ? p.emoji : idx === 1 ? ':question:' : p.emoji)).join(' '));
+
+    description.push(`${bold('>')} ${logic.pair.map((e, idx) => (ended && logic.revealed ? e.emoji : idx === 1 ? '❓' : e.emoji)).join('    ')} ${bold('<')}\n`)
 
     switch (true) {
-      case !ended: {
-        description.push('Click the little button below to reveal the pair.');
+      case !logic.revealed && !ended: {
+        description.push('Click the button below to reveal the pair.');
+
         embed.setColor(Constants.Colors.BLURPLE);
+        button.setLabel('Reveal').setStyle(Constants.MessageButtonStyles.PRIMARY);
+        break;
+      }
+      
+      case !logic.revealed && ended: {
+        description.push("You didn't respond in time. You are keeping your money.", `You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`);
+
+        embed.setColor(Constants.Colors.NOT_QUITE_BLACK);
+        button.setLabel('Timed Out').setStyle(Constants.MessageButtonStyles.SECONDARY);
         break;
       }
 
       case logic.isWin(): {
-        const { final } = Game.calculateWinnings({
-          base: logic.pair.at(0)!.multiplier,
-          bet: ctx.db.bet.value,
-          multiplier: ctx.db.multiplier.value,
-          random: 0
-        });
+        const winnings = roundZero(ctx.winnings 
+          .setBase(randomItem(logic.pair).multiplier)
+          .setMultiplier(ctx.db.multiplier.value)
+          .calculate(ctx.db.bet.value));
 
         ctx.db.run((db) => {
-          db.wallet.update({ value: db.wallet.value + final });
-          if (!db.energy.isMaximumStars()) db.energy.update({ stars: db.energy.stars + 1 });
+          ctx.schema.win(winnings);
+          db.wallet.addValue(winnings);
+          db.bank.space.addValue(winnings);
+          db.energy.addValue();
         });
-        description.push(`${bold('PAIRED!')} You won ${bold(final.toLocaleString())} coins.`);
-        embed.setColor(Constants.Colors.GREEN);
+
+        description.push(`${bold('PAIRED!')} You won ${bold(winnings.toLocaleString())} coins.`, `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
+
+        embed.setColor(Constants.Colors.GREEN).setFooter(ctx.schema.wins.coins.highest > 0 ? { text: `Highest Coins Won: ${toReadable(ctx.schema.wins.coins.highest, 2)}` } : null);
+        button.setLabel('Winner Winner').setStyle(Constants.MessageButtonStyles.SUCCESS);
         break;
       }
 
-      default: {
-        ctx.db.run((db) => db.wallet.update({ value: db.wallet.value - db.bet.value }));
-        description.push("You didn't get an outstanding pair sad.");
+      case logic.isLose(): {
+        ctx.db.run(db => {
+          ctx.schema.lose(db.bet.value);
+          db.wallet.subValue(db.bet.value);
+          db.energy.subValue();
+        });
+
+        description.push("You didn't get a unique pair sad. You lost your bet.", `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
+
         embed.setColor(Constants.Colors.RED);
+        button.setLabel('Loser Loser').setStyle(Constants.MessageButtonStyles.DANGER);
         break;
       }
     }
 
-    return builder.setEmbeds([embed.setDescription(join(description))]);
+    return new InteractionMessageContentBuilder()
+      .addEmbed(() => embed.setDescription(join(description)))
+      .addRow(row => row.addButtonComponent(() => button));
   }
 
   /**
@@ -110,11 +120,10 @@ export class EmojiPairGame extends Game {
    */
   private static get pairs(): EmojiPair.Emoji[] {
     return [
-      { emoji: ':pineapple:', multiplier: 1.5 },
-      { emoji: ':apple:', multiplier: 1.2 },
-      { emoji: ':carrot:', multiplier: 1 },
-      { emoji: ':peach:', multiplier: 0.8 },
-      { emoji: ':eggplant:', multiplier: 0.5 }
+      { emoji: '💰', multiplier: 10 },
+      { emoji: '💶', multiplier: 8 },
+      { emoji: '💵', multiplier: 4 },
+      { emoji: '🪙', multiplier: 2 }
     ];
   }
 }

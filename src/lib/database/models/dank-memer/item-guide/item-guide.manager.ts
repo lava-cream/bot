@@ -1,4 +1,4 @@
-import type { Client } from '#lib/database/client/client.js';
+import type DatabaseClient from '#lib/database/client/client.js';
 import { Manager } from '#lib/database/structures/manager.js';
 import { ItemGuideSchema } from './item-guide.schema.js';
 
@@ -20,11 +20,11 @@ export interface ItemGuideItemUpdateOptions {
   guild: Guild;
   db: ItemGuideSchema.Document;
   category: ItemGuideCategorySchema;
-  type: ItemGuideItemUpdateType
+  type: ItemGuideItemUpdateType;
 }
 
 export class ItemGuideManager extends Manager<ItemGuideSchema> {
-  public constructor(client: Client) {
+  public constructor(client: DatabaseClient) {
     super({ client, name: 'dank-memer.item-guide', holds: ItemGuideSchema });
   }
 
@@ -37,32 +37,32 @@ export class ItemGuideManager extends Manager<ItemGuideSchema> {
     const embed = new MessageEmbed()
       .setTitle(bold(`${category.name} / ${underscore(newItem.name)}`))
       .setColor(Constants.Colors.NOT_QUITE_BLACK)
-      .setFooter({ text: newItem.id });
+      .setFooter({ text: `${category.id}.${newItem.id}` });
 
     if (isNullOrUndefined(db.channels.updates)) return false;
 
-    const resolvedChannel = await Resolvers.resolveGuildTextChannel(db.channels.updates, guild);
+    const resolvedChannel = Resolvers.resolveGuildTextChannel(db.channels.updates, guild);
     if (resolvedChannel.isErr()) return false;
 
     switch (type) {
       case ItemGuideItemUpdateType.Name: {
-        embed.addField('Old Name', oldItem.name, true);
-        embed.addField('New Name', newItem.name, true);
+        embed.addFields({ name: 'Previous Name', value: oldItem.name, inline: true }, { name: 'New Name', value: newItem.name, inline: true });
         break;
-      };
+      }
 
       case ItemGuideItemUpdateType.Price: {
-        embed.addField('Old Price', inlineCode(oldItem.price.toLocaleString()), true);
-        embed.addField('New Price', inlineCode(newItem.price.toLocaleString()), true);
-        embed.addField('Difference', inlineCode((newItem.price - oldItem.price).toLocaleString()), false);
+        embed.addFields(
+          { name: 'Previous Price', value: inlineCode(oldItem.price.toLocaleString()), inline: true },
+          { name: 'New Price', value: inlineCode(newItem.price.toLocaleString()), inline: true },
+          { name: 'Difference', value: inlineCode((newItem.price - oldItem.price).toLocaleString()), inline: false }
+        );
         break;
-      };
+      }
 
       case ItemGuideItemUpdateType.Hidden: {
-        embed.addField('Old Visibility', inlineCode(`${oldItem.hidden}`), true);
-        embed.addField('New Visibility', inlineCode(`${newItem.hidden}`), true);
+        embed.addFields({ name: 'Currently Hidden', value: inlineCode(newItem.hidden.toString()), inline: true });
         break;
-      };
+      }
     }
 
     const content = new MessageContentBuilder().addEmbed(() => embed);

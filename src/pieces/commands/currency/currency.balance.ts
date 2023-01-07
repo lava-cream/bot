@@ -1,39 +1,37 @@
-import type { CommandInteraction } from 'discord.js';
-import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
+import { Command, ApplicationCommandRegistry } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { getHighestRoleColor, join, percent, edit } from '#lib/utilities';
+import { join, percent, send, toReadable, InteractionMessageContentBuilder } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
+import type { User } from 'discord.js';
+import type { PlayerSchema } from '#lib/database';
+import { EmbedTemplates } from '#lib/utilities';
 
 @ApplyOptions<Command.Options>({
   name: 'balance',
-  description: 'Checks for the balance of you or someone else\'s.',
-  runIn: [CommandOptionsRunTypeEnum.GuildText]
+  description: "Checks for the balance of yours or someone else's."
 })
 export default class BalanceCommand extends Command {
-  public override async chatInputRun(command: CommandInteraction<'cached'>) {
-    await command.deferReply();
+  public override async chatInputRun(command: Command.ChatInputInteraction) {
+    const user = command.options.getUser('user') ?? command.user;
+    const db = await this.container.db.players.fetch(user.id);
 
-    const db = await this.container.db.players.fetch(command.user.id);
-    const member = command.options.getMember('user') ?? command.member;
+    await send(command, BalanceCommand.renderContent(user, db));
+  }
 
-    await edit(command, (content) =>
-      content.addEmbed((embed) =>
-        embed
-          .setTitle(`${member.user.username}'s balance`)
-          .setColor(getHighestRoleColor(member))
-          .setTimestamp(Date.now())
-          .setDescription(
-            join(
-              `${bold(':coin: Wallet:')} ${db.wallet.value.toLocaleString()}`,
-              `${bold(':bank: Bank:')} ${db.bank.value.toLocaleString()}/${db.bank.space.toLocaleString()} ${inlineCode(
-                percent(db.bank.value, db.bank.space, 0)
-              )}`,
-              `${bold(':moneybag: Net Worth:')} ${db.netWorth.toLocaleString()}`
-            )
-          )
+  private static renderContent(user: User, db: PlayerSchema) {
+    return new InteractionMessageContentBuilder()
+      .addEmbed(() => 
+        EmbedTemplates
+          .createSimple(join(
+            `${bold('Wallet:')} ${db.wallet.toLocaleString()}`,
+            `${bold('Bank:')} ${db.bank.toLocaleString()}/${db.bank.space.toLocaleString()} ${inlineCode(
+              percent(db.bank.value, db.bank.space.value, 1)
+            )}`
+          ))
+          .setTitle(`${user.username}'s balance`)
+          .setFooter({ text: `Net Worth: ${toReadable(db.netWorth)}` })
       )
-    );
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
@@ -42,6 +40,9 @@ export default class BalanceCommand extends Command {
         .setName(this.name)
         .setDescription(this.description)
         .addUserOption((option) => option.setName('user').setDescription('The user to check for.'))
+      , {
+        idHints: ['1050341967051108403']
+      }
     );
   }
 }

@@ -6,7 +6,7 @@ import { container } from '@sapphire/framework';
 import type { AmariClientOptions } from './options.client.js';
 import { BaseClient } from './base.client.js';
 
-export class AmariClient extends BaseClient {
+export default class AmariClient extends BaseClient {
   public readonly leaderboards = new LeaderboardManager(this);
   public readonly members = new MemberManager(this);
   public readonly rewards = new RewardsManager(this);

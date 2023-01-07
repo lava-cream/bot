@@ -19,18 +19,22 @@ export class Logic {
 
   public get outcome(): Outcome {
     switch (true) {
+      case !this.player.hasPicked(): {
+        return Outcome.NONE;
+      }
+
       case this.player.wonAgainst(this.opponent): {
         return Outcome.WIN;
       }
 
-      case this.opponent.wonAgainst(this.player): {
+      default: {
         return Outcome.LOSE;
       }
-
-      default: {
-        return Outcome.NONE;
-      }
     }
+  }
+
+  public hasPicked(): this is Logic.Picked {
+    return this.outcome !== Outcome.NONE;
   }
 
   public isWin(): this is Logic.Picked {

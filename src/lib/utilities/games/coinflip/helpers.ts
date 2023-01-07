@@ -16,8 +16,7 @@ export class Player {
   }
 
   public wonAgainst(opponent: Player): boolean {
-    if (!opponent.hasPicked() || !this.hasPicked()) return false;
-    return opponent.value === this.value;
+    return this.hasPicked() && opponent.hasPicked() ? this.value === opponent.value : false;
   }
 }
 

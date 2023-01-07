@@ -13,7 +13,7 @@ export class ClientReadyListener extends Listener<typeof Events.ClientReady> {
       for (const logger of loggers.values()) {
         try {
           const watch = new Stopwatch();
-          await logger.sync(guild);
+          await logger.syncLogChannel(guild);
 
           client.logger.info('[LOGGER]', `Successfully linked the "${logger.name}" logs for "${guild.name}" (took ${watch.stop().duration}ms)`);
         } catch {

@@ -1,328 +1,280 @@
-import {
-  type ButtonBuilder,
-  createResponsiveTimer,
-  getHighestRoleColor,
-  isPromiseFulfilled,
-  join,
-  pluralise,
-  randomColor,
-  scatter,
-  seconds,
-  toOrdinal,
-  toReadable,
-  InteractionMessageContentBuilder,
-  send,
-  edit
-} from '#lib/utilities';
+import { Collector, CustomId, disableMessageComponents, edit, InteractionMessageContentBuilder, join, MessageContentBuilder, scatter, seconds, send, toReadable } from '#lib/utilities';
+import { EmbedTemplates } from '#lib/utilities/discord/templates/templates.embed.js';
 import { bold, inlineCode, memberNicknameMention, userMention } from '@discordjs/builders';
 import { ApplyOptions } from '@sapphire/decorators';
-import { isTextChannel } from '@sapphire/discord.js-utilities';
-import { ApplicationCommandRegistry, Command, CommandOptionsRunTypeEnum } from '@sapphire/framework';
-import { isNullOrUndefined, noop } from '@sapphire/utilities';
-import { ButtonInteraction, Collection, CommandInteraction, Constants, Message, Snowflake, User } from 'discord.js';
+import { ApplicationCommandRegistry, Command, CommandOptionsRunTypeEnum, Result } from '@sapphire/framework';
+import { isNullOrUndefined, noop, toTitleCase } from '@sapphire/utilities';
+import type { InteractionCollector, Message, MessageCollector, ThreadChannel } from 'discord.js';
+import { ButtonInteraction, Collection, Constants, Snowflake } from 'discord.js';
 
-interface Spammer {
-  spams: number;
-  button: ButtonInteraction<'cached'>;
-  won: number;
+enum Config {
+  MaxSpamAmount = 25,
+  MaxSpamPlayers = 10
 }
 
-enum SpamControls {
-  Join = 'bot.commands.spam.join',
-  Start = 'bot.commands.spam.start',
-  Stop = 'bot.commands.spam.stop'
+enum Control {
+  Join = 'spam-join',
+  Start = 'spam-start',
+  Stop = 'spam-stop'
 }
 
-enum SpamConfig {
-  /**
-   * The # of required spams to win.
-   */
-  ELIGIBLE_SPAMS = 15,
-  /**
-   * The max # of people who can join the event.
-   */
-  MAXIMUM_SPAMMERS = 30,
-  /**
-   * The minimum % of the payout prize.
-   */
-  MINIMUM_PAYOUT = 10,
-  /**
-   * The maximum % of the payout prize.
-   */
-  MAXIMUM_PAYOUT = 30
+enum Mode {
+  Message = 'message',
+  Button = 'button'
 }
-
-type SpamPlayers = Collection<Snowflake, Spammer>;
 
 @ApplyOptions<Command.Options>({
   name: 'spam',
-  description: 'Start a spam event! Top spammer gets the most payouts while the bottom one gets the least.',
+  description: 'Start a spam event.',
+  detailedDescription: 'This spam event is a competition for spammers out there to win a cool prize!',
   requiredUserPermissions: ['MANAGE_MESSAGES'],
   runIn: [CommandOptionsRunTypeEnum.GuildText]
 })
 export default class SpamCommand extends Command {
-  public override async chatInputRun(command: CommandInteraction<'cached'>) {
-    await command.deferReply();
-
+  public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     const prize = Math.trunc(command.options.getNumber('prize', true));
-    const lock = command.options.getBoolean('lock_channel') ?? true;
-    const players: SpamPlayers = new Collection();
-    const message = await edit(command, () => SpamCommand.renderIntroEmbed(command.user, players, prize));
+    const mode = command.options.getString('mode', true) as Mode;
 
-    await Promise.all([
-      SpamCommand.collectSpammers(command, prize, message, players, command.guild.name),
-      createResponsiveTimer(60, async (seconds) => {
-        if ([30, 15, 3, 2, 1].includes(seconds)) {
-          await send(command, bold(`Starting in ${pluralise('second', seconds)}...`)).catch(noop);
-        }
-      })
-    ]);
+    const players: SpamCommand.Players = new Collection();
+    const customId = new CustomId(command.createdAt);
+    const payload: SpamCommand.Payload = { command, customId, prize, mode, players };
 
-    if (players.size < 3) {
-      await send(command, `The event received only ${bold(players.size.toString())} participants which isn't enough to start a spam event.`);
-      return;
-    }
+    const gatheredPlayers = await this.gatherPlayers(payload);
+    if (gatheredPlayers.isErr()) return send(command, builder => builder.addEmbed(() => EmbedTemplates.createSimple(gatheredPlayers.unwrapErr())));
 
-    if (lock) await SpamCommand.manageChannel(message, true);
+    const collected = await this.collectSpams(payload);
+    if (collected.isErr()) return send(command, builder => builder.addEmbed(() => EmbedTemplates.createSimple(collected.unwrapErr())));
 
-    const [winners] = await Promise.all([
-      SpamCommand.collectMessages(message, players, command.guild.name),
-      createResponsiveTimer(60, async (seconds) => {
-        if ([30, 15, 3, 2, 1].includes(seconds)) {
-          await send(command, bold(`${seconds} ${pluralise('second', seconds)} left!`));
-        }
-      })
-    ]);
+    const [winners, losers] = players.partition((player) => player.spams >= 1);
 
-    if (lock) {
-      await SpamCommand.manageChannel(message, false);
-      await send(command, bold('This channel has been locked.'));
-    }
+    await send(command, builder => builder.addEmbed(() => EmbedTemplates.createSimple('Sending result...')));
+    await Promise.allSettled([...this.splitPrice(prize, winners).values()].sort((a, b) => b.spams - a.spams).map(async (player) => {
+      const db = await this.container.db.players.fetch(player.button.user.id);
+      await db.run(({ wallet }) => wallet.addValue(player.won)).save();  
+    }));
 
-    const results = await Promise.allSettled(
-      SpamCommand.getResults(prize, winners).map(async (result) => {
-        await send(result.button, (content) => content.setEphemeral(true).setContent(`You won ${inlineCode(result.won.toLocaleString())} coins!`));
-        return result;
-      })
-    );
+    await send(command, builder => builder.addEmbed(embed => 
+      embed  
+        .setTitle(`${toReadable(prize)} ${toTitleCase(mode)} Spam Event`)
+        .setColor(Constants.Colors.GOLD)
+        .setDescription(join([...winners.concat(losers).values()].map(({ button, spams, won }, idx) => 
+          `${spams > 0 ? ['🥇', '🥈', '🥉'].at(idx) ?? '👏' : '💀'} ${bold(spams.toLocaleString())} spams - ${bold(button.member.nickname ?? button.user.username)} won ${spams > 0 ? `${bold(won.toLocaleString())} coins` : 'nothing'}!`
+        )))
+    ));
 
-    const losers = await Promise.all(
-      players
-        .filter((p) => !results.some((r) => (isPromiseFulfilled(r) ? p.button.user.id === r.value.button.user.id : true)))
-        .map(async (loser) => {
-          await send(loser.button, (content) => content.setEphemeral(true).setContent(`You lost the battle. Better luck next time!`));
-          return loser;
-        })
-    );
-
-    await send(command, (content) =>
-      content.addEmbed((embed) =>
-        embed
-          .setColor(getHighestRoleColor(command.member))
-          .setTitle(`${bold(results.length.toLocaleString())} people managed to split ${bold(`⏣ ${prize.toLocaleString()}`)}`)
-          .setDescription(
-            join(
-              ...results.filter<PromiseFulfilledResult<Spammer>>(isPromiseFulfilled).map(({ value: { spams, button, won } }, idx) => {
-                const emojis = ['🥇', '🥈', '🥉', ...Array.from<'👏', '👏'>({ length: results.length - 3 }, () => '👏')] as const;
-                return `${bold(`${emojis.at(idx)} ${spams.toLocaleString()}`)} - ${bold(button.user.username)} got ${bold(won.toLocaleString())}`;
-              }),
-              ...losers.map(({ button, spams }) => `${bold(`💀 ${spams.toLocaleString()} - ${button.user.username} fell off LMAO`)}`)
-            )
-          )
-      )
-    );
+    return;
   }
 
-  private static async manageChannel(message: Message<true>, SEND_MESSAGES: boolean) {
-    try {
-      if (isTextChannel(message.channel)) {
-        await message.channel.permissionOverwrites.edit(message.guild.id, { SEND_MESSAGES });
-        return true;
-      }
-
-      return false;
-    } catch {
-      return false;
-    }
-  }
-
-  private static renderIntroEmbed(host: User, players: SpamPlayers, prize: number, ended = false, failed = false) {
-    return new InteractionMessageContentBuilder<ButtonBuilder>()
-      .addEmbed((embed) =>
+  private renderContent(ended: boolean, { command, customId, mode, prize, players }: SpamCommand.Payload) {
+    return new InteractionMessageContentBuilder()
+      .addEmbed(embed =>
         embed
-          .setTitle(`${toReadable(prize)} Spam Event`)
-          .setColor(!ended ? randomColor() : failed ? Constants.Colors.RED : Constants.Colors.NOT_QUITE_BLACK)
-          .setDescription(
-            ended
-              ? failed
-                ? 'The event has been cancelled.'
-                : 'The event has started! Spam as much as you can.'
-              : 'Click the join button to join! Will start in a minute.'
-          )
-          .addField(
-            `Players (${players.size} Players)`,
-            !players.size
-              ? 'No players yet.'
-              : players.map(({ button: { member, user } }) => (member.nickname ? memberNicknameMention(member.id) : userMention(user.id))).join(', ')
-          )
-          .setFooter({ text: `Hosted by ${host.tag}` })
+          .setTitle(`${toTitleCase(mode)} Spam Event`)
+          .setColor(ended ? Constants.Colors.DARK_BUT_NOT_BLACK : Constants.Colors.DARK_GOLD)
+          .setDescription(`${bold(command.user.tag)} just started a ${bold(toReadable(prize, 2))} spam event!`)
+          .setFields({
+            name: `Players (${players.size}/${Config.MaxSpamPlayers})`,
+            value: players.size ? players.map(({ button: { member, user: { id } } }) => member.nickname ? memberNicknameMention(id) : userMention(id)).join(', ') : 'No players yet.'
+          })
       )
-      .addRow((row) =>
-        Object.entries(SpamControls).reduce(
-          (row, [label, customId]) =>
-            row.addButtonComponent((btn) =>
-              btn
-                .setCustomId(customId)
-                .setLabel(label)
-                .setDisabled(ended)
-                .setStyle(
-                  ended
-                    ? failed
-                      ? Constants.MessageButtonStyles.DANGER
-                      : Constants.MessageButtonStyles.SECONDARY
-                    : Constants.MessageButtonStyles.PRIMARY
-                )
-            ),
+      .addRow(row =>
+        Object.entries(Control).reduce((row, [key, control]) =>
+          row.addButtonComponent(btn =>
+            btn
+              .setCustomId(customId.create(control))
+              .setLabel(toTitleCase(key))
+              .setStyle(ended ? Constants.MessageButtonStyles.SECONDARY : Constants.MessageButtonStyles.PRIMARY)
+              .setDisabled(ended)
+          ),
           row
         )
-      );
+      )
   }
 
-  private static createSpammer(button: Spammer['button']): Spammer {
-    return { won: 0, spams: 0, button };
-  }
+  private async gatherPlayers({ command, customId, mode, players, prize }: SpamCommand.Payload): Promise<Result<SpamCommand.Players, string>> {
+    return Result.fromAsync(async () =>
+      new Promise(async (resolve, reject) => {
+        const collector = new Collector({
+          message: await send(command, this.renderContent(false, { command, customId, mode, players, prize })),
+          time: seconds(60),
+          max: Infinity,
+          componentType: 'BUTTON',
+          actions: {
+            [customId.create(Control.Join)]: async (ctx) => {
+              if (players.has(ctx.interaction.user.id)) {
+                await send(ctx.interaction, builder => builder.addEmbed(() => EmbedTemplates.createSimple('You already joined!')));
+                return;
+              }
 
-  private static renderJoinedEvent(players: SpamPlayers) {
-    return new InteractionMessageContentBuilder().addEmbed((embed) =>
-      embed
-        .setTitle('Event Joined')
-        .setColor(Constants.Colors.GREEN)
-        .setDescription(`You're the ${toOrdinal(players.size)} player to join!`)
-    );
-  }
+              players.set(ctx.interaction.user.id, this.createPlayer(ctx.interaction));
+              await edit(command, this.renderContent(false, { command, customId, mode, players, prize }));
+              await send(ctx.interaction, builder => builder.addEmbed(() => EmbedTemplates.createSimple(`You successfully joined the event!`)));
+              if (players.size === Config.MaxSpamPlayers) return ctx.stop();
+            },
+            [customId.create(Control.Start)]: async ctx => {
+              if (ctx.interaction.user.id !== command.user.id) {
+                await send(ctx.interaction, builder => builder.addEmbed(() => EmbedTemplates.createSimple("Hey! You're not the event host!")));
+                return;
+              }
 
-  private static renderAlreadyJoined() {
-    return new InteractionMessageContentBuilder().addEmbed((embed) =>
-      embed.setTitle('Already Joined').setColor(Constants.Colors.RED).setDescription('You already joined the event, weirdo.')
-    );
-  }
+              await send(ctx.interaction, builder => builder.addEmbed(() => EmbedTemplates.createSimple('You started the event!')));
+              return ctx.stop();
+            },
+            [customId.create(Control.Stop)]: async ctx => {
+              if (ctx.interaction.user.id !== command.user.id) {
+                await send(ctx.interaction, builder => builder.addEmbed(() => EmbedTemplates.createSimple("Hey! You're not the event host!")));
+                return;
+              }
 
-  private static renderNotEventHost() {
-    return new InteractionMessageContentBuilder().addEmbed((embed) =>
-      embed.setTitle('Stop It.').setColor(Constants.Colors.RED).setDescription("Get some help. You're not the event host.")
-    );
-  }
-
-  private static renderSpamMessage(word: string) {
-    return new InteractionMessageContentBuilder().addEmbed((embed) =>
-      embed
-        .setTitle(word)
-        .setColor(Constants.Colors.GREEN)
-        .setDescription(`Spam ${bold(word)} right now!`)
-    );
-  }
-
-  private static collectSpammers(
-    command: CommandInteraction<'cached'>,
-    prize: number,
-    message: Message<true>,
-    players: SpamPlayers,
-    word: string
-  ): Promise<SpamPlayers> {
-    return new Promise(async (resolve, reject) => {
-      const collector = message.createMessageComponentCollector({
-        componentType: 'BUTTON',
-        max: Infinity,
-        time: seconds(60)
-      });
-
-      collector.on('collect', async (button) => {
-        await button.deferReply({ ephemeral: true });
-        switch (button.customId as SpamControls) {
-          case SpamControls.Join: {
-            if (players.has(button.user.id)) {
-              await edit(button, this.renderAlreadyJoined());
-              await collector.handleDispose(button);
-              return;
+              await edit(command, builder => builder.addEmbed(() => EmbedTemplates.createSimple("The host stopped the event.")));
+              await send(ctx.interaction, builder => builder.addEmbed(() => EmbedTemplates.createSimple('You stopped the event!')));
+              return ctx.stop();
             }
+          },
+          filter: async (button) => {
+            await button.deferReply({ ephemeral: true });
+            return true;
+          },
+          end: async (context) => {
+            await edit(command, this.renderContent(true, { command, customId, mode, players, prize }));
 
-            players.set(button.user.id, this.createSpammer(button));
-            await edit(button, this.renderJoinedEvent(players));
-            if (players.size === SpamConfig.MAXIMUM_SPAMMERS) collector.stop('max_capacity');
-            break;
+            if (context.wasInternallyStopped() && context.reason !== 'time') return reject('The event was internally stopped.');
+            if (players.size <= 0) return reject(`The event didn't receive enough participants.`);
+            return resolve(players);
+          }
+        });
+
+        await collector.start();
+      })
+    );
+  }
+
+  private collectSpams(payload: SpamCommand.Payload): Promise<Result<SpamCommand.Players, string>> {
+    return Result.fromAsync(() =>
+      new Promise(async (resolve, reject) => {
+        const { command, mode, players, prize }: SpamCommand.Payload = payload;
+        const sentMessage = await this.sendMessage(payload);
+        if (isNullOrUndefined(sentMessage.isErr())) return reject('Unable to send message.');
+
+        const message = await payload.command.fetchReply(), { thread } = message;
+        if (isNullOrUndefined(thread)) return reject('Thread channel missing.');
+
+        const collector = this.getCollector({ ...payload, thread });
+
+        collector.on('collect', (elem) => {
+          const player = players.get(elem instanceof ButtonInteraction ? elem.user.id : elem.author.id);
+          if (!isNullOrUndefined(player)) player.spams++;
+          if (players.reduce((n, player) => player.spams + n, 0) >= Config.MaxSpamAmount * players.size) collector.stop('spam-limit');
+        });
+
+        collector.once('end', async () => {
+          if (mode === Mode.Button) await sentMessage.unwrap().edit({ components: disableMessageComponents(sentMessage.unwrap().components) });
+
+          await thread.send(new MessageContentBuilder().addEmbed(() => EmbedTemplates.createSimple('The results are in and the event has ended!')));
+          await thread.edit({ locked: true, archived: true }, `${mode} spam event ended`).catch(noop);
+
+          return resolve(this.splitPrice(prize, players));
+        });
+
+        await send(command, builder => builder
+          .addEmbed(() => EmbedTemplates.createSimple('The event has started!'))
+          .addRow(row => row.addButtonComponent(btn => 
+            btn
+              .setStyle(Constants.MessageButtonStyles.LINK)  
+              .setLabel(thread.name)
+              .setURL(sentMessage.unwrap().url)
+          ))
+        );
+      })
+    );
+  }
+
+  private createPlayer(button: ButtonInteraction<'cached'>): SpamCommand.Player {
+    return { button, spams: 0, won: 0 };
+  }
+
+  private splitPrice(prize: number, players: SpamCommand.Players): SpamCommand.Players {
+    const payouts = scatter(prize, players.size);
+    const sortedPlayers = players.sort((a, b) => b.spams - a.spams);
+
+    for (const [index, prize] of payouts.entries()) {
+      const playerId = players.keyAt(index);
+      const player = playerId ? sortedPlayers.get(playerId) : null;
+
+      if (!isNullOrUndefined(player)) Reflect.set(player, 'won', prize.value);
+    }
+
+    return players;
+  }
+
+  private async sendMessage(payload: SpamCommand.Payload): Promise<Result<Message<boolean>, string>> {
+    return Result.fromAsync(() =>
+      new Promise(async (resolve, reject) => {
+        const commandMessage = await payload.command.fetchReply();
+        if (commandMessage.channel.type !== 'GUILD_TEXT') return reject('Not in a text channel.');
+
+        const atEveryoneRole = commandMessage.channel.permissionOverwrites.resolve(payload.command.guildId);
+        if (!isNullOrUndefined(atEveryoneRole)) await atEveryoneRole.edit({ SEND_MESSAGES_IN_THREADS: payload.mode === Mode.Message });
+
+        const thread = await commandMessage.channel.threads.create({
+          startMessage: commandMessage.id,
+          name: 'Spam Event',
+          invitable: true,
+          type: 'GUILD_PUBLIC_THREAD',
+          autoArchiveDuration: 'MAX'
+        });
+
+        const content = new MessageContentBuilder()
+          .addEmbed(() =>
+            EmbedTemplates.createSimple(`Spam ${bold(commandMessage.guild.name)} ${inlineCode(Math.trunc(Config.MaxSpamAmount * payload.players.size).toLocaleString())} times!`)
+          );
+
+        switch (payload.mode) {
+          case Mode.Button: {
+            return resolve(await thread.send(
+              content.addRow(row =>
+                row.addButtonComponent(btn =>
+                  btn
+                    .setStyle(Constants.MessageButtonStyles.SECONDARY)
+                    .setLabel(commandMessage.guild.name)
+                    .setCustomId(payload.customId.create(this.name))
+                )
+              )
+            ));
           }
 
-          case SpamControls.Start: {
-            if (command.user.id !== button.user.id) {
-              await edit(button, this.renderNotEventHost());
-              return;
-            }
-
-            await edit(button, (content) => content.setContent('You started the event!'));
-            collector.stop('start');
-            break;
-          }
-
-          case SpamControls.Stop: {
-            if (command.user.id !== button.user.id) {
-              await edit(button, this.renderNotEventHost());
-              return;
-            }
-
-            await command.editReply(this.renderIntroEmbed(button.user, players, prize, true, true));
-            await button.editReply('You stopped the event.');
-            collector.stop(button.customId);
-            break;
-          }
+          case Mode.Message: {
+            return resolve(await thread.send(content));
+          };
         }
-      });
-
-      collector.on('end', async (_, reason) => {
-        if (reason === SpamControls.Stop) return;
-        if (players.size < 1) {
-          await command.followUp({ ephemeral: true, content: 'No one joined the event :(' });
-          await command.editReply(this.renderIntroEmbed(command.user, players, prize, true, true));
-          return reject(players);
-        }
-
-        await command.editReply(this.renderIntroEmbed(command.user, players, prize, true, false));
-        await command.followUp(SpamCommand.renderSpamMessage(word));
-        return resolve(players);
-      });
-    });
+      })
+    );
   }
 
-  private static collectMessages(message: Message<true>, players: SpamPlayers, word: string): Promise<Spammer[]> {
-    return new Promise((resolve) => {
-      const collector = message.channel.createMessageCollector({
-        max: Infinity,
-        time: seconds(60),
-        filter: (msg) => players.has(msg.author.id) && msg.content.toLowerCase().includes(word.toLowerCase())
-      });
+  // private getCollector(payload: SpamCommand.Payload & { mode: Mode.Message; thread: ThreadChannel }): MessageCollector;
+  // private getCollector(payload: SpamCommand.Payload & { mode: Mode.Button; thread: ThreadChannel }): InteractionCollector<ButtonInteraction>;
+  private getCollector(payload: SpamCommand.Payload & { thread: ThreadChannel }): MessageCollector | InteractionCollector<ButtonInteraction> {
+    switch (payload.mode) {
+      case Mode.Button: {
+        return payload.thread.createMessageComponentCollector({
+          max: Infinity,
+          time: seconds(60),
+          componentType: 'BUTTON',
+          filter: async button => {
+            await button.deferUpdate();
+            return payload.players.has(button.user.id);
+          }
+        });
+      };
 
-      collector.on('collect', (message) => {
-        const spammer = players.get(message.author.id);
-        if (!isNullOrUndefined(spammer)) spammer.spams++;
-      });
-
-      collector.once('end', () =>
-        resolve([
-          ...players
-            .filter((p) => p.spams >= SpamConfig.ELIGIBLE_SPAMS)
-            .sort((a, b) => b.spams - a.spams)
-            .values()
-        ])
-      );
-    });
-  }
-
-  private static getResults(prize: number, winners: Spammer[]): Spammer[] {
-    const maximumPayout = Math.trunc(100 / Math.min(winners.length, SpamConfig.MAXIMUM_PAYOUT));
-    const percentages = scatter(100, SpamConfig.MINIMUM_PAYOUT, maximumPayout, winners.length);
-    const payouts = percentages.map((p) => Math.round(prize * (p.value / 100))).sort((a, b) => b - a);
-    for (const [index, winner] of winners.entries()) winner.won = payouts.at(index) ?? 0;
-
-    return winners;
+      case Mode.Message: {
+        return payload.thread.createMessageCollector({
+          max: Infinity,
+          time: seconds(60),
+          filter: message => payload.players.has(message.author.id) && message.content.toLowerCase().includes(payload.command.guild.name.toLowerCase())
+        });
+      };
+    }
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
@@ -330,15 +282,47 @@ export default class SpamCommand extends Command {
       builder
         .setName(this.name)
         .setDescription(this.description)
-        .addNumberOption((builder) =>
-          builder
+        .addNumberOption((option) =>
+          option
             .setName('prize')
-            .setDescription('The amount to be split by the players.')
+            .setDescription('The prize pool to be split by the players.')
             .setRequired(true)
-            .setMaxValue(100_000_000)
             .setMinValue(5_000_000)
         )
-        .addBooleanOption((builder) => builder.setName('lock_channel').setDescription('Whether or not to unlock this channel when the event starts.'))
+        .addStringOption(option =>
+          option
+            .setName('mode')
+            .setDescription('The mode of spam.')
+            .setRequired(true)
+            .addChoices(...Object.entries(Mode).map(([name, value]) => ({ name, value })))
+        )
     );
+  }
+}
+
+export declare namespace SpamCommand {
+  /**
+   * Represents a group of {@link Player players}.
+   */
+  type Players = Collection<Snowflake, Player>;
+
+  /**
+   * Represents a spammer.
+   */
+  interface Player {
+    button: ButtonInteraction<'cached'>;
+    spams: number;
+    won: number;
+  }
+
+  /**
+   * The generic payload to process the whole command.
+   */
+  interface Payload {
+    command: Command.ChatInputInteraction<'cached'>;
+    customId: CustomId;
+    mode: Mode;
+    players: Players;
+    prize: number;
   }
 }
