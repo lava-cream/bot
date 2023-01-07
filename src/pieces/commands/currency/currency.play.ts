@@ -13,7 +13,8 @@ import {
   edit,
   CustomId,
   update,
-  send
+  send,
+  EmbedTemplates
 } from '#lib/utilities';
 import { type Game, GameContext, Games } from '#lib/framework';
 import { isNullish, isNullOrUndefined } from '@sapphire/utilities';
@@ -83,45 +84,47 @@ export default class PlayCommand extends Command {
             btn
               .setCustomId(componentId.create(PickerControl.Proceed))
               .setStyle(Constants.MessageButtonStyles.SUCCESS)
-              .setLabel('Play')
+              .setLabel('✅')
               .setDisabled(isNullish(game) || ended)
           )
           .addButtonComponent((btn) =>
             btn
               .setCustomId(componentId.create(PickerControl.Cancel))
               .setStyle(Constants.MessageButtonStyles.SECONDARY)
-              .setLabel('Cancel')
+              .setLabel('❌')
               .setDisabled(ended)
           )
       )
-      .addEmbed((embed) =>
-        embed
-          .setTitle(isNullish(game) ? 'Game Picker' : game.name)
-          .setColor(ended ? Constants.Colors.NOT_QUITE_BLACK : randomColor(true))
-          .setDescription(
-            isNullish(game) ? 'Choose a game to play from the dropdown below.' : game.detailedDescription ?? 'No description provided.'
-          )
-          .setFields(
-            !isNullish(schema)
-              ? [
-                {
-                  name: 'Last Played',
-                  value: time(new Date(schema.lastPlayedTimestamp), TimestampStyles.RelativeTime),
-                  inline: true
-                },
-                {
-                  name: 'Win Rate',
-                  value: `${(schema.winRate * 100).toFixed(2)}%`,
-                  inline: true,
-                },
-                {
-                  name: 'Net Profit',
-                  value: schema.profit.toLocaleString(),
-                  inline: true
-                }
-              ]
-              : []
-          )
+      .addEmbed(() =>
+        EmbedTemplates.createCamouflaged(embed =>
+          embed
+            .setTitle(isNullish(game) ? 'Game Picker' : game.name)
+            .setColor(ended ? embed.color! : randomColor(true))
+            .setDescription(
+              isNullish(game) ? 'Choose a game to play from the dropdown below.' : game.detailedDescription ?? 'No description provided.'
+            )
+            .setFields(
+              !isNullish(schema)
+                ? [
+                  {
+                    name: 'Last Played',
+                    value: time(new Date(schema.lastPlayedTimestamp), TimestampStyles.RelativeTime),
+                    inline: true
+                  },
+                  {
+                    name: 'Win Rate',
+                    value: `${(schema.winRate * 100).toFixed(2)}%`,
+                    inline: true,
+                  },
+                  {
+                    name: 'Net Profit',
+                    value: schema.profit.toLocaleString(),
+                    inline: true
+                  }
+                ]
+                : []
+            )
+        )
       );
   }
 
@@ -129,8 +132,8 @@ export default class PlayCommand extends Command {
     return new Promise(async (resolve) => {
       const gamesStore = this.container.stores.get('games');
 
-      let selectedGame: Game | null = !isNullOrUndefined(db.games.lastGamePlayed) 
-        ? gamesStore.get(db.games.lastGamePlayed.id) 
+      let selectedGame: Game | null = !isNullOrUndefined(db.games.lastGamePlayed)
+        ? gamesStore.get(db.games.lastGamePlayed.id)
         : null;
       let selectedGameSchema: PlayerGamesSchema | null = !isNullOrUndefined(selectedGame)
         ? db.games.resolve(selectedGame.id) ?? db.games.create(selectedGame.id)
@@ -195,17 +198,19 @@ export default class PlayCommand extends Command {
 
   private renderEnergyPrompterMessage(customId: CustomId, energized: null | boolean) {
     return new InteractionMessageContentBuilder()
-      .addEmbed((embed) =>
-        embed
-          .setTitle(isNullish(energized) || !energized ? 'Energy Expired' : 'Energy Recharged')
-          .setColor(isNullish(energized) ? Constants.Colors.NOT_QUITE_BLACK : energized ? Constants.Colors.GREEN : Constants.Colors.RED)
-          .setDescription(
-            isNullish(energized)
-              ? 'Your energy expired! Convert the stars you currently have into energy.'
-              : energized
-              ? 'Your energy has been recharged. Goodluck playing!'
-              : 'Okay then. Come back next time, I guess.'
-          )
+      .addEmbed(() =>
+        EmbedTemplates.createCamouflaged(embed =>
+          embed
+            .setTitle(isNullish(energized) || !energized ? 'Energy Expired' : 'Energy Recharged')
+            .setColor(isNullish(energized) ? embed.color! : energized ? Constants.Colors.GREEN : Constants.Colors.RED)
+            .setDescription(
+              isNullish(energized)
+                ? 'Your energy expired! Convert the stars you currently have into energy.'
+                : energized
+                  ? 'Your energy has been recharged. Goodluck playing!'
+                  : 'Okay then. Come back next time, I guess.'
+            )
+        )
       )
       .addRow((row) =>
         row
@@ -227,8 +232,8 @@ export default class PlayCommand extends Command {
   }
 
   private renderNoEnergyMessage() {
-    return new InteractionMessageContentBuilder().addEmbed((embed) =>
-      embed.setTitle('Out of Energy').setColor(Constants.Colors.RED).setDescription('You no longer have energy to spend for playing games.')
+    return new InteractionMessageContentBuilder().addEmbed(() =>
+      EmbedTemplates.createSimple('You have no energy left to energize.')
     );
   }
 

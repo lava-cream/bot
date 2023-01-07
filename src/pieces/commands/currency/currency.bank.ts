@@ -1,11 +1,11 @@
 import { CommandError, CommandOptionError } from "#lib/framework";
 import { parseNumber, send } from "#lib/utilities";
+import { EmbedTemplates } from "#lib/utilities";
 import { bold, inlineCode } from "@discordjs/builders";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { Subcommand } from "@sapphire/plugin-subcommands";
 import { isNullOrUndefined } from "@sapphire/utilities";
-import { Constants } from "discord.js";
 
 @ApplyOptions<Subcommand.Options>({
   name: 'bank',
@@ -22,7 +22,7 @@ import { Constants } from "discord.js";
   ]
 })
 export default class BankCommand extends Subcommand {
-  public async chatInputDeposit(command: Subcommand.ChatInputInteraction<'cached'>) {
+  public async chatInputDeposit(command: Subcommand.ChatInputInteraction) {
     const db = await this.container.db.players.fetch(command.user.id);
     if (db.bank.isMaxValue()) throw new CommandError('Your bank is full.');
 
@@ -51,9 +51,8 @@ export default class BankCommand extends Subcommand {
     
     await send(command, builder => 
       builder  
-        .addEmbed(embed => 
-          embed  
-            .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
+        .addEmbed(() => 
+          EmbedTemplates.createCamouflaged()
             .addFields(
               {
                 name: 'Deposited',
@@ -74,7 +73,7 @@ export default class BankCommand extends Subcommand {
     );
   }
 
-  public async chatInputWithdraw(command: Subcommand.ChatInputInteraction<'cached'>) {
+  public async chatInputWithdraw(command: Subcommand.ChatInputInteraction) {
     const db = await this.container.db.players.fetch(command.user.id);
     if (db.bank.value < 1) throw new CommandError('You have none to withdraw.');
 
@@ -103,9 +102,8 @@ export default class BankCommand extends Subcommand {
     
     await send(command, builder => 
       builder  
-        .addEmbed(embed => 
-          embed  
-            .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
+        .addEmbed(() => 
+          EmbedTemplates.createCamouflaged()
             .addFields(
               {
                 name: 'Withdrawn',

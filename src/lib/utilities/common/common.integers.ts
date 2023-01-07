@@ -174,15 +174,13 @@ export function scatter(amount: number, length: number): Scattered {
   const num = 100;
 
   const base = Math.floor(num / length);
-  const scattered: Scattered = Array(length)
-    .fill(null)
-    .map(() => mutate(base));
-  const baseTotal = base * length;
-  const diff = num - baseTotal;
+  const scattered: Scattered = Array(length).fill(null).map(() => mutate(base));
+  // const baseTotal = base * length;
+  // const diff = num - baseTotal;
 
-  for (let i = diff; i > 0; i--) {
-    // Add 2 since we're deducting 1 from a random.
-    randomItem(scattered).value += 2;
+  for (let i = length; i > 0; i--) {
+    // Add 1 since we're also deducting 1 from a random.
+    randomItem(scattered).value += 1;
     // Deduct 1 to balance those who are higher (>=base) and lower (<base).
     randomItem(scattered).value--;
   }

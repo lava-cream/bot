@@ -2,7 +2,7 @@ import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '
 import { ApplyOptions } from '@sapphire/decorators';
 
 import { bold, time, TimestampStyles } from '@discordjs/builders';
-import { join, edit, InteractionMessageContentBuilder, CustomId, Collector, seconds, minutes, send, update } from '#lib/utilities';
+import { join, edit, InteractionMessageContentBuilder, CustomId, Collector, seconds, minutes, send, update, EmbedTemplates } from '#lib/utilities';
 import { ButtonInteraction, Constants } from 'discord.js';
 import type { PlayerSchema } from '#lib/database';
 
@@ -28,6 +28,11 @@ export default class EnergyCommand extends Command {
       time: seconds(10),
       actions: {
         [componentId.create('energize')]: async ctx => {
+          if (db.energy.energy < 1) {
+            await send(ctx.interaction, EnergyCommand.renderNoEnergyContent());
+            return;
+          }
+
           await db.run((db) => db.energy.subEnergy(1).setExpire(Date.now() + minutes(db.energy.getDefaultDuration(db.upgrades.tier)))).save();
           await update(ctx.interaction, EnergyCommand.renderContent(ctx.interaction, db, componentId, true, true));
           return ctx.stop();
@@ -71,6 +76,12 @@ export default class EnergyCommand extends Command {
             .setDisabled(ended)
         )
       );
+  }
+
+  private static renderNoEnergyContent() {
+    return new InteractionMessageContentBuilder().addEmbed(() =>
+      EmbedTemplates.createSimple('You have no energy remaining to spend.')
+    )
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

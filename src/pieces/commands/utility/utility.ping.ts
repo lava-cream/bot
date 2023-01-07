@@ -1,10 +1,9 @@
 import { type ApplicationCommandRegistry, Command } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
-import { Constants } from 'discord.js';
 
 import { Stopwatch } from '@sapphire/stopwatch';
-import { randomColor, join, edit, send } from '#lib/utilities';
-import { bold, inlineCode } from '@discordjs/builders';
+import { join, edit, send, EmbedTemplates } from '#lib/utilities';
+import { inlineCode } from '@discordjs/builders';
 
 @ApplyOptions<Command.Options>({
   name: 'ping',
@@ -14,26 +13,20 @@ export default class PingCommand extends Command {
   public override async chatInputRun(command: Command.ChatInputInteraction) {
     const watch = new Stopwatch().start();
 
-    await send(command, (builder) => 
-      builder
-        .addEmbed((embed) => 
-          embed
-            .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
-            .setDescription('Pinging...')
-        )
+    await send(command, (builder) =>
+      builder.addEmbed(() =>
+        EmbedTemplates.createSimple('Pinging...')
+      )
     );
     await edit(command, (builder) =>
-      builder
-        .addEmbed((embed) =>
-          embed
-            .setColor(randomColor())
-            .setDescription(
-              join(
-                `${bold('✏ Editing Messages:')} ${inlineCode(watch.stop().toString())}`,
-                `${bold('🤖 Websocket Ping:')} ${inlineCode(`${command.inCachedGuild() ? command.guild.shard.ping : command.client.ws.ping}ms`)}`
-              )
-            )
+      builder.addEmbed(() =>
+        EmbedTemplates.createSimple(
+          join(
+            `I have a ${inlineCode(`${command.inCachedGuild() ? command.guild.shard.ping : command.client.ws.ping}ms`)} internal delay from Discord.`,
+            `While it took me ${inlineCode(watch.stop().toString())} to edit this message.`
+          )
         )
+      )
     );
   }
 

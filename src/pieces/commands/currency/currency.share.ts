@@ -1,11 +1,11 @@
 import type { PlayerSchema } from "#lib/database";
 import { CommandError } from "#lib/framework";
-import { InteractionMessageContentBuilder, join, parseNumber, send } from "#lib/utilities";
+import { EmbedTemplates, InteractionMessageContentBuilder, join, parseNumber, send } from "#lib/utilities";
 import { bold } from "@discordjs/builders";
 import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry, Command, CommandOptionsRunTypeEnum } from "@sapphire/framework";
 import { isNullOrUndefined } from "@sapphire/utilities";
-import { Constants, User } from "discord.js";
+import type { User } from "discord.js";
 
 @ApplyOptions<Command.Options>({
   name: 'share',
@@ -41,17 +41,14 @@ export default class ShareCommand extends Command {
     sender: { db: PlayerSchema, user: User },
     recepient: { db: PlayerSchema, user: User }
   ) {
-    return new InteractionMessageContentBuilder()
-      .addEmbed(embed => 
-        embed
-          .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
-          .setDescription(
-            join(
-              `Successfully shared ${bold(amount.toLocaleString())} coins to ${bold(recepient.user.tag)}.`,
-              `You now have ${bold(sender.db.wallet.toReadable(2))} coins, while they have ${bold(recepient.db.wallet.toReadable(2))} coins.`
-            )
-          )
+    return new InteractionMessageContentBuilder().addEmbed(() =>
+      EmbedTemplates.createSimple(
+        join(
+          `Successfully shared ${bold(amount.toLocaleString())} coins to ${bold(recepient.user.tag)}.`,
+          `You now have ${bold(sender.db.wallet.toReadable(2))} coins, while they have ${bold(recepient.db.wallet.toReadable(2))} coins.`
+        )
       )
+    )
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {

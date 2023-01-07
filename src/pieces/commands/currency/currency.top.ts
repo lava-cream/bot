@@ -16,7 +16,8 @@ import {
   send,
   update,
   toInlineNumberCode,
-  InlineNumberCodeAlignment
+  InlineNumberCodeAlignment,
+  EmbedTemplates
 } from '#lib/utilities';
 import { inlineCode } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
@@ -97,10 +98,9 @@ export default class TopCommand extends Command {
       .slice(0, 5);
 
     return new InteractionMessageContentBuilder()
-      .addEmbed((embed) =>
-        embed
+      .addEmbed(() =>
+        EmbedTemplates.createCamouflaged()
           .setTitle(`${pluralise(toTitleCase(page), leaderboard.length)} Leaderboard`)
-          .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
           .setDescription(
             leaderboard.length > 0
               ? join(

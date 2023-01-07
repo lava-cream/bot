@@ -9,7 +9,8 @@ import {
   CustomId,
   edit,
   unsend,
-  send
+  send,
+  EmbedTemplates
 } from '#lib/utilities';
 import { Result } from '@sapphire/result';
 import { Stopwatch } from '@sapphire/stopwatch';
@@ -78,9 +79,8 @@ export default class EvalCommand extends Command {
 
     const renderContent = (done: boolean) => {
       return new InteractionMessageContentBuilder()
-        .addEmbed((embed) =>
-          embed
-            .setColor(done ? Constants.Colors.NOT_QUITE_BLACK : Constants.Colors.BLURPLE)
+        .addEmbed(() =>
+          EmbedTemplates.createCamouflaged()
             .setDescription(codeBlock('js', context.evaled))
             .setFooter({ text: `Duration: ${context.watch.toString()}` })
         )
@@ -90,7 +90,7 @@ export default class EvalCommand extends Command {
               row.addButtonComponent((btn) =>
                 btn
                   .setCustomId(customId.create(control))
-                  .setStyle(done ? Constants.MessageButtonStyles.SECONDARY : Constants.MessageButtonStyles.PRIMARY)
+                  .setStyle(Constants.MessageButtonStyles.SECONDARY)
                   .setLabel(toTitleCase(control))
                   .setDisabled(done)
               ),
@@ -100,8 +100,8 @@ export default class EvalCommand extends Command {
     };
 
     const renderEvaluatedCodeMessage = () => {
-      return new MessageContentBuilder().addEmbed((embed) =>
-        embed.setTitle('Evaluated Code').setColor(Constants.Colors.BLURPLE).setDescription(codeBlock('js', code))
+      return new MessageContentBuilder().addEmbed(() =>
+        EmbedTemplates.createSimple(codeBlock('js', code)).setTitle('Evaluated Code')
       );
     };
 

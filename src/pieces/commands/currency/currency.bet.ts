@@ -6,7 +6,7 @@ import { bold } from '@discordjs/builders';
 import { isNullOrUndefined } from '@sapphire/utilities';
 import { CommandError } from '#lib/framework';
 import type { PlayerSchema } from '#lib/database';
-import { Constants } from 'discord.js';
+import { EmbedTemplates } from '#lib/utilities';
 
 @ApplyOptions<Command.Options>({
   name: 'bet',
@@ -19,7 +19,7 @@ export default class BetCommand extends Command {
     const amount = command.options.getString('amount');
 
     if (isNullOrUndefined(amount)) {
-      return await send(command, BetCommand.renderCurrentBetMessage(db));
+      return send(command, BetCommand.renderCurrentBetMessage(db));
     }
 
     const parsedAmount = parseNumber(amount, {
@@ -40,21 +40,15 @@ export default class BetCommand extends Command {
   }
 
   private static renderCurrentBetMessage(db: PlayerSchema) {
-    return new InteractionMessageContentBuilder()
-      .addEmbed(embed => 
-        embed  
-          .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
-          .setDescription(`Your current bet is ${bold(db.bet.toLocaleString())} coins.`)
-      )
-  } 
+    return new InteractionMessageContentBuilder().addEmbed(() =>
+      EmbedTemplates.createSimple(`Your current bet is ${bold(db.bet.toLocaleString())} coins.`)
+    )
+  }
 
   private static renderBetUpdatedMessage(db: PlayerSchema) {
-    return new InteractionMessageContentBuilder()
-      .addEmbed(embed => 
-        embed  
-          .setColor(Constants.Colors.DARK_BUT_NOT_BLACK)
-          .setDescription(`You're now betting ${bold(db.bet.toLocaleString())} coins. Goodluck playing!`)
-      )
+    return new InteractionMessageContentBuilder().addEmbed(() =>
+      EmbedTemplates.createSimple(`You're now betting ${bold(db.bet.toLocaleString())} coins. Goodluck playing!`)
+    )
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
@@ -67,6 +61,7 @@ export default class BetCommand extends Command {
         )
       , {
         idHints: ['1050341969324408902']
-      });
+      }
+    );
   }
 }

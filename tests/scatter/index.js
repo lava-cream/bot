@@ -1,4 +1,4 @@
-import { randomInArray, parseProcessArgs } from '../utilities.js';
+import { randomInArray, parseProcessArgs, randomNumber } from '../utilities.js';
 
 /**
  * Creates an array of 10-based percentages.
@@ -13,9 +13,9 @@ const createPercentages = (length) => {
   const baseTotal = base * length;
   const diff = num - baseTotal;
 
-  for (let i = diff; i > 0; i--) {
+  for (let i = length; i > 0; i--) {
     // Add 2 since we're deducting 1 from a random.
-    randomInArray(ns).value += 2;
+    randomInArray(ns).value += 1;
     // Deduct 1 to balance those who are higher (>=base) and lower (<base).
     randomInArray(ns).value--;
   }
