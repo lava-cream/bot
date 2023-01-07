@@ -57,22 +57,21 @@ export default class BlackjackGame extends Game {
 
       switch (game.outcome?.outcome) {
         case Blackjack.Outcome.WIN: {
-          const { final } = Game.calculateWinnings({
-            base: 0.1,
-            bet: context.db.bet.value,
-            multiplier: context.db.multiplier.value,
-            random: Math.random() * 1.8
-          });
+          const winnings = context.winnings
+            .setBase(0.1)
+            .setMultiplier(context.db.multiplier.value)
+            .setRandom(Math.random() * 1.8)
+            .calculate(context.db.bet.value)
 
           await context.db
             .run((db) => {
-              context.schema.win(final);
-              db.wallet.addValue(final);
-              db.bank.space.addValue(final);
+              context.schema.win(winnings);
+              db.wallet.addValue(winnings);
+              db.bank.space.addValue(winnings);
               db.energy.addValue();
             })
             .save();
-          game.outcome.extra = `You won ${bold(final.toLocaleString())} coins. You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`;
+          game.outcome.extra = `You won ${bold(winnings.toLocaleString())} coins. You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`;
 
           break;
         }

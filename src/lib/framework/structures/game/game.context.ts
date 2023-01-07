@@ -1,34 +1,11 @@
 import type { PlayerSchema } from '#lib/database';
-import { BuilderCallback, CustomId, InteractionMessageContentBuilder, isMessageInstance, Responder } from '#lib/utilities';
+import { CustomId, InteractionMessageContentBuilder } from '#lib/utilities';
 import { EmbedTemplates } from '#lib/utilities/discord/templates/templates.embed.js';
 import { Result } from '@sapphire/result';
-import { isNullOrUndefined } from '@sapphire/utilities';
-import type { CommandInteraction, GuildCacheMessage } from 'discord.js';
+import type { CommandInteraction } from 'discord.js';
 import type { Game } from './game.piece.js';
-
-/**
- * Represents the game's responder utility.
- */
-export class GameResponder extends Responder<'cached', CommandInteraction<'cached'>> {
-  private messageId: string | null = null;
-
-  public override async send(builder: BuilderCallback<InteractionMessageContentBuilder>) {
-    const message = await super.send(builder);
-    this.messageId = message.id;
-    return message;
-  }
-
-  public override async edit(builder: BuilderCallback<InteractionMessageContentBuilder>): Promise<GuildCacheMessage<'cached'>> {
-    const message = isNullOrUndefined(this.messageId)
-      ? await super.edit(builder)
-      : await this.target.webhook.editMessage(this.messageId, this.content.apply(builder))
-
-    if (!isMessageInstance(message) || !message.inGuild()) throw new Error();
-
-    this.messageId = message.id;
-    return message;
-  }
-}
+import { GameResponder } from './game.responder';
+import { GameWinnings } from './game.winnings.js';
 
 /**
  * Represents a game context.
@@ -55,6 +32,10 @@ export class GameContext {
    * A {@link Responder} instance. 
    */
   public responder: GameResponder;
+  /**
+   * The winnings calculator.
+   */
+  public winnings: GameWinnings;
 
   /**
    * The constructor.
@@ -66,6 +47,7 @@ export class GameContext {
     this.db = options.db;
     this.game = options.game;
     this.responder = new GameResponder(options.command);
+    this.winnings = new GameWinnings();
   }
 
   /**

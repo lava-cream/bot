@@ -3,24 +3,11 @@ import { Piece } from '@sapphire/framework';
 import type { Awaitable } from 'discord.js';
 import type { GameContext } from './game.context.js';
 import type { GameStore } from './game.store.js';
-import { roundZero } from '#lib/utilities';
 
 export interface GameOptions extends PieceOptions {
   id: string;
   description?: string | null;
   detailedDescription?: string | null;
-}
-
-export interface GameCalculateWinningsOptions {
-  base?: number;
-  bet: number;
-  multiplier?: number;
-  random?: number;
-}
-
-export interface GameCalculatedWinnings {
-  raw: number;
-  final: number;
 }
 
 export abstract class Game extends Piece<GameOptions> implements GameOptions {
@@ -50,19 +37,6 @@ export abstract class Game extends Piece<GameOptions> implements GameOptions {
    * @param context The game's controller.
    */
   public abstract play(context: GameContext): Awaitable<unknown>;
-
-  /**
-   * Calculates for the coins the player is about to win.
-   * @param options Options to calculate winnings.
-   * @returns The winnings object.
-   */
-  protected static calculateWinnings(options: GameCalculateWinningsOptions): Readonly<GameCalculatedWinnings> {
-    const { base = 0, random = Math.random(), multiplier = 0, bet } = options;
-    const raw = Math.round(bet * (random + base));
-    const final = Math.round(raw + raw * (multiplier / 100));
-
-    return Object.freeze({ raw, final: roundZero(final) });
-  }
 }
 
 export declare namespace Game {
@@ -70,6 +44,4 @@ export declare namespace Game {
   type Context = GameContext;
   type JSON = Piece.JSON;
   type LocationJSON = Piece.LocationJSON;
-
-  type CalculatedWinnings = GameCalculatedWinnings;
 }

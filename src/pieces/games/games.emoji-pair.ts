@@ -76,21 +76,19 @@ export default class EmojiPairGame extends Game {
       }
 
       case logic.isWin(): {
-        const { final } = Game.calculateWinnings({
-          base: randomItem(logic.pair).multiplier,
-          bet: ctx.db.bet.value,
-          multiplier: ctx.db.multiplier.value,
-          random: 0
-        });
+        const winnings = ctx.winnings 
+          .setBase(randomItem(logic.pair).multiplier)
+          .setMultiplier(ctx.db.multiplier.value)
+          .calculate(ctx.db.bet.value);
 
         ctx.db.run((db) => {
-          ctx.schema.win(final);
-          db.wallet.addValue(final);
-          db.bank.space.addValue(final);
+          ctx.schema.win(winnings);
+          db.wallet.addValue(winnings);
+          db.bank.space.addValue(winnings);
           db.energy.addValue();
         });
 
-        description.push(`${bold('PAIRED!')} You won ${bold(final.toLocaleString())} coins.`, `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
+        description.push(`${bold('PAIRED!')} You won ${bold(winnings.toLocaleString())} coins.`, `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
 
         embed.setColor(Constants.Colors.GREEN).setFooter(ctx.schema.wins.coins.highest > 0 ? { text: `Highest Coins Won: ${toReadable(ctx.schema.wins.coins.highest, 2)}` } : null);
         button.setLabel('Winner Winner').setStyle(Constants.MessageButtonStyles.SUCCESS);

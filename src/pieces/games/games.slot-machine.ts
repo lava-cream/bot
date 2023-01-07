@@ -78,22 +78,20 @@ export default class SlotMachineGame extends Game {
       }
 
       case machine.isJackpot() || machine.isWin(): {
-        const { final } = Game.calculateWinnings({
-          bet: ctx.db.bet.value,
-          base: machine.multiplier,
-          multiplier: ctx.db.multiplier.value,
-          random: 0
-        });
+        const won = ctx.winnings
+          .setBase(machine.multiplier)
+          .setMultiplier(ctx.db.multiplier.value)
+          .calculate(ctx.db.bet.value);
 
         ctx.db.run(db => {
-          ctx.schema.win(final);
-          db.wallet.addValue(final);
-          db.bank.space.addValue(final);
+          ctx.schema.win(won);
+          db.wallet.addValue(won);
+          db.bank.space.addValue(won);
           db.energy.addValue();
         });
 
         description.push(
-          `${machine.isJackpot() ? bold('JACKPOT!') : ''} You won ${bold(final.toLocaleString())} coins.`,
+          `${machine.isJackpot() ? bold('JACKPOT!') : ''} You won ${bold(won.toLocaleString())} coins.`,
           `${bold('Multiplier')} ${inlineCode(`${machine.multiplier.toLocaleString()}x`)}`,
           `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`
         );

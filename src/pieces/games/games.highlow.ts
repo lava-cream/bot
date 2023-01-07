@@ -75,21 +75,20 @@ export default class HighlowGame extends Game {
 
         if (!logic.hasGuessed()) return;
 
-        const winnings = Game.calculateWinnings({
-          base: logic.isJackpot() ? 10 : 0.75,
-          random: logic.isJackpot() ? 0 : Math.random() * 0.5,
-          multiplier: logic.isJackpot() ? 0 : context.db.multiplier.value,
-          bet: context.db.bet.value
-        });
+        const winnings = context.winnings
+          .setBase(logic.isJackpot() ? 10 : 0.75)
+          .setMultiplier(logic.isJackpot() ? 0 : Math.random() * 0.5)
+          .setRandom(logic.isJackpot() ? 0 : context.db.multiplier.value)
+          .calculate(context.db.bet.value);
 
         switch (true) {
           case logic.isJackpot():
           case logic.isWin(): {
             await context.db
               .run(db => {
-                context.schema.win(winnings.final);
-                db.wallet.addValue(winnings.final);
-                db.bank.space.addValue(winnings.final);
+                context.schema.win(winnings);
+                db.wallet.addValue(winnings);
+                db.bank.space.addValue(winnings);
                 db.energy.addValue();
               })
               .save();
@@ -116,7 +115,7 @@ export default class HighlowGame extends Game {
     await collector.start();
   }
 
-  private static renderContent(context: Game.Context, logic: Highlow.Logic, winnings: Game.CalculatedWinnings | null, ended = false) {
+  private static renderContent(context: Game.Context, logic: Highlow.Logic, winnings: number | null, ended = false) {
     return new InteractionMessageContentBuilder<ButtonBuilder>()
       .addEmbed((embed) =>
         embed
@@ -148,7 +147,7 @@ export default class HighlowGame extends Game {
                 : join("You didn't respond in time. You are keeping your money.\n", `You have ${bold(context.db.wallet.value.toLocaleString())} coins still.`)
               : join(
                 bold(`${logic.isJackpot() ? 'JACKPOT! ' : ''}You ${logic.isLose() ? 'lost' : 'won'} ${
-                  (logic.isLose() ? context.db.bet.value : (winnings?.final ?? 0)).toLocaleString()
+                  (logic.isLose() ? context.db.bet.value : (winnings ?? 0)).toLocaleString()
                 } coins${logic.isWin() ? '!' : '.'}\n`),
                 `Your hint was ${bold(logic.hint.toLocaleString())}. The hidden number was ${bold(logic.value.toLocaleString())}.`,
                 `You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`

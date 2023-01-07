@@ -53,24 +53,22 @@ export default class CoinFlipGame extends Game {
 
         switch (true) {
           case game.isWin(): {
-            // 25% (0.25) to 175% (1.5+0.25=1.75)
-            const won = Game.calculateWinnings({
-              base: 0.9,
-              multiplier: context.db.multiplier.value,
-              bet: context.db.bet.value,
-              random: Math.random() * 0.2,
-            });
+            const winnings = context.winnings
+              .setBase(0.9)
+              .setMultiplier(context.db.multiplier.value)
+              .setRandom(Math.random() * 0.2)
+              .calculate(context.db.bet.value);
 
             await context.db
               .run((db) => {
-                context.schema.win(won.final);
-                db.wallet.addValue(won.final);
-                db.bank.space.addValue(won.final);
+                context.schema.win(winnings);
+                db.wallet.addValue(winnings);
+                db.bank.space.addValue(winnings);
                 db.energy.addValue();
               })
               .save();
 
-            await edit(ctx.interaction, CoinFlipGame.renderContent(context, game, true, won.final));
+            await edit(ctx.interaction, CoinFlipGame.renderContent(context, game, true, winnings));
             break;
           }
 

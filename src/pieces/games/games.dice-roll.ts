@@ -95,17 +95,16 @@ export default class DiceRollGame extends Game {
       }
 
       case game.isWin(): {
-        const { final } = Game.calculateWinnings({
-          base: 0.05,
-          multiplier: ctx.db.multiplier.value,
-          bet: ctx.db.bet.value,
-          random: Math.random() * 1.9
-        });
+        const winnings = ctx.winnings
+          .setBase(0.05)
+          .setMultiplier(ctx.db.multiplier.value)
+          .setRandom(Math.random() * 1.9)
+          .calculate(ctx.db.bet.value);
 
         ctx.db.run((db) => {
-          ctx.schema.win(final);
-          db.wallet.addValue(final);
-          db.bank.space.addValue(final);
+          ctx.schema.win(winnings);
+          db.wallet.addValue(winnings);
+          db.bank.space.addValue(winnings);
           db.energy.addValue();
         });
 
@@ -116,8 +115,8 @@ export default class DiceRollGame extends Game {
           .setColor(Constants.Colors.GREEN)
           .setDescription(
             join(
-              `You won ${bold(final.toLocaleString())} coins.\n`,
-              `${bold('Percent Won:')} ${percent(final, ctx.db.bet.value)}`,
+              `You won ${bold(winnings.toLocaleString())} coins.\n`,
+              `${bold('Percent Won:')} ${percent(winnings, ctx.db.bet.value)}`,
               `${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`
             )
           )
