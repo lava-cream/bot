@@ -1,14 +1,5 @@
-class Test {
-  static {
-    console.log(this.name);
-  }
-
-  static {
-    console.log(this.name);
-  }
+function lmao(arg) {
+  console.log({ arg });
 }
 
-new Test();
-// Output:
-// Test
-// Teest
+lmao`{arg lol}`

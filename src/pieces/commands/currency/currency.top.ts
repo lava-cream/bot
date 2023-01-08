@@ -2,7 +2,7 @@ import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '
 import { ApplyOptions } from '@sapphire/decorators';
 
 import type { PlayerSchema } from '#lib/database';
-import { Constants, MessageSelectOptionData, SelectMenuInteraction } from 'discord.js';
+import type { MessageSelectOptionData, SelectMenuInteraction } from 'discord.js';
 import {
   join,
   Collector,
@@ -50,9 +50,7 @@ export default class TopCommand extends Command {
   public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     let activeType: PageType = command.options.getString('type') as PageType | null ?? PageType.Wallet;
 
-    await send(command, builder => builder.addEmbed(
-      embed => embed.setColor(Constants.Colors.DARK_BUT_NOT_BLACK).setDescription('Fetching...')
-    ));
+    await send(command, builder => builder.addEmbed(() => EmbedTemplates.createSimple('Fetching...')));
 
     const dbs = await this.container.db.players.fetchAll(true);
 

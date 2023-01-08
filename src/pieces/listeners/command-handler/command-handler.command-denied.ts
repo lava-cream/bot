@@ -1,11 +1,11 @@
 import { GuildSchemaStatus } from '#lib/database';
 import { PreconditionNames } from '#lib/framework';
-import { createEmbed, send } from '#lib/utilities';
+import { EmbedTemplates, joinAnd, send } from '#lib/utilities';
 import { time, TimestampStyles } from '@discordjs/builders';
 import type { ChatInputCommandDeniedPayload, Preconditions, UserError } from '@sapphire/framework';
 import { Events, Identifiers, Listener } from '@sapphire/framework';
 import { toTitleCase } from '@sapphire/utilities';
-import { Constants, Permissions, PermissionString } from 'discord.js';
+import { Permissions, PermissionString } from 'discord.js';
 
 export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatInputCommandDenied> {
   public constructor(context: Listener.Context) {
@@ -13,24 +13,22 @@ export class ChatInputCommandDeniedListener extends Listener<typeof Events.ChatI
   }
 
   private get permissionReadables(): Record<PermissionString, string> {
-    const obj: Record<PermissionString, string> = Object.create(null);
-
-    for (const string of Object.keys(Permissions.FLAGS) as PermissionString[]) {
-      Reflect.defineProperty(obj, string, toTitleCase(string.replaceAll('_', ' ')));
-    }
-
-    return obj;
+    return <Record<PermissionString, string>> Object.fromEntries(
+      Object.keys(Permissions.FLAGS).map(
+        (key) => [key, toTitleCase(key.replaceAll('_', ' '))]
+      )
+    );
   };
 
   public async run(error: UserError, payload: ChatInputCommandDeniedPayload) {
-    const embed = createEmbed(embed => embed.setColor(Constants.Colors.DARK_BUT_NOT_BLACK));
+    const embed = EmbedTemplates.createCamouflaged();
 
     if (this.isClientMissingPermissions(error, error.context)) {
       const missingPermissions = error.context.permissions.toArray();
       embed.setDescription('This command requires me to have special permissions to run this command.');
       embed.addFields({ 
         name: `${missingPermissions.toLocaleString()} Permissions`, 
-        value: missingPermissions.map(perm => Reflect.get(this.permissionReadables, perm)).join(', ') 
+        value: joinAnd(missingPermissions.map(perm => Reflect.get(this.permissionReadables, perm)))
       });
     } else if (this.isClientPermissionsNoClient(error)) {
       embed.setDescription("The bot can't check its permission from this channel.");

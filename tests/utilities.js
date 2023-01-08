@@ -1,6 +1,19 @@
 // @ts-check
 
 /**
+ * Creates a progress bar.
+ * @param {number} percent A percentage between 1 and 100. 
+ * @param {string} filled 
+ * @param {string} empty 
+ * @returns string
+ */
+export function progressBar(percent = 100, filled = '■', empty = '□') {
+  percent = Math.max(0, Math.min(Math.trunc(percent / 10), 10));
+  const repeat = Math.max(0, 10 - Math.min(10, Math.abs(percent)));
+  return [filled.repeat(percent), empty.repeat(repeat)].join('');
+}
+
+/**
  * @typedef {Object} Scattered
  * @prop {number} value
  */
