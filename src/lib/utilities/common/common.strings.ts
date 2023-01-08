@@ -175,18 +175,12 @@ export function createDiscordSnowflake(timestamp = Date.now()): string {
 
 /**
  * Joins an array of strings to commas but leaving the last 2 items separated with "and".
- * @template T Array of strings to join.
  * @param array The array to join with.
- * @version 4.5.0
+ * @version 6.0.0 Use {@link Intl.ListFormat} api.
  * @since 4.2.0
  */
-export function joinAnd<T extends string>(array: T[]): string {
-  if (array.length < 2) return array.join(' ');
-
-  const { length, pop, slice, [length - 2]: s2l } = array;
-  const [last, exc] = [pop.call(array), slice.call(array, 0, length - 2)];
-
-  return [...exc, [s2l, last].join(' and ')].join(', ');
+export function joinAnd(array: string[]): string {
+  return new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format(array);
 }
 
 /**
@@ -218,15 +212,16 @@ export function join(...strings: [string[]] | string[]): string {
 
 /**
  * Creates a unique progress bar.
- * @param percent A valid number between 1 and 10.
+ * @param percent A valid number between 1 and 100.
  * @param filled The completed parts for the progress bar.
  * @param empty The empty character to place.
  * @version 4.5.0
  * @since 3.0.0
  */
-export function progressBar(percent = 1, filled = '■', empty = '□'): string {
+export function progressBar(percent = 100, filled = '■', empty = '□'): string {
+  percent = Math.max(0, Math.min(Math.trunc(percent / 10), 10));
   const repeat = Math.max(0, 10 - Math.min(10, Math.abs(percent)));
-  return `${filled.repeat(percent)}${empty.repeat(repeat)}`;
+  return [filled.repeat(percent), empty.repeat(repeat)].join('');
 }
 
 /**
