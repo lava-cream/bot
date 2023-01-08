@@ -1,4 +1,4 @@
-import { Collector, CustomId, disableMessageComponents, edit, InteractionMessageContentBuilder, join, MessageContentBuilder, scatter, seconds, send, toReadable } from '#lib/utilities';
+import { Collector, CustomId, disableMessageComponents, edit, InlineNumberCodeAlignment, InteractionMessageContentBuilder, join, MessageContentBuilder, minutes, scatter, seconds, send, toInlineNumberCode, toReadable } from '#lib/utilities';
 import { EmbedTemplates } from '#lib/utilities/discord/templates/templates.embed.js';
 import { bold, inlineCode, memberNicknameMention, userMention } from '@discordjs/builders';
 import { ApplyOptions } from '@sapphire/decorators';
@@ -8,8 +8,8 @@ import type { InteractionCollector, Message, MessageCollector, ThreadChannel } f
 import { ButtonInteraction, Collection, Constants, Snowflake } from 'discord.js';
 
 enum Config {
-  MaxSpamAmount = 25,
-  MaxSpamPlayers = 10
+  MaxSpamAmount = 30,
+  MaxSpamPlayers = 100
 }
 
 enum Control {
@@ -50,28 +50,30 @@ export default class SpamCommand extends Command {
     await send(command, builder => builder.addEmbed(() => EmbedTemplates.createSimple('Sending result...')));
     await Promise.allSettled([...this.splitPrice(prize, winners).values()].sort((a, b) => b.spams - a.spams).map(async (player) => {
       const db = await this.container.db.players.fetch(player.button.user.id);
-      await db.run(({ wallet }) => wallet.addValue(player.won)).save();  
+      await db.run(({ wallet }) => wallet.addValue(player.won)).save();
     }));
 
-    await send(command, builder => builder.addEmbed(embed => 
-      embed  
-        .setTitle(`${toReadable(prize)} ${toTitleCase(mode)} Spam Event`)
-        .setColor(Constants.Colors.GOLD)
-        .setDescription(join([...winners.concat(losers).values()].map(({ button, spams, won }, idx) => 
-          `${spams > 0 ? ['🥇', '🥈', '🥉'].at(idx) ?? '👏' : '💀'} ${bold(spams.toLocaleString())} spams - ${bold(button.member.nickname ?? button.user.username)} won ${spams > 0 ? `${bold(won.toLocaleString())} coins` : 'nothing'}!`
-        )))
-    ));
+    await send(command, builder =>
+      builder.addEmbed(() =>
+        EmbedTemplates
+          .createSimple(
+            join([...winners.concat(losers).values()].map(({ button, spams, won }, idx, arr) =>
+              `${spams > 0 ? ['🥇', '🥈', '🥉'].at(idx) ?? '👏' : '💀'} ${inlineCode(toInlineNumberCode(arr.map(n => n.spams), idx, InlineNumberCodeAlignment.Right))} - ${bold(button.member.nickname ?? button.user.username)} won ${spams > 0 ? `${bold(won.toLocaleString())} coins` : 'nothing'}!`
+            ))
+          )
+          .setTitle(`${toReadable(prize)} ${toTitleCase(mode)} Spam Heist`)
+      )
+    );
 
     return;
   }
 
   private renderContent(ended: boolean, { command, customId, mode, prize, players }: SpamCommand.Payload) {
     return new InteractionMessageContentBuilder()
-      .addEmbed(embed =>
-        embed
-          .setTitle(`${toTitleCase(mode)} Spam Event`)
-          .setColor(ended ? Constants.Colors.DARK_BUT_NOT_BLACK : Constants.Colors.DARK_GOLD)
-          .setDescription(`${bold(command.user.tag)} just started a ${bold(toReadable(prize, 2))} spam event!`)
+      .addEmbed(() =>
+        EmbedTemplates.createCamouflaged()
+          .setTitle(`${toTitleCase(mode)} Spam Heist`)
+          .setDescription(`${bold(command.user.tag)} just started a ${bold(toReadable(prize, 2))} spam heist! Just spam for money!`)
           .setFields({
             name: `Players (${players.size}/${Config.MaxSpamPlayers})`,
             value: players.size ? players.map(({ button: { member, user: { id } } }) => member.nickname ? memberNicknameMention(id) : userMention(id)).join(', ') : 'No players yet.'
@@ -126,7 +128,7 @@ export default class SpamCommand extends Command {
                 return;
               }
 
-              await edit(command, builder => builder.addEmbed(() => EmbedTemplates.createSimple("The host stopped the event.")));
+              await send(command, builder => builder.addEmbed(() => EmbedTemplates.createSimple("The host stopped the event.")));
               await send(ctx.interaction, builder => builder.addEmbed(() => EmbedTemplates.createSimple('You stopped the event!')));
               return ctx.stop();
             }
@@ -139,7 +141,7 @@ export default class SpamCommand extends Command {
             await edit(command, this.renderContent(true, { command, customId, mode, players, prize }));
 
             if (context.wasInternallyStopped() && context.reason !== 'time') return reject('The event was internally stopped.');
-            if (players.size <= 0) return reject(`The event didn't receive enough participants.`);
+            if (players.size <= 0 && context.reason === 'time') return reject(`The event didn't receive enough participants.`);
             return resolve(players);
           }
         });
@@ -171,16 +173,16 @@ export default class SpamCommand extends Command {
           if (mode === Mode.Button) await sentMessage.unwrap().edit({ components: disableMessageComponents(sentMessage.unwrap().components) });
 
           await thread.send(new MessageContentBuilder().addEmbed(() => EmbedTemplates.createSimple('The results are in and the event has ended!')));
-          await thread.edit({ locked: true, archived: true }, `${mode} spam event ended`).catch(noop);
+          await thread.edit({ locked: true, archived: true }, `${mode} spam heist ended`).catch(noop);
 
           return resolve(this.splitPrice(prize, players));
         });
 
         await send(command, builder => builder
           .addEmbed(() => EmbedTemplates.createSimple('The event has started!'))
-          .addRow(row => row.addButtonComponent(btn => 
+          .addRow(row => row.addButtonComponent(btn =>
             btn
-              .setStyle(Constants.MessageButtonStyles.LINK)  
+              .setStyle(Constants.MessageButtonStyles.LINK)
               .setLabel(thread.name)
               .setURL(sentMessage.unwrap().url)
           ))
@@ -196,12 +198,14 @@ export default class SpamCommand extends Command {
   private splitPrice(prize: number, players: SpamCommand.Players): SpamCommand.Players {
     const payouts = scatter(prize, players.size);
     const sortedPlayers = players.sort((a, b) => b.spams - a.spams);
+    const baseShare = Math.floor(prize / players.size);
+    const spamWorth = Math.floor(baseShare / Config.MaxSpamAmount);
 
-    for (const [index, prize] of payouts.entries()) {
+    for (const [index] of payouts.entries()) {
       const playerId = players.keyAt(index);
       const player = playerId ? sortedPlayers.get(playerId) : null;
 
-      if (!isNullOrUndefined(player)) Reflect.set(player, 'won', prize.value);
+      if (!isNullOrUndefined(player)) Reflect.set(player, 'won', Math.trunc(spamWorth * player.spams));
     }
 
     return players;
@@ -214,7 +218,9 @@ export default class SpamCommand extends Command {
         if (commandMessage.channel.type !== 'GUILD_TEXT') return reject('Not in a text channel.');
 
         const atEveryoneRole = commandMessage.channel.permissionOverwrites.resolve(payload.command.guildId);
-        if (!isNullOrUndefined(atEveryoneRole)) await atEveryoneRole.edit({ SEND_MESSAGES_IN_THREADS: payload.mode === Mode.Message });
+        if (payload.mode === Mode.Message && !isNullOrUndefined(atEveryoneRole) && !atEveryoneRole.allow.toArray().includes('SEND_MESSAGES_IN_THREADS')) {
+          await atEveryoneRole.edit({ SEND_MESSAGES_IN_THREADS: true });
+        }
 
         const thread = await commandMessage.channel.threads.create({
           startMessage: commandMessage.id,
@@ -258,11 +264,11 @@ export default class SpamCommand extends Command {
       case Mode.Button: {
         return payload.thread.createMessageComponentCollector({
           max: Infinity,
-          time: seconds(60),
+          time: minutes(payload.command.options.getNumber('minutes') ?? 1),
           componentType: 'BUTTON',
           filter: async button => {
             await button.deferUpdate();
-            return payload.players.has(button.user.id);
+            return payload.players.has(button.user.id) && button.customId === payload.customId.create(this.name);
           }
         });
       };
@@ -270,7 +276,7 @@ export default class SpamCommand extends Command {
       case Mode.Message: {
         return payload.thread.createMessageCollector({
           max: Infinity,
-          time: seconds(60),
+          time: minutes(payload.command.options.getNumber('minutes') ?? 1),
           filter: message => payload.players.has(message.author.id) && message.content.toLowerCase().includes(payload.command.guild.name.toLowerCase())
         });
       };
@@ -287,7 +293,7 @@ export default class SpamCommand extends Command {
             .setName('prize')
             .setDescription('The prize pool to be split by the players.')
             .setRequired(true)
-            .setMinValue(5_000_000)
+            .setMinValue(3_000_000)
         )
         .addStringOption(option =>
           option
@@ -296,6 +302,16 @@ export default class SpamCommand extends Command {
             .setRequired(true)
             .addChoices(...Object.entries(Mode).map(([name, value]) => ({ name, value })))
         )
+        .addNumberOption(option => 
+          option  
+            .setName('minutes')
+            .setDescription('The duration of the spam, in minutes.')
+            .setMinValue(1)
+            .setMaxValue(5)
+        ),
+      {
+        idHints: ['1050342060227567626']
+      }
     );
   }
 }

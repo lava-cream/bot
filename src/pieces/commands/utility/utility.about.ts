@@ -40,6 +40,13 @@ export default class AboutCommand extends Command {
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
-    registry.registerChatInputCommand((builder) => builder.setName(this.name).setDescription(this.description));
+    registry.registerChatInputCommand((builder) => 
+      builder
+        .setName(this.name)
+        .setDescription(this.description)
+      , {
+        idHints: ['1050342065088778291']
+      }
+    );
   }
 }

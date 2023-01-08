@@ -142,6 +142,9 @@ export default class BankCommand extends Subcommand {
             .setDescription('Withdraw coins from your bank.')
             .addStringOption(option => option.setName('amount').setDescription('The amount you want to withdraw.').setRequired(true))
         )
+      , {
+        idHints: ['1057190448243953684']
+      }
     );
   }
 }

@@ -145,6 +145,9 @@ export default class EvalCommand extends Command {
         .setDescription(this.description)
         .addStringOption((string) => string.setName('code').setDescription('The code to evaluate.').setRequired(true))
         .addBooleanOption((boolean) => boolean.setName('dm').setDescription('If the bot will DM you the code you ran.'))
+      , {
+        idHints: ['1050342070340034591']
+      }
     );
   }
 }

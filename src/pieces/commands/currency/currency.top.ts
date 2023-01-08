@@ -148,6 +148,9 @@ export default class TopCommand extends Command {
               ...Object.entries(PageType).map(([name, value]) => (<APIApplicationCommandOptionChoice<string>>{ name, value }))
             )  
         )
-      );
+      , {
+        idHints: ['1050341975032868914']
+      }
+    );
   }
 }

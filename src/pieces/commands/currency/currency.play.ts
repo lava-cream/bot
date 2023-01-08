@@ -83,7 +83,7 @@ export default class PlayCommand extends Command {
           .addButtonComponent((btn) =>
             btn
               .setCustomId(componentId.create(PickerControl.Proceed))
-              .setStyle(Constants.MessageButtonStyles.SUCCESS)
+              .setStyle(Constants.MessageButtonStyles.SECONDARY)
               .setLabel('✅')
               .setDisabled(isNullish(game) || ended)
           )

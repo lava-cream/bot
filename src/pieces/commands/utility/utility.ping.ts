@@ -31,6 +31,13 @@ export default class PingCommand extends Command {
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
-    registry.registerChatInputCommand((builder) => builder.setName(this.name).setDescription(this.description));
+    registry.registerChatInputCommand((builder) => 
+      builder
+        .setName(this.name)
+        .setDescription(this.description)
+      , {
+        idHints: ['1050342143488704584']
+      }
+    );
   }
 }
