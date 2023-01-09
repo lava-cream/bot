@@ -1,5 +1,5 @@
 import { Game } from '#lib/framework';
-import { Collector, percent, getUserAvatarURL, join, seconds, checkClientReadyStatus, createEmbed, createButton, InteractionMessageContentBuilder, roundZero } from '#lib/utilities';
+import { Collector, percent, getUserAvatarURL, join, seconds, checkClientReadyStatus, createButton, InteractionMessageContentBuilder, roundZero, EmbedTemplates } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
 import { ApplyOptions } from '@sapphire/decorators';
 import { Constants } from 'discord.js';
@@ -57,7 +57,7 @@ export default class DiceRollGame extends Game {
   }
 
   private static renderContentAndUpdate(ctx: Game.Context, game: DiceRoll.Logic, ended: boolean) {
-    const embed = createEmbed(embed => embed.setAuthor({ name: `${ctx.command.user.username}'s dice roll game`, iconURL: getUserAvatarURL(ctx.command.user) }));
+    const embed = EmbedTemplates.createCamouflaged().setAuthor({ name: `${ctx.command.user.username}'s dice roll game`, iconURL: getUserAvatarURL(ctx.command.user) });
     const button = createButton(button => button.setCustomId(ctx.customId.create('roll')).setDisabled(game.hasBothRolled() || ended));
 
     for (const user of [game.player.user, game.opponent.user]) {
@@ -87,7 +87,6 @@ export default class DiceRollGame extends Game {
           .setStyle(Constants.MessageButtonStyles.SECONDARY)
           .setDisabled(true);
         embed
-          .setColor(Constants.Colors.NOT_QUITE_BLACK)
           .setDescription(join(`You didn't respond in time. You are keeping your money.\n`, `${bold('Your Balance:')} ${ctx.db.wallet.value.toLocaleString()}`))
           .setFooter(ctx.schema.loses.streak.isActive() ? { text: `Lose Streak: ${ctx.schema.loses.streak.display}` } : null);
 

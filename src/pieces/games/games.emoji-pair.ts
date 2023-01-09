@@ -1,6 +1,6 @@
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, randomItem, createEmbed, createButton, toReadable, roundZero } from '#lib/utilities';
+import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, randomItem, createButton, toReadable, roundZero, EmbedTemplates } from '#lib/utilities';
 import { Game } from '#lib/framework/index.js';
 import { Constants } from 'discord.js';
 import { bold } from '@discordjs/builders';
@@ -52,7 +52,7 @@ export default class EmojiPairGame extends Game {
   }
 
   private static renderContentAndUpdate(logic: EmojiPair.Logic, ctx: Game.Context, ended: boolean) {
-    const embed = createEmbed(embed => embed.setAuthor({ name: `${ctx.command.user.username}'s pairing game`, iconURL: getUserAvatarURL(ctx.command.user) }));
+    const embed = EmbedTemplates.createCamouflaged().setAuthor({ name: `${ctx.command.user.username}'s pairing game`, iconURL: getUserAvatarURL(ctx.command.user) });
     const button = createButton(button => button.setCustomId(ctx.customId.create('reveal')).setDisabled(logic.revealed || ended));
     const description: string[] = [];
 
@@ -70,7 +70,6 @@ export default class EmojiPairGame extends Game {
       case !logic.revealed && ended: {
         description.push("You didn't respond in time. You are keeping your money.", `You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`);
 
-        embed.setColor(Constants.Colors.NOT_QUITE_BLACK);
         button.setLabel('Timed Out').setStyle(Constants.MessageButtonStyles.SECONDARY);
         break;
       }

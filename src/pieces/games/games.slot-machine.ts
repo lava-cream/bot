@@ -1,7 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Game } from '#lib/framework/index.js';
 
-import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, createEmbed, createButton, toReadable, roundZero } from '#lib/utilities';
+import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, createButton, toReadable, roundZero, EmbedTemplates } from '#lib/utilities';
 import { Constants } from 'discord.js';
 import { bold, inlineCode } from '@discordjs/builders';
 
@@ -54,7 +54,7 @@ export default class SlotMachineGame extends Game {
   }
 
   private static renderContentAndUpdate(machine: SlotMachine.Logic, ctx: Game.Context, ended: boolean) {
-    const embed = createEmbed(embed => embed.setAuthor({ name: `${ctx.command.user.username}'s slot machine`, iconURL: getUserAvatarURL(ctx.command.user) }));
+    const embed = EmbedTemplates.createCamouflaged().setAuthor({ name: `${ctx.command.user.username}'s slot machine`, iconURL: getUserAvatarURL(ctx.command.user) });
     const button = createButton(button => button.setCustomId(ctx.customId.create('spin')).setDisabled(machine.revealed || ended));
     const description: string[] = [];
 
@@ -72,7 +72,6 @@ export default class SlotMachineGame extends Game {
       case !machine.revealed && ended: {
         description.push('Your time ran out. You are keeping your money.', `You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`);
 
-        embed.setColor(Constants.Colors.NOT_QUITE_BLACK);
         button.setLabel('Timed Out').setStyle(Constants.MessageButtonStyles.SECONDARY);
         break;
       }

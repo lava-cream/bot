@@ -7,7 +7,7 @@ import * as Coinflip from '#lib/utilities/games/coinflip/index.js';
 import { bold } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
-import { checkClientReadyStatus, edit, InteractionMessageContentBuilder, percent, roundZero } from '#lib/utilities';
+import { checkClientReadyStatus, edit, EmbedTemplates, InteractionMessageContentBuilder, percent, roundZero } from '#lib/utilities';
 
 declare module '#lib/framework/structures/game/game.types' {
   interface Games {
@@ -94,47 +94,49 @@ export default class CoinFlipGame extends Game {
 
   private static renderContent(context: Game.Context, game: Coinflip.Logic, ended: boolean, won = 0) {
     return new InteractionMessageContentBuilder()
-      .addEmbed((embed) =>
-        embed
-          .setAuthor({
-            name: `${context.command.user.username}'s coinflip game`,
-            iconURL: Discord.getUserAvatarURL(context.command.user)
-          })
-          .setDescription(
-            Common.join(
+      .addEmbed(() =>
+        EmbedTemplates.createCamouflaged(embed =>
+          embed
+            .setAuthor({
+              name: `${context.command.user.username}'s coinflip game`,
+              iconURL: Discord.getUserAvatarURL(context.command.user)
+            })
+            .setDescription(
+              Common.join(
+                !game.hasPicked()
+                  ? !ended
+                    ? Common.join(
+                      'Guess what side of the coin it would flip up to.',
+                      `You placed ${bold(context.db.bet.value.toLocaleString())} coins.`
+                    )
+                    : Common.join(
+                      "You didn't respond in time. You are keeping your money.\n",
+                      `${bold('Your Balance:')} ${context.db.wallet.value.toLocaleString()}`
+                    )
+                  : Common.join(
+                    `It was ${bold(game.opponent.value)}${game.isWin() ? '!' : '.'} You ${game.isWin() ? 'won' : 'lost'} ${bold((game.isWin() ? won : context.db.bet.value).toLocaleString())} coins.\n`,
+                    game.isWin() ? `${bold('Percent Won:')} ${percent(won, context.db.bet.value)}` : '',
+                    `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}.`
+                  )
+              )
+            )
+            .setColor(
               !game.hasPicked()
                 ? !ended
-                  ? Common.join(
-                    'Guess what side of the coin it would flip up to.',
-                    `You placed ${bold(context.db.bet.value.toLocaleString())} coins.`
-                  )
-                  : Common.join(
-                    "You didn't respond in time. You are keeping your money.\n",
-                    `${bold('Your Balance:')} ${context.db.wallet.value.toLocaleString()}`
-                  )
-                : Common.join(
-                  `It was ${bold(game.opponent.value)}${game.isWin() ? '!' : '.'} You ${game.isWin() ? 'won' : 'lost'} ${bold((game.isWin() ? won : context.db.bet.value).toLocaleString())} coins.\n`,
-                  game.isWin() ? `${bold('Percent Won:')} ${percent(won, context.db.bet.value)}` : '',
-                  `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}.`
-                )
+                  ? Constants.Colors.BLURPLE
+                  : embed.color!
+                : game.isWin()
+                  ? Constants.Colors.GREEN
+                  : Constants.Colors.RED
             )
-          )
-          .setColor(
-            !game.hasPicked()
-              ? !ended
-                ? Constants.Colors.BLURPLE
-                : Constants.Colors.NOT_QUITE_BLACK
-              : game.isWin()
-                ? Constants.Colors.GREEN
-                : Constants.Colors.RED
-          )
-          .setFooter(
-            !game.hasPicked()
-              ? null 
-              : context.schema.wins.streak.isActive() || context.schema.loses.streak.isActive()
-                ? { text: `${game.isWin() ? 'Win' : 'Lose'} Streak: ${Reflect.get(context.schema, game.isWin() ? 'wins' : 'loses').streak.display}` }
-                : null
-          )
+            .setFooter(
+              !game.hasPicked()
+                ? null
+                : context.schema.wins.streak.isActive() || context.schema.loses.streak.isActive()
+                  ? { text: `${game.isWin() ? 'Win' : 'Lose'} Streak: ${Reflect.get(context.schema, game.isWin() ? 'wins' : 'loses').streak.display}` }
+                  : null
+            )
+        )
       )
       .addRow((row) =>
         Object.values(Coinflip.Side).reduce(

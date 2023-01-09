@@ -2,7 +2,7 @@ import { Game } from '#lib/framework/index.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
 import { getUserAvatarURL, join, seconds, InteractionMessageContentBuilder, roundZero } from '#lib/utilities';
-import { checkClientReadyStatus, Collector, edit } from '#lib/utilities/discord/index.js';
+import { checkClientReadyStatus, Collector, edit, EmbedTemplates } from '#lib/utilities/discord/index.js';
 import * as Blackjack from '#lib/utilities/games/blackjack/index.js';
 import { bold, hyperlink, inlineCode } from '@discordjs/builders';
 import { isNullOrUndefined, toTitleCase } from '@sapphire/utilities';
@@ -159,39 +159,41 @@ export default class BlackjackGame extends Game {
     };
 
     return new InteractionMessageContentBuilder()
-      .addEmbed((embed) =>
-        embed
-          .setAuthor({
-            name: `${game.player.user.username}'s blackjack game`,
-            iconURL: getUserAvatarURL(game.player.user)
-          })
-          .setColor(!isNullOrUndefined(game.outcome) ? Blackjack.Outcomes[game.outcome.outcome].color() : Constants.Colors.BLURPLE)
-          .setDescription(
-            isNullOrUndefined(game.outcome)
-              ? ''
-              : join([bold(`${Blackjack.Outcomes[game.outcome.outcome].message} ${game.outcome.reason}`), game.outcome.extra ?? ''])
-          )
-          .addFields(
-            {
-              name: `${game.player.user.username} (Player)`,
-              value: renderHand(game.player, false),
-              inline: true
-            },
-            {
-              name: `${game.dealer.user.username} (Dealer)`,
-              value: renderHand(game.dealer, !isNullOrUndefined(game.outcome) ? false : !game.player.stood),
-              inline: true
-            }
-          )
-          .setFooter({
-            text: isNullOrUndefined(game.outcome) 
-              ? 'K, Q, J = 10  |  A = 1 OR 11' 
-              : game.outcome.outcome === Blackjack.Outcome.WIN && context.schema.wins.streak.isActive()
-                ? `Win Streak: ${context.schema.wins.streak.display}`
-                : game.outcome.outcome === Blackjack.Outcome.LOSS && context.schema.loses.streak.isActive()
-                  ? `Lose Streak: ${context.schema.loses.streak.display}`
-                  : ''
-          })
+      .addEmbed(() =>
+        EmbedTemplates.createCamouflaged(embed =>
+          embed
+            .setAuthor({
+              name: `${game.player.user.username}'s blackjack game`,
+              iconURL: getUserAvatarURL(game.player.user)
+            })
+            .setColor(!isNullOrUndefined(game.outcome) ? Blackjack.Outcomes[game.outcome.outcome].color() : embed.color!)
+            .setDescription(
+              isNullOrUndefined(game.outcome)
+                ? ''
+                : join([bold(`${Blackjack.Outcomes[game.outcome.outcome].message} ${game.outcome.reason}`), game.outcome.extra ?? ''])
+            )
+            .addFields(
+              {
+                name: `${game.player.user.username} (Player)`,
+                value: renderHand(game.player, false),
+                inline: true
+              },
+              {
+                name: `${game.dealer.user.username} (Dealer)`,
+                value: renderHand(game.dealer, !isNullOrUndefined(game.outcome) ? false : !game.player.stood),
+                inline: true
+              }
+            )
+            .setFooter({
+              text: isNullOrUndefined(game.outcome)
+                ? 'K, Q, J = 10  |  A = 1 OR 11'
+                : game.outcome.outcome === Blackjack.Outcome.WIN && context.schema.wins.streak.isActive()
+                  ? `Win Streak: ${context.schema.wins.streak.display}`
+                  : game.outcome.outcome === Blackjack.Outcome.LOSS && context.schema.loses.streak.isActive()
+                    ? `Lose Streak: ${context.schema.loses.streak.display}`
+                    : ''
+            })
+        )
       )
       .addRow((row) =>
         Object.values(Control).reduce(

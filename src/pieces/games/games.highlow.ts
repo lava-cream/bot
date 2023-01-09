@@ -1,7 +1,7 @@
 import { Game } from '#lib/framework/index.js';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { join, seconds, getUserAvatarURL, Collector, InteractionMessageContentBuilder, ButtonBuilder, edit, roundZero } from '#lib/utilities';
+import { join, seconds, getUserAvatarURL, Collector, InteractionMessageContentBuilder, ButtonBuilder, edit, roundZero, EmbedTemplates } from '#lib/utilities';
 import * as Highlow from '#lib/utilities/games/highlow/index.js';
 import { toTitleCase } from '@sapphire/utilities';
 import { Constants } from 'discord.js';
@@ -117,42 +117,43 @@ export default class HighlowGame extends Game {
 
   private static renderContent(context: Game.Context, logic: Highlow.Logic, winnings: number | null, ended = false) {
     return new InteractionMessageContentBuilder<ButtonBuilder>()
-      .addEmbed((embed) =>
-        embed
-          .setAuthor({
-            iconURL: getUserAvatarURL(context.command.user),
-            name: `${context.command.user.username}'s ${!logic.hasGuessed() ? '' : logic.isJackpot() ? 'jackpot ' : logic.isWin() ? 'winning ' : 'losing '
-              }high-low game`
-          })
-          .setColor(
-            !logic.hasGuessed() && !ended
-              ? Constants.Colors.BLURPLE
-              : logic.isJackpot() || logic.isWin() ? logic.isJackpot() ? Constants.Colors.GOLD : Constants.Colors.GREEN : ended ? Constants.Colors.RED : Constants.Colors.NOT_QUITE_BLACK
-          )
-          .setFooter(
-            !logic.hasGuessed() || !ended
-              ? null
-              : context.schema.wins.streak.isActive() || context.schema.loses.streak.isActive()
-                ? { text: `${logic.isWin() || logic.isJackpot() ? 'Win' : 'Lose'} Streak: ${Reflect.get(context.schema, logic.isWin() || logic.isJackpot() ? 'wins' : 'loses').streak.display}` }
-                : null
-          )
-          .setDescription(
-            !logic.hasGuessed()
-              ? !ended
-                ? join(
-                  `You placed ${bold(context.db.bet.value.toLocaleString())} coins.\n`,
-                  `I just chose a secret number between ${logic.min} and ${logic.max}.`,
-                  `Is the secret number ${italic('higher')} or ${italic('lower')} than ${bold(logic.hint.toLocaleString())}?`
+      .addEmbed(() =>
+        EmbedTemplates.createCamouflaged(embed =>
+          embed
+            .setAuthor({
+              iconURL: getUserAvatarURL(context.command.user),
+              name: `${context.command.user.username}'s ${!logic.hasGuessed() ? '' : logic.isJackpot() ? 'jackpot ' : logic.isWin() ? 'winning ' : 'losing '
+                }high-low game`
+            })
+            .setColor(
+              !logic.hasGuessed() && !ended
+                ? Constants.Colors.BLURPLE
+                : logic.isJackpot() || logic.isWin() ? logic.isJackpot() ? Constants.Colors.GOLD : Constants.Colors.GREEN : ended ? Constants.Colors.RED : embed.color!
+            )
+            .setFooter(
+              !logic.hasGuessed() || !ended
+                ? null
+                : context.schema.wins.streak.isActive() || context.schema.loses.streak.isActive()
+                  ? { text: `${logic.isWin() || logic.isJackpot() ? 'Win' : 'Lose'} Streak: ${Reflect.get(context.schema, logic.isWin() || logic.isJackpot() ? 'wins' : 'loses').streak.display}` }
+                  : null
+            )
+            .setDescription(
+              !logic.hasGuessed()
+                ? !ended
+                  ? join(
+                    `You placed ${bold(context.db.bet.value.toLocaleString())} coins.\n`,
+                    `I just chose a secret number between ${logic.min} and ${logic.max}.`,
+                    `Is the secret number ${italic('higher')} or ${italic('lower')} than ${bold(logic.hint.toLocaleString())}?`
+                  )
+                  : join("You didn't respond in time. You are keeping your money.\n", `You have ${bold(context.db.wallet.value.toLocaleString())} coins still.`)
+                : join(
+                  bold(`${logic.isJackpot() ? 'JACKPOT! ' : ''}You ${logic.isLose() ? 'lost' : 'won'} ${(logic.isLose() ? context.db.bet.value : (winnings ?? 0)).toLocaleString()
+                    } coins${logic.isWin() ? '!' : '.'}\n`),
+                  `Your hint was ${bold(logic.hint.toLocaleString())}. The hidden number was ${bold(logic.value.toLocaleString())}.`,
+                  `You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`
                 )
-                : join("You didn't respond in time. You are keeping your money.\n", `You have ${bold(context.db.wallet.value.toLocaleString())} coins still.`)
-              : join(
-                bold(`${logic.isJackpot() ? 'JACKPOT! ' : ''}You ${logic.isLose() ? 'lost' : 'won'} ${
-                  (logic.isLose() ? context.db.bet.value : (winnings ?? 0)).toLocaleString()
-                } coins${logic.isWin() ? '!' : '.'}\n`),
-                `Your hint was ${bold(logic.hint.toLocaleString())}. The hidden number was ${bold(logic.value.toLocaleString())}.`,
-                `You now have ${bold(context.db.wallet.value.toLocaleString())} coins.`
-              )
-          )
+            )
+        )
       )
       .addRow((row) =>
         Object.values(Control).reduce(
