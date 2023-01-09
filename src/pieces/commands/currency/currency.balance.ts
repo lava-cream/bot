@@ -31,7 +31,7 @@ export default class BalanceCommand extends Command {
             `${bold('Net Worth:')} ${db.netWorth.toLocaleString()}`
           ))
           .setTitle(`${user.username}'s balance`)
-      )
+      );
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
