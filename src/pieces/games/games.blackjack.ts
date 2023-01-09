@@ -58,9 +58,9 @@ export default class BlackjackGame extends Game {
       switch (game.outcome?.outcome) {
         case Blackjack.Outcome.WIN: {
           const winnings = roundZero(context.winnings
-            .setBase(0.1)
+            .setBase(0.25)
             .setMultiplier(context.db.multiplier.value)
-            .setRandom(Math.random() * 1.8)
+            .setRandom(Math.random() * 1.5)
             .calculate(context.db.bet.value))
 
           await context.db

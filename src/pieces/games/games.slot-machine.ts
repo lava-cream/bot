@@ -129,10 +129,8 @@ export default class SlotMachineGame extends Game {
     return [
       { emoji: '💰', multiplier: { jackpot: 100, win: 10 } },
       { emoji: '💶', multiplier: { jackpot: 90, win: 9 } },
-      { emoji: '💵', multiplier: { jackpot: 80, win: 8 } },
-      { emoji: '👑', multiplier: { jackpot: 70, win: 7 } },
-      { emoji: '🔱', multiplier: { jackpot: 60, win: 6 } },
-      { emoji: '💎', multiplier: { jackpot: 50, win: 5 } },
+      { emoji: '👑', multiplier: { jackpot: 80, win: 8 } },
+      { emoji: '🔱', multiplier: { jackpot: 70, win: 7 } },
       { emoji: '🍔', multiplier: { jackpot: 40, win: 4 } },
       { emoji: '🧀', multiplier: { jackpot: 30, win: 3 } },
       { emoji: '🍞', multiplier: { jackpot: 20, win: 2 } },

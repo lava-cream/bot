@@ -76,8 +76,8 @@ export default class HighlowGame extends Game {
         if (!logic.hasGuessed()) return;
 
         const winnings = roundZero(context.winnings
-          .setBase(logic.isJackpot() ? 10 : 0.75)
-          .setMultiplier(logic.isJackpot() ? 0 : Math.random() * 0.5)
+          .setBase(logic.isJackpot() ? 10 : 0.05)
+          .setMultiplier(logic.isJackpot() ? 0 : Math.random() * 1.9)
           .setRandom(logic.isJackpot() ? 0 : context.db.multiplier.value)
           .calculate(context.db.bet.value));
 

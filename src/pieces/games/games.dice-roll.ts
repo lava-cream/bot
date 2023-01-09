@@ -95,9 +95,9 @@ export default class DiceRollGame extends Game {
 
       case game.isWin(): {
         const winnings = roundZero(ctx.winnings
-          .setBase(0.05)
+          .setBase(0.1)
           .setMultiplier(ctx.db.multiplier.value)
-          .setRandom(Math.random() * 1.9)
+          .setRandom(Math.random() * 1.8)
           .calculate(ctx.db.bet.value));
 
         ctx.db.run((db) => {
