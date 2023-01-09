@@ -15,7 +15,7 @@ import type { User } from "discord.js";
 export default class ShareCommand extends Command {
   public override async chatInputRun(command: Command.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
-    const recepient = command.options.getMember('recepient', true);
+    const user = command.options.getMember('user', true);
     const amount = command.options.getString('amount', true);
 
     if (db.wallet.value <= 1) throw new CommandError('You have nothing to share!');
@@ -29,11 +29,11 @@ export default class ShareCommand extends Command {
     if (isNullOrUndefined(parsedAmount) || parsedAmount < 1) throw new CommandError('Must be a valid number.');
     if (parsedAmount > db.wallet.value) throw new CommandError(`You can't share that many. You only have ${bold(db.wallet.value.toLocaleString())} coins!`);
 
-    const dbRecepient = await this.container.db.players.fetch(recepient.user.id);
+    const dbRecepient = await this.container.db.players.fetch(user.user.id);
 
     await db.run(({ wallet }) => wallet.subValue(parsedAmount)).save();
     await dbRecepient.run(({ wallet }) => wallet.addValue(parsedAmount)).save();
-    await send(command, ShareCommand.renderSuccessfulTransactionMessage(parsedAmount, { db, user: command.user }, { db: dbRecepient, user: recepient.user }));
+    await send(command, ShareCommand.renderSuccessfulTransactionMessage(parsedAmount, { db, user: command.user }, { db: dbRecepient, user: user.user }));
   }
 
   private static renderSuccessfulTransactionMessage(
@@ -56,7 +56,7 @@ export default class ShareCommand extends Command {
       builder
         .setName(this.name)
         .setDescription(this.description)
-        .addUserOption(option => option.setName('recepient').setDescription('The user you want to share your coins with.').setRequired(true))
+        .addUserOption(option => option.setName('user').setDescription('The user you want to share your coins with.').setRequired(true))
         .addStringOption(option => option.setName('amount').setDescription('A valid amount.').setRequired(true))
       , {
         idHints: ['1057916707299151942']
