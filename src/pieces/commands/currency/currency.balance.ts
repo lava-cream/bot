@@ -1,7 +1,7 @@
 import { Command, ApplicationCommandRegistry } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { join, percent, send, toReadable, InteractionMessageContentBuilder } from '#lib/utilities';
+import { join, percent, send, InteractionMessageContentBuilder } from '#lib/utilities';
 import { bold, inlineCode } from '@discordjs/builders';
 import type { User } from 'discord.js';
 import type { PlayerSchema } from '#lib/database';
@@ -27,10 +27,10 @@ export default class BalanceCommand extends Command {
             `${bold('Wallet:')} ${db.wallet.toLocaleString()}`,
             `${bold('Bank:')} ${db.bank.toLocaleString()}/${db.bank.space.toLocaleString()} ${inlineCode(
               percent(db.bank.value, db.bank.space.value, 1)
-            )}`
+            )}`,
+            `${bold('Net Worth:')} ${db.netWorth.toLocaleString()}`
           ))
           .setTitle(`${user.username}'s balance`)
-          .setFooter({ text: `Net Worth: ${toReadable(db.netWorth)}` })
       )
   }
 
