@@ -1,4 +1,4 @@
-import { Collector, CustomId, disableMessageComponents, edit, InlineNumberCodeAlignment, InteractionMessageContentBuilder, join, MessageContentBuilder, minutes, scatter, seconds, send, toInlineNumberCode, toReadable } from '#lib/utilities';
+import { Collector, CustomId, disableMessageComponents, edit, InlineNumberCodeAlignment, InteractionMessageContentBuilder, join, MessageContentBuilder, minutes, roundZero, seconds, send, toInlineNumberCode, toReadable } from '#lib/utilities';
 import { EmbedTemplates } from '#lib/utilities/discord/templates/templates.embed.js';
 import { bold, inlineCode, memberNicknameMention, userMention } from '@discordjs/builders';
 import { ApplyOptions } from '@sapphire/decorators';
@@ -170,7 +170,7 @@ export default class SpamCommand extends Command {
         });
 
         collector.once('end', async () => {
-          if (mode === Mode.Button) await sentMessage.unwrap().edit({ components: disableMessageComponents(sentMessage.unwrap().components) });
+          if (mode === Mode.Button) await sentMessage.inspectAsync(message => message.edit({ components: disableMessageComponents(message.components) }));
 
           await thread.send(new MessageContentBuilder().addEmbed(() => EmbedTemplates.createSimple('The results are in and the event has ended!')));
           await thread.edit({ locked: true, archived: true }, `${mode} spam heist ended`).catch(noop);
@@ -196,19 +196,12 @@ export default class SpamCommand extends Command {
   }
 
   private splitPrice(prize: number, players: SpamCommand.Players): SpamCommand.Players {
-    const payouts = scatter(prize, players.size);
-    const sortedPlayers = players.sort((a, b) => b.spams - a.spams);
-    const baseShare = Math.floor(prize / players.size);
-    const spamWorth = Math.floor(baseShare / Config.MaxSpamAmount);
+    const baseShare = roundZero(prize / players.size, 2);
+    const spamWorth = roundZero(baseShare / Config.MaxSpamAmount, 1)
 
-    for (const [index] of payouts.entries()) {
-      const playerId = players.keyAt(index);
-      const player = playerId ? sortedPlayers.get(playerId) : null;
-
-      if (!isNullOrUndefined(player)) Reflect.set(player, 'won', Math.trunc(spamWorth * player.spams));
-    }
-
-    return players;
+    return players
+      .sort((a, b) => b.spams - a.spams)
+      .each(player => Reflect.set(player, 'won', Math.trunc(spamWorth * player.spams)));
   }
 
   private async sendMessage(payload: SpamCommand.Payload): Promise<Result<Message<boolean>, string>> {
@@ -218,9 +211,7 @@ export default class SpamCommand extends Command {
         if (commandMessage.channel.type !== 'GUILD_TEXT') return reject('Not in a text channel.');
 
         const atEveryoneRole = commandMessage.channel.permissionOverwrites.resolve(payload.command.guildId);
-        if (payload.mode === Mode.Message && !isNullOrUndefined(atEveryoneRole) && !atEveryoneRole.allow.toArray().includes('SEND_MESSAGES_IN_THREADS')) {
-          await atEveryoneRole.edit({ SEND_MESSAGES_IN_THREADS: true });
-        }
+        if (!isNullOrUndefined(atEveryoneRole)) await atEveryoneRole.edit({ SEND_MESSAGES_IN_THREADS: payload.mode === Mode.Message });
 
         const thread = await commandMessage.channel.threads.create({
           startMessage: commandMessage.id,

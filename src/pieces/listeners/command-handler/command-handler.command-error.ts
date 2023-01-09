@@ -1,7 +1,7 @@
 import { type ChatInputCommandErrorPayload, UserError } from '@sapphire/framework';
 import { Listener, Events } from '@sapphire/framework';
 
-import { EmbedTemplates, Responder } from '#lib/utilities';
+import { EmbedTemplates, send } from '#lib/utilities';
 
 import { ChatInputSubcommandErrorPayload, SubcommandPluginEvents } from '@sapphire/plugin-subcommands';
 
@@ -11,11 +11,10 @@ export class ChatInputCommandErrorListener extends Listener<typeof Events.ChatIn
   }
 
   public async run(error: unknown, payload: ChatInputCommandErrorPayload): Promise<void> {
-    const responder = new Responder(payload.interaction);
     const embed = EmbedTemplates.createCamouflaged();
 
     if (error instanceof UserError) {
-      await responder.send(content => content.addEmbed(() => embed.setDescription(error.message)));
+      await send(payload.interaction, content => content.addEmbed(() => embed.setDescription(error.message)));
     }
   }
 }
@@ -26,11 +25,10 @@ export class ChatInputSubcommandErrorListener extends Listener<typeof Subcommand
   }
 
   public async run(error: unknown, payload: ChatInputSubcommandErrorPayload) {
-    const responder = new Responder(payload.interaction);
     const embed = EmbedTemplates.createCamouflaged();
 
     if (error instanceof UserError) {
-      await responder.send(content => content.addEmbed(() => embed.setDescription(error.message)));
+      await send(payload.interaction, content => content.addEmbed(() => embed.setDescription(error.message)));
     }
   }
 }
