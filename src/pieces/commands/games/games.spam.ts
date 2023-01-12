@@ -54,15 +54,24 @@ export default class SpamCommand extends Command {
     }));
 
     await send(command, builder =>
-      builder.addEmbed(() =>
-        EmbedTemplates
-          .createSimple(
-            join([...winners.concat(losers).values()].map(({ button, spams, won }, idx, arr) =>
-              `${spams > 0 ? ['🥇', '🥈', '🥉'].at(idx) ?? '👏' : '💀'} ${inlineCode(toInlineNumberCode(arr.map(n => n.spams), idx, InlineNumberCodeAlignment.Right))} - ${bold(button.member.nickname ?? button.user.username)} won ${spams > 0 ? `${bold(won.toLocaleString())} coins` : 'nothing'}!`
-            ))
-          )
-          .setTitle(`${toReadable(prize)} ${toTitleCase(mode)} Spam Heist`)
-      )
+      builder
+        .addEmbed(() =>
+          EmbedTemplates
+            .createSimple(
+              join([...winners.concat(losers).values()].map(({ button, spams, won }, idx, arr) =>
+                `${spams > 0 ? ['🥇', '🥈', '🥉'].at(idx) ?? '👏' : '💀'} ${inlineCode(toInlineNumberCode(arr.map(n => n.spams), idx, InlineNumberCodeAlignment.Right))} - ${bold(button.member.nickname ?? button.user.username)} won ${spams > 0 ? `${bold(won.toLocaleString())} coins` : 'nothing'}!`
+              ))
+            )
+            .setTitle(`${toReadable(prize)} ${toTitleCase(mode)} Spam Heist`)
+        )
+        .addRow(row => 
+          row.addButtonComponent(btn => 
+            btn  
+              .setCustomId(customId.create('result'))
+              .setDisabled(true)
+              .setLabel(`${winners.reduce((n, player) => player.spams + n, 0).toLocaleString()} total spams`)
+          )  
+        )
     );
 
     return;
@@ -293,8 +302,8 @@ export default class SpamCommand extends Command {
             .setRequired(true)
             .addChoices(...Object.entries(Mode).map(([name, value]) => ({ name, value })))
         )
-        .addNumberOption(option => 
-          option  
+        .addNumberOption(option =>
+          option
             .setName('minutes')
             .setDescription('The duration of the spam, in minutes.')
             .setMinValue(1)
