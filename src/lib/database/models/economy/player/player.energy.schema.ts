@@ -49,7 +49,7 @@ export class PlayerEnergySchema extends CreateNumberValueSchema(PlayerDefaults.S
    * @returns This schema.
    */
   public override addValue(): this {
-    return super.addValue(PlayerEnergy.StarGain);
+    return super.addValue(PlayerEnergy.StarsAddedPerWin);
   }
 
   /**
@@ -57,7 +57,7 @@ export class PlayerEnergySchema extends CreateNumberValueSchema(PlayerDefaults.S
    * @returns This schema.
    */
   public override subValue(): this {
-    return super.subValue(PlayerEnergy.StarGain);
+    return this.energy > PlayerEnergy.StarsAddedPerWin ? super.subValue(PlayerEnergy.StarsAddedPerWin) : this;
   }
 
   /**

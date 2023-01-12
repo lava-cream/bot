@@ -1,7 +1,7 @@
 export const enum PlayerLimits {
-  Wallet = 100_000_000,
-  Bet = 100_000,
-  Bank = 250_000_000,
+  Wallet = 1_000_000_000,
+  Bet = 5_000_000,
+  Bank = 2_500_000_000,
   Star = 100_000,
   Multiplier = 0,
   Level = 1_000,
@@ -36,7 +36,7 @@ export const enum PlayerBank {
 
 export const enum PlayerEnergy {
   StarRatio = 100, // StarRatio = 1 Energy
-  StarGain = 50, // StarGain added Per Win
+  StarsAddedPerWin = 10, // StarGain added Per Win
   DefaultDuration = 10, // X Minutes
   TierAddedDefaultDuration = DefaultDuration * 0.2 // X Minutes
 }
@@ -64,7 +64,7 @@ export const enum PlayerMasteryRequirements {
 }
 
 export const enum PlayerMasteryAddedLimits {
-  Wallet = (500_000_000 - PlayerLimits.Wallet) / PlayerLimits.Mastery,
-  Bet = (500_000 - PlayerLimits.Bet) / PlayerLimits.Mastery,
-  Bank = (1_000_000_000 - PlayerLimits.Bank) / PlayerLimits.Mastery
+  Wallet = (5_000_000_000 - PlayerLimits.Wallet) / PlayerLimits.Mastery,
+  Bet = (25_000_000 - PlayerLimits.Bet) / PlayerLimits.Mastery,
+  Bank = (5_000_000_000 - PlayerLimits.Bank) / PlayerLimits.Mastery
 }
