@@ -1,4 +1,4 @@
-import { Schema, CastDocument, CastJSON, prop, CreateResolvableSchemaType } from '#lib/database/structures/schema.js';
+import { Schema, CastDocument, CastJSON, prop, CreateResolvableSchemaType, pre } from '#lib/database/structures/schema.js';
 
 import { PlayerBet, PlayerMasteryAddedLimits } from '#lib/utilities/constants/index.js';
 
@@ -13,7 +13,12 @@ import { PlayerAdvancementsManagerSchema } from './player.advancements.schema.js
 import { PlayerPartyManagerSchema } from './player.party.schema.js';
 import { PlayerGamesManagerSchema } from './player.game.schema.js';
 import { PlayerBoosterManagerSchema } from './player.booster.schema.js';
+import { container } from '@sapphire/framework';
 
+@pre<PlayerSchema>('save', function (next) {
+  container.stores.get('games').syncPlayerGames(this);
+  return next();
+})
 export class PlayerSchema extends Schema {
   @prop({ type: () => PlayerWalletSchema, immutable: true, default: new PlayerWalletSchema() })
   public readonly wallet!: PlayerWalletSchema;

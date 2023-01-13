@@ -56,7 +56,7 @@ export default class CoinFlipGame extends Game {
             const winnings = roundZero(context.winnings
               .setBase(0.15)
               .setMultiplier(context.db.multiplier.value)
-              .setRandom(Math.random() * 0.7)
+              .setRandom(Math.random() * 1.7)
               .calculate(context.db.bet.value));
 
             await context.db

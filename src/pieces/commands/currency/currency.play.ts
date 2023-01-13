@@ -4,7 +4,6 @@ import { ApplyOptions } from '@sapphire/decorators';
 
 import {
   Collector,
-  randomColor,
   seconds,
   minutes,
   SelectMenuBuilder,
@@ -84,22 +83,21 @@ export default class PlayCommand extends Command {
             btn
               .setCustomId(componentId.create(PickerControl.Proceed))
               .setStyle(Constants.MessageButtonStyles.SECONDARY)
-              .setLabel('✅')
+              .setEmoji('✅')
               .setDisabled(isNullish(game) || ended)
           )
           .addButtonComponent((btn) =>
             btn
               .setCustomId(componentId.create(PickerControl.Cancel))
               .setStyle(Constants.MessageButtonStyles.SECONDARY)
-              .setLabel('❌')
+              .setEmoji('❌')
               .setDisabled(ended)
           )
       )
       .addEmbed(() =>
         EmbedTemplates.createCamouflaged(embed =>
           embed
-            .setTitle(isNullish(game) ? 'Game Picker' : game.name)
-            .setColor(ended ? embed.color! : randomColor(true))
+            .setTitle(isNullish(game) ? 'Select Game to Play' : game.name)
             .setDescription(
               isNullish(game) ? 'Choose a game to play from the dropdown below.' : game.detailedDescription ?? 'No description provided.'
             )
@@ -143,10 +141,7 @@ export default class PlayCommand extends Command {
         message: await send(command, this.renderGamePickerContent(command, componentId, selectedGame, selectedGameSchema)),
         max: Infinity,
         time: seconds(10),
-        filter: async (component) => {
-          const context = component.user.id === command.user.id;
-          return context;
-        },
+        filter: (component) => component.user.id === command.user.id,
         end: async (ctx) => {
           if (ctx.wasInternallyStopped()) {
             await edit(command, this.renderGamePickerContent(command, componentId, selectedGame, selectedGameSchema, true));
@@ -202,7 +197,7 @@ export default class PlayCommand extends Command {
         EmbedTemplates.createCamouflaged(embed =>
           embed
             .setTitle(isNullish(energized) || !energized ? 'Energy Expired' : 'Energy Recharged')
-            .setColor(isNullish(energized) ? embed.color! : energized ? Constants.Colors.GREEN : Constants.Colors.RED)
+            .setColor(isNullish(energized) ? embed.color! : energized ? Constants.Colors.DARK_GOLD : embed.color!)
             .setDescription(
               isNullish(energized)
                 ? 'Your energy expired! Convert the stars you currently have into energy.'
@@ -246,7 +241,7 @@ export default class PlayCommand extends Command {
       }
 
       const collector = new Collector({
-        message: await edit(command, this.renderEnergyPrompterMessage(customId, null)),
+        message: await send(command, this.renderEnergyPrompterMessage(customId, null)),
         componentType: 'BUTTON',
         max: Infinity,
         time: seconds(60),

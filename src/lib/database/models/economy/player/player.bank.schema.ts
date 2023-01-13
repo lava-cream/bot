@@ -31,12 +31,25 @@ export class PlayerBankSpaceSchema extends CreateNumberValueSchema(PlayerBank.De
   }
 
   /**
+   * Checks if the bank space multiplier is already maxed.
+   * @returns A boolean.
+   */
+  public isMaxRate() {
+    return this.rate >= PlayerBank.MaxSpaceMultiplier;
+  }
+
+  /**
    * Increments the bank space's value with the product of the specified value and the bank space's rate.
    * @param value The value to add.
    * @returns This schema.
    */
   public override addValue(value: number): this {
     return super.addValue(roundZero(value * (this.rate / 100)));
+  }
+
+  public setRate(rate: number): this {
+    this.rate = rate;
+    return this;
   }
 }
 

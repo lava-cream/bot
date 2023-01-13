@@ -69,7 +69,8 @@ export default class SpamCommand extends Command {
             btn  
               .setCustomId(customId.create('result'))
               .setDisabled(true)
-              .setLabel(`${winners.reduce((n, player) => player.spams + n, 0).toLocaleString()} total spams`)
+              .setLabel(`${winners.reduce((n, player) => player.spams + n, 0).toLocaleString()} Spams`)
+              .setStyle(Constants.MessageButtonStyles.SECONDARY)
           )  
         )
     );

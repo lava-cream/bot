@@ -17,6 +17,7 @@ export default class BalanceCommand extends Command {
     const db = await this.container.db.players.fetch(user.id);
 
     await send(command, BalanceCommand.renderContent(user, db));
+    await db.save();
   }
 
   private static renderContent(user: User, db: PlayerSchema) {
@@ -27,7 +28,7 @@ export default class BalanceCommand extends Command {
             `${bold('Wallet:')} ${db.wallet.toLocaleString()}`,
             `${bold('Bank:')} ${db.bank.toLocaleString()}/${db.bank.space.toLocaleString()} ${inlineCode(
               percent(db.bank.value, db.bank.space.value, 1)
-            )}`,
+            )}\n`,
             `${bold('Net Worth:')} ${db.netWorth.toLocaleString()}`
           ))
           .setTitle(`${user.username}'s balance`)

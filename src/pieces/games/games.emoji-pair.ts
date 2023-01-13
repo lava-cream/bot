@@ -120,9 +120,9 @@ export default class EmojiPairGame extends Game {
   private static get pairs(): EmojiPair.Emoji[] {
     return [
       { emoji: '💰', multiplier: 10 },
-      { emoji: '💶', multiplier: 5 },
-      { emoji: '💵', multiplier: 3 },
-      { emoji: '🪙', multiplier: 2 }
+      { emoji: '💶', multiplier: 9 },
+      { emoji: '💵', multiplier: 2 },
+      { emoji: '🪙', multiplier: 1 }
     ];
   }
 }

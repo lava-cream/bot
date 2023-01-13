@@ -74,7 +74,7 @@ export class GameContext {
     await checked.inspectErrAsync(err => this.responder.send(() => this.renderMessage(err)));
 
     this.schema.setLastPlayed(new Date());
-    if (force) await this.db.save();
+    if (force || checked.isErr()) await this.db.save();
 
     return checked.isOk() && this.play();
   }
