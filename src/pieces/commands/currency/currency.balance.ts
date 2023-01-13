@@ -1,8 +1,7 @@
 import { Command, ApplicationCommandRegistry } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { join, percent, send, InteractionMessageContentBuilder } from '#lib/utilities';
-import { bold, inlineCode } from '@discordjs/builders';
+import { percent, send, InteractionMessageContentBuilder, toReadable } from '#lib/utilities';
 import type { User } from 'discord.js';
 import type { PlayerSchema } from '#lib/database';
 import { EmbedTemplates } from '#lib/utilities';
@@ -23,15 +22,24 @@ export default class BalanceCommand extends Command {
   private static renderContent(user: User, db: PlayerSchema) {
     return new InteractionMessageContentBuilder()
       .addEmbed(() => 
-        EmbedTemplates
-          .createSimple(join(
-            `${bold('Wallet:')} ${db.wallet.toLocaleString()}`,
-            `${bold('Bank:')} ${db.bank.toLocaleString()}/${db.bank.space.toLocaleString()} ${inlineCode(
-              percent(db.bank.value, db.bank.space.value, 1)
-            )}\n`,
-            `${bold('Net Worth:')} ${db.netWorth.toLocaleString()}`
-          ))
+        EmbedTemplates.createCamouflaged()
           .setTitle(`${user.username}'s balance`)
+          .addFields(
+            {
+              name: 'Wallet',
+              value: db.wallet.toLocaleString(),
+              inline: true
+            },
+            {
+              name: `Bank (${percent(db.bank.value, db.bank.space.value)} Full)`,
+              value: `${db.bank.toLocaleString()}/${toReadable(db.bank.space.value, 2)}`,
+              inline: true
+            },
+            {
+              name: 'Net Worth',
+              value: db.netWorth.toLocaleString()
+            }
+          )
       );
   }
 

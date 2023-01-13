@@ -1,6 +1,5 @@
 import type { PlayerSchema } from "#lib/database";
-import { CommandError, CommandOptionError } from "#lib/framework";
-import { Collector, CustomId, edit, InteractionMessageContentBuilder, ModalActionRowBuilder, parseNumber, PlayerBank, seconds, send } from "#lib/utilities";
+import { Collector, CustomId, edit, InteractionMessageContentBuilder, ModalActionRowBuilder, parseNumber, percent, PlayerBank, ResponderError, seconds, send } from "#lib/utilities";
 import { EmbedTemplates } from "#lib/utilities";
 import { bold, inlineCode } from "@discordjs/builders";
 import { ApplyOptions } from "@sapphire/decorators";
@@ -31,7 +30,7 @@ import { Constants, Modal } from "discord.js";
 export default class BankCommand extends Subcommand {
   public async chatInputDeposit(command: Subcommand.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
-    if (db.bank.isMaxValue()) throw new CommandError('Your bank is full.');
+    if (db.bank.isMaxValue()) return ResponderError.send(command, 'Your bank is full.');
 
     const amount = command.options.getString('amount', true);
     const parsedAmount = parseNumber(amount, {
@@ -41,12 +40,12 @@ export default class BankCommand extends Subcommand {
     });
 
     if (isNullOrUndefined(parsedAmount)) {
-      throw new CommandOptionError({ option: 'amount', message: 'It should be a valid or actual number.' });
+      return ResponderError.send(command, 'It should be a valid or actual number.');
     }
 
     const cleanParsedAmount = Math.trunc(parsedAmount);
     if (cleanParsedAmount > db.bank.difference) {
-      throw new CommandError(`You can only deposit up to ${bold(db.bank.difference.toLocaleString())} coins right now.`);
+      return ResponderError.send(command, `You can only deposit up to ${bold(db.bank.difference.toLocaleString())} coins right now.`);
     }
 
     await db
@@ -56,7 +55,7 @@ export default class BankCommand extends Subcommand {
       })
       .save();
 
-    await send(command, builder =>
+    return send(command, builder =>
       builder
         .addEmbed(() =>
           EmbedTemplates.createCamouflaged()
@@ -82,7 +81,7 @@ export default class BankCommand extends Subcommand {
 
   public async chatInputWithdraw(command: Subcommand.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
-    if (db.bank.value < 1) throw new CommandError('You have none to withdraw.');
+    if (db.bank.value < 1) return ResponderError.send(command, 'You have none to withdraw.');
 
     const amount = command.options.getString('amount', true);
     const parsedAmount = parseNumber(amount, {
@@ -92,12 +91,12 @@ export default class BankCommand extends Subcommand {
     });
 
     if (isNullOrUndefined(parsedAmount)) {
-      throw new CommandOptionError({ option: 'amount', message: 'It should be a valid or actual number.' });
+      return ResponderError.send(command, 'It should be a valid or actual number.');
     }
 
     const cleanParsedAmount = Math.trunc(parsedAmount);
     if (cleanParsedAmount > db.bank.value) {
-      throw new CommandError(`You only have ${bold(db.bank.toLocaleString())} in your bank lmao.`);
+      return ResponderError.send(command, `You only have ${bold(db.bank.toLocaleString())} in your bank lmao.`);
     }
 
     await db
@@ -107,7 +106,7 @@ export default class BankCommand extends Subcommand {
       })
       .save();
 
-    await send(command, builder =>
+    return send(command, builder =>
       builder
         .addEmbed(() =>
           EmbedTemplates.createCamouflaged()
@@ -134,9 +133,7 @@ export default class BankCommand extends Subcommand {
   public async chatInputSpace(command: Subcommand.ChatInputInteraction<'cached'>) {
     const db = await this.container.db.players.fetch(command.user.id);
     const customId = new CustomId(command.createdAt);
-    const message = await send(command, BankCommand.renderSpaceContent(db, customId, db.bank.space.isMaxRate()));
-
-    if (db.bank.space.isMaxRate()) return;
+    const message = await send(command, BankCommand.renderSpaceContent(db, customId, false));
 
     const collector = new Collector({
       message,
@@ -144,40 +141,48 @@ export default class BankCommand extends Subcommand {
       max: Infinity,
       time: seconds(10),
       actions: {
-        [customId.create('increase-multiplier')]: async ctx => {
-          ctx.collector.resetTimer();
+        [customId.create('set-multiplier')]: async ctx => {
+          ctx.collector.resetTimer({ time: seconds(60) });
 
           await ctx.interaction.showModal(
             new Modal()
-              .setTitle('What Percentage?')
+              .setTitle('Bank Space Multiplier')
               .setCustomId(customId.create('modal'))
               .setComponents(
                 new ModalActionRowBuilder().addTextInputComponent(input =>
                   input
                     .setCustomId(customId.create('input'))
-                    .setPlaceholder(`# between ${db.bank.space.rate + 1} and ${PlayerBank.MaxSpaceMultiplier}`)
+                    .setPlaceholder(`Between ${PlayerBank.MinSpaceMultiplier} and ${PlayerBank.MaxSpaceMultiplier}.`)
                     .setRequired(true)
-                    .setLabel('Percentage')
+                    .setLabel('Multiplier')
                     .setStyle(Constants.TextInputStyles.SHORT)
                 )
               )
           );
 
-          const modal = await ctx.interaction.awaitModalSubmit({ time: seconds(10) });
+          const modal = await ctx.interaction.awaitModalSubmit({ time: seconds(60) }).catch(() => null);
+          if (isNullOrUndefined(modal)) {
+            await ResponderError.send(command, "You didn't input anything!");
+            return;
+          }
+
+          await modal.deferReply();
+
           const input = modal.fields.getTextInputValue(customId.create('input'));
           const parsedInput = parseNumber(input, {
             amount: db.bank.space.rate,
-            minimum: db.bank.space.rate + 1,
+            minimum: PlayerBank.MinSpaceMultiplier,
             maximum: PlayerBank.MaxSpaceMultiplier
           });
 
           if (isNullOrUndefined(parsedInput)) {
-            await modal.reply({ embeds: [EmbedTemplates.createSimple('It must be a valid number.')] });
+            await ResponderError.edit(modal, 'It must be a valid number.');
             return;
           }
 
           await db.run(db => db.bank.space.setRate(parsedInput)).save();
-          await modal.reply({ embeds: [EmbedTemplates.createSimple(`Successfully set your bank space multiplier to ${parsedInput}%.`)] });
+          await edit(modal, builder => builder.addEmbed(() => EmbedTemplates.createSimple(`Successfully set your bank space multiplier to ${parsedInput}%.`)));
+          return ctx.stop();
         }
       },
       filter: button => {
@@ -198,23 +203,21 @@ export default class BankCommand extends Subcommand {
         EmbedTemplates.createCamouflaged()
           .addFields(
             {
-              name: 'Capacity',
-              value: db.bank.space.toLocaleString(),
-              inline: true
+              name: `Capacity (${percent(db.bank.value, db.bank.space.value)} Full)`,
+              value: db.bank.space.toLocaleString()
             },
             {
               name: 'Multiplier',
-              value: `${db.bank.space.rate.toLocaleString()}`,
-              inline: true
+              value: `${db.bank.space.rate.toLocaleString()}%`
             }
           )
-          .setTitle('Your Bank Space')
+          .setTitle('Bank Space')
       )
       .addRow(row =>
         row.addButtonComponent(btn =>
           btn
-            .setLabel('Increase Multiplier')
-            .setCustomId(customId.create('increase-multiplier'))
+            .setLabel('Set Multiplier')
+            .setCustomId(customId.create('set-multiplier'))
             .setStyle(Constants.MessageButtonStyles.SECONDARY)
             .setDisabled(ended)
         )

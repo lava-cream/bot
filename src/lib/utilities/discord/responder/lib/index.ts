@@ -1,4 +1,4 @@
-import type { GuildCacheMessage, CacheType, CommandInteraction, ButtonInteraction, SelectMenuInteraction } from 'discord.js';
+import type { GuildCacheMessage, CacheType, CommandInteraction, ButtonInteraction, SelectMenuInteraction, ModalSubmitInteraction } from 'discord.js';
 import { type BuilderCallback, InteractionMessageContentBuilder, CustomId, InteractionMessageUpdateBuilder, MessageActionRowBuilderComponents } from '#lib/utilities';
 import { isFunction, isNullOrUndefined } from '@sapphire/utilities';
 import { Result } from '@sapphire/result';
@@ -7,7 +7,7 @@ import { Result } from '@sapphire/result';
  * Represents a responder target.
  * @template Cached The cache type.
  */
-export type ResponderTarget<Cached extends CacheType> = CommandInteraction<Cached> | ButtonInteraction<Cached> | SelectMenuInteraction<Cached>;
+export type ResponderTarget<Cached extends CacheType> = CommandInteraction<Cached> | ButtonInteraction<Cached> | SelectMenuInteraction<Cached> | ModalSubmitInteraction<Cached>;
 
 /**
  * Represents the responder content.

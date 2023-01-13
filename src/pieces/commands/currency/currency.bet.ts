@@ -1,10 +1,9 @@
 import { Command, ApplicationCommandRegistry, CommandOptionsRunTypeEnum } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { hasDecimal, parseNumber, InteractionMessageContentBuilder, send } from '#lib/utilities';
+import { hasDecimal, parseNumber, InteractionMessageContentBuilder, send, ResponderError } from '#lib/utilities';
 import { bold } from '@discordjs/builders';
 import { isNullOrUndefined } from '@sapphire/utilities';
-import { CommandError } from '#lib/framework';
 import type { PlayerSchema } from '#lib/database';
 import { EmbedTemplates } from '#lib/utilities';
 
@@ -28,11 +27,11 @@ export default class BetCommand extends Command {
       maximum: db.maxBet
     });
 
-    if (isNullOrUndefined(parsedAmount) || hasDecimal(parsedAmount)) throw new CommandError('You need to pass an actual number.');
-    if (parsedAmount === db.bet.value) throw new CommandError('Cannot change your bet to the same one.');
-    if (parsedAmount < db.minBet) throw new CommandError(`You can't bet lower than your minimum ${bold(db.minBet.toLocaleString())} limit.`);
-    if (parsedAmount > db.maxBet) throw new CommandError(`You can't bet higher than your maximum ${bold(db.maxBet.toLocaleString())} limit.`);
-    if (parsedAmount > db.wallet.value) throw new CommandError(`You only have ${bold(db.wallet.value.toLocaleString())} coins.`);
+    if (isNullOrUndefined(parsedAmount) || hasDecimal(parsedAmount)) return ResponderError.send(command, 'You need to pass an actual number.');
+    if (parsedAmount === db.bet.value) return ResponderError.send(command, 'Cannot change your bet to the same one.');
+    if (parsedAmount < db.minBet) return ResponderError.send(command, `You can't bet lower than your minimum ${bold(db.minBet.toLocaleString())} limit.`);
+    if (parsedAmount > db.maxBet) return ResponderError.send(command, `You can't bet higher than your maximum ${bold(db.maxBet.toLocaleString())} limit.`);
+    if (parsedAmount > db.wallet.value) return ResponderError.send(command, `You only have ${bold(db.wallet.value.toLocaleString())} coins.`);
 
     await db.run((db) => db.bet.setValue(parsedAmount)).save();
     await send(command, BetCommand.renderBetUpdatedMessage(db));
