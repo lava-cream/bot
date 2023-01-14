@@ -57,7 +57,7 @@ export default class TopCommand extends Command {
     for (const db of dbs.values()) {
       try {
         if (!command.client.users.resolve(db._id)) {
-          await command.client.users.fetch(db._id, { cache: true, force: true });
+          await command.client.users.fetch(db._id, { cache: true });
         }
       } catch {}
     }

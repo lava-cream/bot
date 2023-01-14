@@ -140,7 +140,7 @@ export abstract class Manager<T extends Schema> extends BaseManager {
    */
   public async fetchAll(cache = true): Promise<CastDocument<T>[]> {
     const documents = await this.model.find({}).exec();
-    if (cache) for (const doc of documents) this.add(doc);
+    if (cache) for (const doc of documents) this.cache.set(doc._id, doc);
     return documents;
   }
 
