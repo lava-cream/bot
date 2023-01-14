@@ -3,19 +3,19 @@ import '@sapphire/plugin-subcommands/register';
 import '#lib/utilities/root/root.setup.js';
 
 // Clients
-import MemersClient from '#lib/framework/core/client.js';
+import LavaClient from '#lib/framework/client/client.js';
 import DatabaseClient from '#lib/database/client/client.js';
 import AmariClient from '#lib/apis/amari-bot/client/amari.client.js';
 
 // Misc
-import { CLIENT_OPTIONS } from '#lib/framework/core/client-options.js';
+import { CLIENT_OPTIONS } from '#lib/framework/client/client-options.js';
 import { container, Result } from '@sapphire/framework';
 import { LogLevels, setLogLevel } from '@typegoose/typegoose';
 import chalk from 'chalk';
 
 setLogLevel(LogLevels.SILENT);
 
-await Result.fromAsync(Reflect.construct(MemersClient, [CLIENT_OPTIONS]).login()).then((result) =>
+await Result.fromAsync(Reflect.construct(LavaClient, [CLIENT_OPTIONS]).login()).then((result) =>
   result.inspectErr((err) => container.logger.fatal(chalk.redBright(err)))
 );
 

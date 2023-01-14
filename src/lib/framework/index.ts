@@ -1,5 +1,5 @@
-export { default as MemersClient } from './core/client.js';
-export * from './core/client-options.js';
+export { default as MemersClient } from './client/client.js';
+export * from './client/client-options.js';
 
 export * from './errors/index.js';
 export * from './preconditions/index.js';
