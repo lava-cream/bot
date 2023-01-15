@@ -13,7 +13,7 @@ if (isBuilt) {
 }
 
 const build = () => {
-  exec(pkg.scripts.build.split('&&').map(cmd => `npx ${cmd.trim()}`).join(' '), console.log);
+  exec(pkg.scripts.build.split('&&').map(cmd => `npx ${cmd.trim()}`).join(' && '), console.log);
 };
 
 build();
