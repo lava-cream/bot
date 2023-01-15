@@ -56,7 +56,7 @@
 	},
 	"devDependencies": {
 		"@sapphire/prettier-config": "^1.3.0",
-		"@sapphire/ts-config": "^3.3.1",
+		"@sapphire/ts-config": "^3.3.4",
 		"@types/node": "^17.0.17",
 		"@types/node-fetch": "^2.5.10",
 		"prettier": "2.5.1",
@@ -73,19 +73,5 @@
 		"#lib/utilities": "./src/lib/utilities/index.js",
 		"#lib/utilities/*": "./src/lib/utilities/*",
 		"#pieces/*": "./src/pieces/*"
-	},
-	"tsup": {
-		"entry": [
-			"src/index.ts"
-		],
-		"format": [
-			"esm"
-		],
-		"target": "es2022",
-		"splitting": false,
-		"sourcemap": true,
-		"clean": true,
-		"keepNames": true,
-		"minify": false
 	}
 }
