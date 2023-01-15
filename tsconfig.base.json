@@ -2,7 +2,7 @@
 	"extends": "@sapphire/ts-config/extra-strict",
 	"include": ["src"],
 	"compilerOptions": {
-		"outDir": "./dist",
+		"outDir": "dist",
 		"skipLibCheck": true
 	}
 }
