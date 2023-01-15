@@ -13,7 +13,7 @@
 		"watch": "tsc -w",
 		"format": "prettier --write \"src/**/*.ts\"",
 		"nuke": "rimraf ./node_modules ./yarn-lock.json",
-		"postinstall": "npm run build"
+		"prestart": "npm run build"
 	},
 	"repository": {
 		"type": "git",
