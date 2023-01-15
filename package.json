@@ -12,7 +12,8 @@
 		"build": "rimraf ./dist && tsc --project src/tsconfig.json",
 		"watch": "tsc -w",
 		"format": "prettier --write \"src/**/*.ts\"",
-		"nuke": "rimraf ./node_modules ./yarn-lock.json"
+		"nuke": "rimraf ./node_modules ./yarn-lock.json",
+		"postinstall": "rimraf ./dist && tsc --project src/tsconfig.json"
 	},
 	"repository": {
 		"type": "git",
