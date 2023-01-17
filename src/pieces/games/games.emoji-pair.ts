@@ -19,7 +19,7 @@ declare module '#lib/framework/structures/game/game.types' {
   detailedDescription: 'Get an exact pair of the same emoji. The mood behind the emoji signifies how big you had won.'
 })
 export default class EmojiPairGame extends Game {
-  public async play(context: Game.Context) {
+  public async currencyPlay(context: Game.Context) {
     const logic = new EmojiPair.Logic(EmojiPairGame.pairs);
     const collector = new Collector({
       componentType: 'BUTTON',

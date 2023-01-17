@@ -1,6 +1,6 @@
-import { Awaitable, Piece } from "@sapphire/framework";
-import type { Game, Games } from "../game";
-import type { BoosterOptions, BoosterShopEntry, BoosterType } from "./booster.options.js";
+import { Piece } from "@sapphire/framework";
+import type { Games } from "../game";
+import type { BoosterOptions, BoosterShopOffer, BoosterType } from "./booster.options.js";
 
 /**
  * Represents a game boooster
@@ -9,27 +9,26 @@ import type { BoosterOptions, BoosterShopEntry, BoosterType } from "./booster.op
 export abstract class Booster extends Piece<BoosterOptions> implements BoosterOptions {
   public readonly id: string;
   public readonly description: string;
-  public readonly shopEntries: BoosterShopEntry[];
-  public readonly type: BoosterType;
+  public readonly shopOffers: BoosterShopOffer[];
+  public readonly types: BoosterType[];
   public readonly excludedGames: Games.Keys[];
   public constructor(context: Piece.Context, options: BoosterOptions) {
     super(context, options);
     this.id = options.id;
     this.description = options.description;
-    this.shopEntries = options.shopEntries;
-    this.type = options.type;
+    this.shopOffers = options.shopOffers;
+    this.types = options.types;
     this.excludedGames = options.excludedGames ?? [];
   }
 
-  /**
-   * The booster's precondition in order to be triggered.
-   * @param context The game's context.
-   */
-  public abstract preTrigger(context: Game.Context): Awaitable<boolean>;
+  public hasType(type: BoosterType): boolean {
+    return this.types.includes(type);
+  }
+}
 
-  /**
-   * Returns the value to apply towards the game's logic.
-   * @param context The game's context.
-   */
-  public abstract trigger(context: Game.Context): Awaitable<number>;
+export declare namespace Booster {
+  type Options = BoosterOptions;
+  type Context = Piece.Context;
+  type JSON = Piece.JSON;
+  type LocationJSON = Piece.LocationJSON;
 }

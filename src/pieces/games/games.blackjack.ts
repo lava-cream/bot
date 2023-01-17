@@ -29,7 +29,7 @@ declare module '#lib/framework/structures/game/game.types' {
     'Play a game of blackjack. This game was borrowed from Dank Memer, the original memey-currency bot used by millions of frog users.'
 })
 export default class BlackjackGame extends Game {
-  public async play(context: Game.Context) {
+  public async currencyPlay(context: Game.Context) {
     checkClientReadyStatus(context.command.client);
 
     const game = new Blackjack.Logic(context.command.user, context.command.client.user).start();

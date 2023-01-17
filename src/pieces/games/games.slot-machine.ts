@@ -20,7 +20,7 @@ declare module '#lib/framework/structures/game/game.types' {
   detailedDescription: 'Test your chances at spinning the slot machine.'
 })
 export default class SlotMachineGame extends Game {
-  public async play(context: Game.Context) {
+  public async currencyPlay(context: Game.Context) {
     const machine = new SlotMachine.Logic(SlotMachineGame.emojis);
     const collector = new Collector({
       message: await context.responder.send(() => SlotMachineGame.renderContentAndUpdate(machine, context, false)),

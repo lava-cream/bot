@@ -26,7 +26,7 @@ declare module '#lib/framework/structures/game/game.types' {
   detailedDescription: 'Experience one of the most successful event game here in Memers Crib. You are one step away from disaster!'
 })
 export default class HighlowGame extends Game {
-  public async play(context: Game.Context) {
+  public async currencyPlay(context: Game.Context) {
     const logic = new Highlow.Logic(1, 10);
     const collector = new Collector({
       message: await context.responder.send(() => HighlowGame.renderContent(context, logic, null)),

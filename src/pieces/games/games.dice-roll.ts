@@ -19,7 +19,7 @@ declare module '#lib/framework/structures/game/game.types' {
   detailedDescription: 'Roll a dice to win coins. Whoever gets the highest rolled value wins.'
 })
 export default class DiceRollGame extends Game {
-  public async play(context: Game.Context) {
+  public async currencyPlay(context: Game.Context) {
     checkClientReadyStatus(context.command.client);
 
     const game = new DiceRoll.Logic(context.command.user, context.command.client.user);

@@ -2,7 +2,7 @@ import { ApplicationCommandRegistries, Piece, RegisterBehavior, SapphireClient, 
 import { Guild, Permissions, Team, User } from 'discord.js';
 import { isNullOrUndefined, toTitleCase } from '@sapphire/utilities';
 import { piecesDir, pluralise } from '#lib/utilities';
-import { GameStore, LoggerStore } from '#lib/framework/structures/index.js';
+import { BoosterStore, GameStore, LoggerStore } from '#lib/framework/structures/index.js';
 import chalk from 'chalk';
 
 /**
@@ -45,7 +45,7 @@ export default class LavaClient extends SapphireClient {
 
   public override async login(token = process.env.DISCORD_TOKEN) {
     this.stores.registerPath(piecesDir);
-    this.stores.register(new GameStore()).register(new LoggerStore());
+    this.stores.register(new BoosterStore()).register(new GameStore()).register(new LoggerStore());
 
     ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(RegisterBehavior.Overwrite);
 

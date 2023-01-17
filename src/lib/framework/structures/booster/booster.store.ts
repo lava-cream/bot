@@ -6,3 +6,9 @@ export class BoosterStore extends Store<Booster> {
     super(Booster, { name: 'boosters' });
   }
 }
+
+declare module '@sapphire/pieces' {
+  interface StoreRegistryEntries {
+    boosters: BoosterStore;
+  }
+}

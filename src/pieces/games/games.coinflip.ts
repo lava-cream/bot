@@ -22,7 +22,7 @@ declare module '#lib/framework/structures/game/game.types' {
   detailedDescription: "Classic coinflip that either makes you profit or lose a lot. It's balanced as all things should be."
 })
 export default class CoinFlipGame extends Game {
-  public async play(context: Game.Context) {
+  public async currencyPlay(context: Game.Context) {
     checkClientReadyStatus(context.command.client);
 
     const game = new Coinflip.Logic(context.command.user, context.command.client.user);

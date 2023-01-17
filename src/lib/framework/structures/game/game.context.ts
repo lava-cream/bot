@@ -59,10 +59,22 @@ export class GameContext {
 
   /**
    * Calls for the play method of the game.
-   * @returns The return value of {@link Game#play}.
+   * @returns The return value of {@link Game#currencyPlay}.
    */
   public play() {
-    return Reflect.apply(this.game.play, this.game, [this]);
+    return Reflect.apply(this.game.currencyPlay, this.game, [this]);
+  }
+
+  public win(coins: number): void {
+    this.schema.wins.addValue(1).coins.addValue(coins);
+    this.schema.wins.streak.addValue();
+    this.schema.loses.streak.resetValue();
+  }
+
+  public lose(coins: number): void {
+    this.schema.loses.addValue(1).coins.addValue(coins);
+    this.schema.loses.streak.addValue();
+    this.schema.wins.streak.resetValue();
   }
 
   /**
