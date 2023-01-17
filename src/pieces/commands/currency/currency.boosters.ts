@@ -51,7 +51,7 @@ export default class BoostersCommand extends Command {
           const { unit, cost, type, value } = boosterShopOffer;
           const { name } = booster;
 
-          switch(unit) {
+          switch (unit) {
             case BoosterShopOfferUnit.Coins: {
               db.wallet.subValue(cost);
               break;
@@ -70,7 +70,7 @@ export default class BoostersCommand extends Command {
 
           const finalValue = isFunction(value) ? value() : value;
 
-          switch(type) {
+          switch (type) {
             case BoosterShopOfferType.Duration: {
               schema.setExpire(Date.now() + finalValue);
               break;
@@ -82,10 +82,10 @@ export default class BoostersCommand extends Command {
             };
           }
 
-          const unitEmoji = unit === BoosterShopOfferUnit.Star ? '⭐' : unit === BoosterShopOfferUnit.Energy ? '⚡' : '🪙'; 
+          const unitEmoji = unit === BoosterShopOfferUnit.Star ? '⭐' : unit === BoosterShopOfferUnit.Energy ? '⚡' : '🪙';
 
-          await send(ctx.interaction, builder => 
-            builder.addEmbed(() => EmbedTemplates.createSimple(`Successfully bought ${bold(name)} for ${unitEmoji} ${bold(cost.toLocaleString())}.`))  
+          await send(ctx.interaction, builder =>
+            builder.addEmbed(() => EmbedTemplates.createSimple(`Successfully bought ${bold(name)} for ${unitEmoji} ${bold(cost.toLocaleString())}.`))
           )
         },
       },
@@ -99,8 +99,8 @@ export default class BoostersCommand extends Command {
   }
 
   private static renderBoosterPickerContent(customId: CustomId, selectedBooster: Booster | null, selectedShopOffer: BoosterShopOffer | null, ended: boolean) {
-    return new InteractionMessageContentBuilder()
-      .addRow(row => {
+    const content = new InteractionMessageContentBuilder()
+      .addRow(row =>
         row.addSelectMenuComponent(menu => {
           menu
             .setCustomId(customId.create('picker'))
@@ -119,42 +119,8 @@ export default class BoostersCommand extends Command {
               }),
               menu
             );
-        });
-
-        if (!isNullOrUndefined(selectedBooster)) {
-          row.addSelectMenuComponent(menu => {
-            menu
-              .setCustomId(customId.create('shop-offer'))
-              .setPlaceholder('Select Offer')
-              .setDisabled(ended)
-              .setMaxValues(1);
-
-            return selectedBooster.shopOffers
-              .reduce((menu, shopOffer) =>
-                menu.addOption({
-                  label: shopOffer.cost.toLocaleString(),
-                  emoji: shopOffer.unit === BoosterShopOfferUnit.Star ? '⭐' : shopOffer.unit === BoosterShopOfferUnit.Energy ? '⚡' : '🪙',
-                  value: shopOffer.id,
-                  default: selectedShopOffer?.id === shopOffer.id,
-                  description: `${shopOffer.type === BoosterShopOfferType.Duration ? 'Duration' : 'Quantity'}: ${isFunction(shopOffer.value) ? 'Random Value' : shopOffer.type === BoosterShopOfferType.Duration ? new DurationFormatter().format(shopOffer.value, Infinity, { right: ', ' }) : shopOffer.value.toLocaleString()}`
-                }),
-                menu
-              );
-          });
-
-          for (const control of ['buy', 'cancel'] as const) {
-            row.addButtonComponent(btn =>
-              btn
-                .setCustomId(customId.create(control))
-                .setLabel(toTitleCase(control))
-                .setStyle(Constants.MessageButtonStyles.SECONDARY)
-                .setDisabled(control === 'buy' ? isNullOrUndefined(selectedShopOffer) || ended : ended)
-            );
-          }
-        }
-
-        return row;
-      })
+        })
+      )
       .addEmbed(() =>
         EmbedTemplates.createCamouflaged(embed => {
           embed
@@ -189,7 +155,45 @@ export default class BoostersCommand extends Command {
 
           return embed;
         })
-      )
+      );
+
+    if (!isNullOrUndefined(selectedBooster)) {
+      content.addRow(row =>
+        row.addSelectMenuComponent(menu => {
+          menu
+            .setCustomId(customId.create('shop-offer'))
+            .setPlaceholder('Select Offer')
+            .setDisabled(ended)
+            .setMaxValues(1);
+
+          return selectedBooster.shopOffers
+            .reduce((menu, shopOffer) =>
+              menu.addOption({
+                label: shopOffer.cost.toLocaleString(),
+                emoji: shopOffer.unit === BoosterShopOfferUnit.Star ? '⭐' : shopOffer.unit === BoosterShopOfferUnit.Energy ? '⚡' : '🪙',
+                value: shopOffer.id,
+                default: selectedShopOffer?.id === shopOffer.id,
+                description: `${shopOffer.type === BoosterShopOfferType.Duration ? 'Duration' : 'Quantity'}: ${isFunction(shopOffer.value) ? 'Random Value' : shopOffer.type === BoosterShopOfferType.Duration ? new DurationFormatter().format(shopOffer.value, Infinity, { right: ', ' }) : shopOffer.value.toLocaleString()}`
+              }),
+              menu
+            );
+        })
+      );
+
+      for (const control of ['buy', 'cancel'] as const) {
+        content.addRow(row =>
+          row.addButtonComponent(btn =>
+            btn
+              .setCustomId(customId.create(control))
+              .setLabel(toTitleCase(control))
+              .setStyle(Constants.MessageButtonStyles.SECONDARY)
+              .setDisabled(control === 'buy' ? isNullOrUndefined(selectedShopOffer) || ended : ended)
+          )
+        );
+      }
+    }
+
+    return content;
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
