@@ -195,7 +195,7 @@ export default class BoostersCommand extends Command {
           )
         }
 
-        return btn;
+        return row;
       });
     }
 
