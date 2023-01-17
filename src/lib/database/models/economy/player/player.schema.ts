@@ -50,7 +50,7 @@ export class PlayerSchema extends Schema {
   @prop({ type: () => PlayerGamesManagerSchema, immutable: true, default: new PlayerGamesManagerSchema() })
   public readonly games!: PlayerGamesManagerSchema;
 
-  @prop({ type: () => PlayerBoosterManagerSchema, immutable: true, default: new PlayerBoosterManagerSchema() })
+  @prop({ type: () => PlayerBoosterManagerSchema, default: new PlayerBoosterManagerSchema() })
   public readonly boosters!: PlayerBoosterManagerSchema;
 
   public get netWorth(): number {
