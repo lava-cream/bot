@@ -1,4 +1,4 @@
-import { Booster, BoosterShopOffer, BoosterShopOfferType, BoosterShopOfferUnit } from "#lib/framework/structures";
+import { Booster, BoosterShopOffer, BoosterShopOfferType, BoosterShopOfferUnit } from "#lib/framework";
 import { Collector, CustomId, edit, EmbedTemplates, InteractionMessageContentBuilder, join, minutes, send, update } from "#lib/utilities";
 import { bold } from "@discordjs/builders";
 import { ApplyOptions } from "@sapphire/decorators";
