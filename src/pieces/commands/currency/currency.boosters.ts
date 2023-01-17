@@ -82,11 +82,15 @@ export default class BoostersCommand extends Command {
             };
           }
 
+          await db.save();
+
           const unitEmoji = unit === BoosterShopOfferUnit.Star ? '⭐' : unit === BoosterShopOfferUnit.Energy ? '⚡' : '🪙';
 
           await send(ctx.interaction, builder =>
             builder.addEmbed(() => EmbedTemplates.createSimple(`Successfully bought ${bold(name)} for ${unitEmoji} ${bold(cost.toLocaleString())}.`))
-          )
+          );
+
+          return ctx.stop();
         },
       },
       filter: component => component.user.id === command.user.id,
@@ -180,8 +184,8 @@ export default class BoostersCommand extends Command {
         })
       );
 
-      for (const control of ['buy', 'cancel'] as const) {
-        content.addRow(row =>
+      content.addRow(row => {
+        for (const control of ['buy', 'cancel'] as const) {
           row.addButtonComponent(btn =>
             btn
               .setCustomId(customId.create(control))
@@ -189,8 +193,10 @@ export default class BoostersCommand extends Command {
               .setStyle(Constants.MessageButtonStyles.SECONDARY)
               .setDisabled(control === 'buy' ? isNullOrUndefined(selectedShopOffer) || ended : ended)
           )
-        );
-      }
+        }
+
+        return btn;
+      });
     }
 
     return content;
