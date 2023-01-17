@@ -19,7 +19,7 @@ export default class TestBooster extends Booster {
         },
         {
           id: 'coins.duration.1',
-          cost: 100_000_000,
+          cost: 3,
           unit: BoosterShopOfferUnit.Energy,
           type: BoosterShopOfferType.Duration,
           value: minutes(15)

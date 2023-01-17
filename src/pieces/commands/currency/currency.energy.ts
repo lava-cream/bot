@@ -55,17 +55,19 @@ export default class EnergyCommand extends Command {
 
   private static renderContent(interaction: Command.ChatInputInteraction<'cached'> | ButtonInteraction<'cached'>, db: PlayerSchema, componentId: CustomId, energized: boolean, ended: boolean) {
     return new InteractionMessageContentBuilder()
-      .addEmbed((embed) =>
-        embed
-          .setTitle(`${interaction.user.username}'s energy`)
-          .setColor(energized && ended ? Constants.Colors.DARK_GOLD : Constants.Colors.DARK_BUT_NOT_BLACK)
-          .setDescription(
-            join(
-              `${bold('⭐ Stars:')} ${db.energy.toLocaleString()}`,
-              `${bold('⚡ Energy:')} ${db.energy.energy.toLocaleString()}\n`,
-              `Expire${db.energy.isExpired() ? 'd' : 's'} ${time(new Date(db.energy.expire), TimestampStyles.RelativeTime)}`
+      .addEmbed(() =>
+        EmbedTemplates.createCamouflaged(embed =>
+          embed
+            .setTitle(`${interaction.user.username}'s energy`)
+            .setColor(energized && ended ? Constants.Colors.DARK_GOLD : embed.color!)
+            .setDescription(
+              join(
+                `${bold('⭐ Stars:')} ${db.energy.toLocaleString()}`,
+                `${bold('⚡ Energy:')} ${db.energy.energy.toLocaleString()}\n`,
+                `Expire${db.energy.isExpired() ? 'd' : 's'} ${time(new Date(db.energy.expire), TimestampStyles.RelativeTime)}`
+              )
             )
-          )
+        )
       )
       .addRow((row) =>
         row.addButtonComponent((btn) =>
@@ -91,6 +93,6 @@ export default class EnergyCommand extends Command {
         .setDescription(this.description)
       , {
         idHints: ['1050341971127959582']
-    });
+      });
   }
 }

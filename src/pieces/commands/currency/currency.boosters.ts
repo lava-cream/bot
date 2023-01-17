@@ -1,3 +1,4 @@
+import type { PlayerSchema } from "#lib/database";
 import { Booster, BoosterShopOffer, BoosterShopOfferType, BoosterShopOfferUnit } from "#lib/framework";
 import { Collector, CustomId, edit, EmbedTemplates, InteractionMessageContentBuilder, join, minutes, send, update } from "#lib/utilities";
 import { bold } from "@discordjs/builders";
@@ -21,7 +22,7 @@ export default class BoostersCommand extends Command {
     let boosterShopOffer: BoosterShopOffer | null = null;
 
     const collector = new Collector({
-      message: await send(command, BoostersCommand.renderBoosterPickerContent(customId, booster, boosterShopOffer, false)),
+      message: await send(command, BoostersCommand.renderBoosterPickerContent(db, customId, booster, boosterShopOffer, false)),
       max: Infinity,
       time: minutes(1),
       actions: {
@@ -31,7 +32,7 @@ export default class BoostersCommand extends Command {
           const selectedBoosterId = ctx.interaction.values.at(0) ?? null;
           const selectedBooster = selectedBoosterId ? container.stores.get('boosters').get(selectedBoosterId) ?? null : null;
 
-          await update(ctx.interaction, BoostersCommand.renderBoosterPickerContent(customId, booster = selectedBooster, null, false));
+          await update(ctx.interaction, BoostersCommand.renderBoosterPickerContent(db, customId, booster = selectedBooster, null, false));
         },
         [customId.create('shop-offer')]: async (ctx) => {
           if (!ctx.interaction.isSelectMenu()) return;
@@ -40,7 +41,7 @@ export default class BoostersCommand extends Command {
           const selectedBoosterShopOfferId = ctx.interaction.values.at(0) ?? null;
           const selectedBoosterShopOffer = selectedBoosterShopOfferId ? booster.shopOffers.find(so => so.id === selectedBoosterShopOfferId) ?? null : null;
 
-          await update(ctx.interaction, BoostersCommand.renderBoosterPickerContent(customId, booster, boosterShopOffer = selectedBoosterShopOffer, false));
+          await update(ctx.interaction, BoostersCommand.renderBoosterPickerContent(db, customId, booster, boosterShopOffer = selectedBoosterShopOffer, false));
         },
         [customId.create('buy')]: async ctx => {
           if (!ctx.interaction.isButton()) return;
@@ -95,14 +96,14 @@ export default class BoostersCommand extends Command {
       },
       filter: component => component.user.id === command.user.id,
       end: async () => {
-        await edit(command, BoostersCommand.renderBoosterPickerContent(customId, booster, boosterShopOffer, true));
+        await edit(command, BoostersCommand.renderBoosterPickerContent(db, customId, booster, boosterShopOffer, true));
       }
     });
 
     await collector.start();
   }
 
-  private static renderBoosterPickerContent(customId: CustomId, selectedBooster: Booster | null, selectedShopOffer: BoosterShopOffer | null, ended: boolean) {
+  private static renderBoosterPickerContent(db: PlayerSchema, customId: CustomId, selectedBooster: Booster | null, selectedShopOffer: BoosterShopOffer | null, ended: boolean) {
     const content = new InteractionMessageContentBuilder()
       .addRow(row =>
         row.addSelectMenuComponent(menu => {
@@ -141,7 +142,7 @@ export default class BoostersCommand extends Command {
                 inline: true,
                 value: join(
                   `${bold(`${shopOffer.type === BoosterShopOfferType.Duration ? 'Duration' : 'Quantity'}:`)} ${isFunction(shopOffer.value) ? 'Random' : shopOffer.type === BoosterShopOfferType.Duration ? new DurationFormatter().format(shopOffer.value, Infinity, { right: ', ' }) : `x${shopOffer.value.toLocaleString()}`}`,
-                  `${bold('Price:')} ${shopOffer.unit === BoosterShopOfferUnit.Star ? '⭐' : shopOffer.unit === BoosterShopOfferUnit.Energy ? '⚡' : '🪙'}`
+                  `${bold('Price:')} ${shopOffer.unit === BoosterShopOfferUnit.Star ? '⭐' : shopOffer.unit === BoosterShopOfferUnit.Energy ? '⚡' : '🪙'} ${shopOffer.cost.toLocaleString()}`
                 )
               });
             }
@@ -151,7 +152,7 @@ export default class BoostersCommand extends Command {
               embed.setDescription(
                 join(
                   `${bold(`${selectedShopOffer.type === BoosterShopOfferType.Duration ? 'Duration' : 'Quantity'}:`)} ${isFunction(selectedShopOffer.value) ? 'Random' : selectedShopOffer.type === BoosterShopOfferType.Duration ? new DurationFormatter().format(selectedShopOffer.value, Infinity, { right: ', ' }) : `x${selectedShopOffer.value.toLocaleString()}`}`,
-                  `${bold('Price:')} ${selectedShopOffer.unit === BoosterShopOfferUnit.Star ? '⭐' : selectedShopOffer.unit === BoosterShopOfferUnit.Energy ? '⚡' : '🪙'}`
+                  `${bold('Price:')} ${selectedShopOffer.unit === BoosterShopOfferUnit.Star ? '⭐' : selectedShopOffer.unit === BoosterShopOfferUnit.Energy ? '⚡' : '🪙'} ${selectedShopOffer.cost.toLocaleString()}`
                 )
               );
             }
@@ -191,7 +192,7 @@ export default class BoostersCommand extends Command {
               .setCustomId(customId.create(control))
               .setLabel(toTitleCase(control))
               .setStyle(Constants.MessageButtonStyles.SECONDARY)
-              .setDisabled(control === 'buy' ? isNullOrUndefined(selectedShopOffer) || ended : ended)
+              .setDisabled(control === 'buy' ? isNullOrUndefined(selectedShopOffer) || (selectedShopOffer.unit === BoosterShopOfferUnit.Star ? db.energy.value : selectedShopOffer.unit === BoosterShopOfferUnit.Energy ? db.energy.energy : db.wallet.value) > selectedShopOffer.cost || ended : ended)
           )
         }
 
