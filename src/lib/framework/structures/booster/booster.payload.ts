@@ -1,6 +1,6 @@
 import type { PlayerBoosterSchema } from "#lib/database/models/economy/player/player.booster.schema";
 import type { Booster } from "./booster.piece";
-import { BoosterType } from "./booster.options";
+import { BoosterType } from "./booster.options.js";
 
 export class BoosterPayload {
   public constructor(public piece: Booster, public schema: PlayerBoosterSchema) { }
