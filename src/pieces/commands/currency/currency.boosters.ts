@@ -192,7 +192,7 @@ export default class BoostersCommand extends Command {
               .setCustomId(customId.create(control))
               .setLabel(toTitleCase(control))
               .setStyle(Constants.MessageButtonStyles.SECONDARY)
-              .setDisabled(control === 'buy' ? isNullOrUndefined(selectedShopOffer) || (selectedShopOffer.unit === BoosterShopOfferUnit.Star ? db.energy.value : selectedShopOffer.unit === BoosterShopOfferUnit.Energy ? db.energy.energy : db.wallet.value) > selectedShopOffer.cost || ended : ended)
+              .setDisabled(control === 'buy' ? isNullOrUndefined(selectedShopOffer) || ((selectedShopOffer.unit === BoosterShopOfferUnit.Star ? db.energy.value : selectedShopOffer.unit === BoosterShopOfferUnit.Energy ? db.energy.energy : db.wallet.value) >= selectedShopOffer.cost) || ended : ended)
           )
         }
 
