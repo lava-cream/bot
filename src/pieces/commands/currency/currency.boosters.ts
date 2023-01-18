@@ -139,7 +139,6 @@ export default class BoostersCommand extends Command {
             for (const [index, shopOffer] of selectedBooster.shopOffers.entries()) {
               embed.addFields({
                 name: `Offer #${index + 1}`,
-                inline: true,
                 value: join(
                   `${bold(`${shopOffer.type === BoosterShopOfferType.Duration ? 'Duration' : 'Quantity'}:`)} ${isFunction(shopOffer.value) ? 'Random' : shopOffer.type === BoosterShopOfferType.Duration ? new DurationFormatter().format(shopOffer.value, Infinity, { right: ', ' }) : `x${shopOffer.value.toLocaleString()}`}`,
                   `${bold('Price:')} ${shopOffer.unit === BoosterShopOfferUnit.Star ? '⭐' : shopOffer.unit === BoosterShopOfferUnit.Energy ? '⚡' : '🪙'} ${shopOffer.cost.toLocaleString()}`
@@ -148,12 +147,15 @@ export default class BoostersCommand extends Command {
             }
 
             if (!isNullOrUndefined(selectedShopOffer)) {
-              embed.setFields([]);
-              embed.setDescription(
-                join(
-                  `${bold(`${selectedShopOffer.type === BoosterShopOfferType.Duration ? 'Duration' : 'Quantity'}:`)} ${isFunction(selectedShopOffer.value) ? 'Random' : selectedShopOffer.type === BoosterShopOfferType.Duration ? new DurationFormatter().format(selectedShopOffer.value, Infinity, { right: ', ' }) : `x${selectedShopOffer.value.toLocaleString()}`}`,
-                  `${bold('Price:')} ${selectedShopOffer.unit === BoosterShopOfferUnit.Star ? '⭐' : selectedShopOffer.unit === BoosterShopOfferUnit.Energy ? '⚡' : '🪙'} ${selectedShopOffer.cost.toLocaleString()}`
-                )
+              embed.setFields(
+                {
+                  name: 'Price',
+                  value: `${selectedShopOffer.unit === BoosterShopOfferUnit.Star ? '⭐' : selectedShopOffer.unit === BoosterShopOfferUnit.Energy ? '⚡' : '🪙'} ${selectedShopOffer.cost.toLocaleString()}`
+                },
+                {
+                  name: selectedShopOffer.type === BoosterShopOfferType.Duration ? 'Duration' : 'Quantity',
+                  value: isFunction(selectedShopOffer.value) ? 'Random' : selectedShopOffer.type === BoosterShopOfferType.Duration ? new DurationFormatter().format(selectedShopOffer.value, Infinity, { right: ', ' }) : `x${selectedShopOffer.value.toLocaleString()}`
+                }
               );
             }
           }
