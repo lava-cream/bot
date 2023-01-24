@@ -6,159 +6,159 @@ import * as Discord from '#lib/utilities/discord/index.js';
 import * as Coinflip from '#lib/utilities/games/coinflip/index.js';
 import { bold } from '@discordjs/builders';
 import { toTitleCase } from '@sapphire/utilities';
-import { Constants } from 'discord.js';
+import { Colors, ComponentType, ButtonStyle } from 'discord.js';
 import { checkClientReadyStatus, edit, EmbedTemplates, InteractionMessageContentBuilder, percent, roundZero } from '#lib/utilities';
 
 declare module '#lib/framework/structures/game/game.types' {
-  interface Games {
-    coinflip: never;
-  }
+	interface Games {
+		coinflip: never;
+	}
 }
 
 @ApplyOptions<Game.Options>({
-  id: 'coinflip',
-  name: 'Coin Flip',
-  description: 'Flip a coin!',
-  detailedDescription: "Classic coinflip that either makes you profit or lose a lot. It's balanced as all things should be."
+	id: 'coinflip',
+	name: 'Coin Flip',
+	description: 'Flip a coin!',
+	detailedDescription: "Classic coinflip that either makes you profit or lose a lot. It's balanced as all things should be."
 })
 export default class CoinFlipGame extends Game {
-  public async currencyPlay(context: Game.Context) {
-    checkClientReadyStatus(context.command.client);
+	public async currencyPlay(context: Game.Context) {
+		checkClientReadyStatus(context.command.client);
 
-    const game = new Coinflip.Logic(context.command.user, context.command.client.user);
-    const collector = new Discord.Collector({
-      message: await context.responder.send(() => CoinFlipGame.renderContent(context, game, false)),
-      componentType: 'BUTTON',
-      max: Infinity,
-      time: Common.seconds(10),
-      filter: async (button) => {
-        const contextual = button.user.id === context.command.user.id;
-        await button.deferUpdate();
-        return contextual;
-      },
-      end: async (ctx) => {
-        if (ctx.wasInternallyStopped()) {
-          await context.responder.edit(() => CoinFlipGame.renderContent(context, game, true));
-          await context.end(true);
-          return;
-        }
+		const game = new Coinflip.Logic(context.command.user, context.command.client.user);
+		const collector = new Discord.Collector({
+			message: await context.responder.send(() => CoinFlipGame.renderContent(context, game, false)),
+			componentType: ComponentType.Button,
+			max: Infinity,
+			time: Common.seconds(10),
+			filter: async (button) => {
+				const contextual = button.user.id === context.command.user.id;
+				await button.deferUpdate();
+				return contextual;
+			},
+			end: async (ctx) => {
+				if (ctx.wasInternallyStopped()) {
+					await context.responder.edit(() => CoinFlipGame.renderContent(context, game, true));
+					await context.end(true);
+					return;
+				}
 
-        await context.end();
-      }
-    });
+				await context.end();
+			}
+		});
 
-    for (const side of Object.values(Coinflip.Side)) {
-      collector.actions.add(context.customId.create(side), async (ctx) => {
-        game.pick.call(game, side);
+		for (const side of Object.values(Coinflip.Side)) {
+			collector.actions.add(context.customId.create(side), async (ctx) => {
+				game.pick.call(game, side);
 
-        switch (true) {
-          case game.isWin(): {
-            const winnings = roundZero(context.winnings
-              .setBase(0.15)
-              .setMultiplier(context.db.multiplier.value)
-              .setRandom(Math.random() * 1.7)
-              .calculate(context.db.bet.value));
+				switch (true) {
+					case game.isWin(): {
+						const winnings = roundZero(
+							context.winnings
+								.setBase(0.15)
+								.setMultiplier(context.db.multiplier.value)
+								.setRandom(Math.random() * 1.7)
+								.calculate(context.db.bet.value)
+						);
 
-            await context.db
-              .run((db) => {
-                context.schema.win(winnings);
-                db.wallet.addValue(winnings);
-                db.bank.space.addValue(winnings);
-                db.energy.addValue();
-              })
-              .save();
+						await context.db
+							.run((db) => {
+								context.schema.win(winnings);
+								db.wallet.addValue(winnings);
+								db.bank.space.addValue(winnings);
+								db.energy.addValue();
+							})
+							.save();
 
-            await edit(ctx.interaction, CoinFlipGame.renderContent(context, game, true, winnings));
-            break;
-          }
+						await edit(ctx.interaction, CoinFlipGame.renderContent(context, game, true, winnings));
+						break;
+					}
 
-          case game.isLose(): {
-            await context.db
-              .run((db) => {
-                context.schema.lose(db.bet.value);
-                db.wallet.subValue(db.bet.value);
-                db.energy.subValue();
-              })
-              .save();
-            await edit(ctx.interaction, CoinFlipGame.renderContent(context, game, true));
-            break;
-          }
-        }
+					case game.isLose(): {
+						await context.db
+							.run((db) => {
+								context.schema.lose(db.bet.value);
+								db.wallet.subValue(db.bet.value);
+								db.energy.subValue();
+							})
+							.save();
+						await edit(ctx.interaction, CoinFlipGame.renderContent(context, game, true));
+						break;
+					}
+				}
 
-        return ctx.stop();
-      });
-    }
+				return ctx.stop();
+			});
+		}
 
-    await collector.start();
-  }
+		await collector.start();
+	}
 
-  private static renderContent(context: Game.Context, game: Coinflip.Logic, ended: boolean, won = 0) {
-    return new InteractionMessageContentBuilder()
-      .addEmbed(() =>
-        EmbedTemplates.createCamouflaged(embed =>
-          embed
-            .setAuthor({
-              name: `${context.command.user.username}'s coinflip game`,
-              iconURL: Discord.getUserAvatarURL(context.command.user)
-            })
-            .setDescription(
-              Common.join(
-                !game.hasPicked()
-                  ? !ended
-                    ? Common.join(
-                      'Guess what side of the coin it would flip up to.',
-                      `You placed ${bold(context.db.bet.value.toLocaleString())} coins.`
-                    )
-                    : Common.join(
-                      "You didn't respond in time. You are keeping your money.\n",
-                      `${bold('Your Balance:')} ${context.db.wallet.value.toLocaleString()}`
-                    )
-                  : Common.join(
-                    `It was ${bold(game.opponent.value)}${game.isWin() ? '!' : '.'} You ${game.isWin() ? 'won' : 'lost'} ${bold((game.isWin() ? won : context.db.bet.value).toLocaleString())} coins.\n`,
-                    game.isWin() ? `${bold('Percent Won:')} ${percent(won, context.db.bet.value)}` : '',
-                    `${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}.`
-                  )
-              )
-            )
-            .setColor(
-              !game.hasPicked()
-                ? !ended
-                  ? Constants.Colors.BLURPLE
-                  : embed.color!
-                : game.isWin()
-                  ? Constants.Colors.GREEN
-                  : Constants.Colors.RED
-            )
-            .setFooter(
-              !game.hasPicked()
-                ? null
-                : context.schema.wins.streak.isActive() || context.schema.loses.streak.isActive()
-                  ? { text: `${game.isWin() ? 'Win' : 'Lose'} Streak: ${Reflect.get(context.schema, game.isWin() ? 'wins' : 'loses').streak.display}` }
-                  : null
-            )
-        )
-      )
-      .addRow((row) =>
-        Object.values(Coinflip.Side).reduce(
-          (row, customId) =>
-            row.addButtonComponent((btn) =>
-              btn
-                .setCustomId(context.customId.create(customId))
-                .setLabel(toTitleCase(customId))
-                .setDisabled(ended)
-                .setStyle(
-                  !game.hasPicked() && !ended
-                    ? Constants.MessageButtonStyles.PRIMARY
-                    : (game.player.value === Coinflip.Side.HEADS && customId === Coinflip.Side.HEADS) ||
-                      (game.player.value === Coinflip.Side.TAILS && customId === Coinflip.Side.TAILS)
-                      ? game.isWin()
-                        ? Constants.MessageButtonStyles.SUCCESS
-                        : Constants.MessageButtonStyles.DANGER
-                      : Constants.MessageButtonStyles.SECONDARY
-                )
-            ),
-          row
-        )
-      );
-  }
+	private static renderContent(context: Game.Context, game: Coinflip.Logic, ended: boolean, won = 0) {
+		return new InteractionMessageContentBuilder()
+			.addEmbed(() =>
+				EmbedTemplates.createCamouflaged((embed) =>
+					embed
+						.setAuthor({
+							name: `${context.command.user.username}'s coinflip game`,
+							iconURL: Discord.getUserAvatarURL(context.command.user)
+						})
+						.setDescription(
+							Common.join(
+								!game.hasPicked()
+									? !ended
+										? Common.join(
+												'Guess what side of the coin it would flip up to.',
+												`You placed ${bold(context.db.bet.value.toLocaleString())} coins.`
+										  )
+										: Common.join(
+												"You didn't respond in time. You are keeping your money.\n",
+												`${bold('Your Balance:')} ${context.db.wallet.value.toLocaleString()}`
+										  )
+									: Common.join(
+											`It was ${bold(game.opponent.value)}${game.isWin() ? '!' : '.'} You ${
+												game.isWin() ? 'won' : 'lost'
+											} ${bold((game.isWin() ? won : context.db.bet.value).toLocaleString())} coins.\n`,
+											game.isWin() ? `${bold('Percent Won:')} ${percent(won, context.db.bet.value)}` : '',
+											`${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}.`
+									  )
+							)
+						)
+						.setColor(!game.hasPicked() ? (!ended ? Colors.Blurple : embed.data.color!) : game.isWin() ? Colors.Green : Colors.Red)
+						.setFooter(
+							!game.hasPicked()
+								? null
+								: context.schema.wins.streak.isActive() || context.schema.loses.streak.isActive()
+								? {
+										text: `${game.isWin() ? 'Win' : 'Lose'} Streak: ${
+											Reflect.get(context.schema, game.isWin() ? 'wins' : 'loses').streak.display
+										}`
+								  }
+								: null
+						)
+				)
+			)
+			.addRow((row) =>
+				Object.values(Coinflip.Side).reduce(
+					(row, customId) =>
+						row.addButtonComponent((btn) =>
+							btn
+								.setCustomId(context.customId.create(customId))
+								.setLabel(toTitleCase(customId))
+								.setDisabled(ended)
+								.setStyle(
+									!game.hasPicked() && !ended
+										? ButtonStyle.Primary
+										: (game.player.value === Coinflip.Side.HEADS && customId === Coinflip.Side.HEADS) ||
+										  (game.player.value === Coinflip.Side.TAILS && customId === Coinflip.Side.TAILS)
+										? game.isWin()
+											? ButtonStyle.Success
+											: ButtonStyle.Danger
+										: ButtonStyle.Secondary
+								)
+						),
+					row
+				)
+			);
+	}
 }

@@ -1,128 +1,157 @@
 import { ApplyOptions } from '@sapphire/decorators';
 
-import { Collector, seconds, getUserAvatarURL, join, InteractionMessageContentBuilder, edit, randomItem, createButton, toReadable, roundZero, EmbedTemplates } from '#lib/utilities';
+import {
+	Collector,
+	seconds,
+	getUserAvatarURL,
+	join,
+	InteractionMessageContentBuilder,
+	edit,
+	randomItem,
+	createButton,
+	toReadable,
+	roundZero,
+	EmbedTemplates
+} from '#lib/utilities';
 import { Game } from '#lib/framework/index.js';
-import { Constants } from 'discord.js';
+import { ButtonStyle, Colors, ComponentType } from 'discord.js';
 import { bold } from '@discordjs/builders';
 import * as EmojiPair from '#lib/utilities/games/emoji-pair/index.js';
 
 declare module '#lib/framework/structures/game/game.types' {
-  interface Games {
-    emojipair: never;
-  }
+	interface Games {
+		emojipair: never;
+	}
 }
 
 @ApplyOptions<Game.Options>({
-  id: 'emojipair',
-  name: 'Emoji Pair',
-  description: 'Just pair it!',
-  detailedDescription: 'Get an exact pair of the same emoji. The mood behind the emoji signifies how big you had won.'
+	id: 'emojipair',
+	name: 'Emoji Pair',
+	description: 'Just pair it!',
+	detailedDescription: 'Get an exact pair of the same emoji. The mood behind the emoji signifies how big you had won.'
 })
 export default class EmojiPairGame extends Game {
-  public async currencyPlay(context: Game.Context) {
-    const logic = new EmojiPair.Logic(EmojiPairGame.pairs);
-    const collector = new Collector({
-      componentType: 'BUTTON',
-      message: await context.responder.send(() => EmojiPairGame.renderContentAndUpdate(logic, context, false)),
-      time: seconds(10),
-      max: Infinity,
-      actions: {
-        [context.customId.create('reveal')]: async (ctx) => {
-          await edit(ctx.interaction, EmojiPairGame.renderContentAndUpdate(logic.reveal(), context, true));
-          return ctx.stop();
-        }
-      },
-      filter: async (button) => {
-        const contextual = button.user.id === context.command.user.id;
-        await button.deferUpdate();
-        return contextual;
-      },
-      end: async (ctx) => {
-        if (ctx.wasInternallyStopped()) {
-          await context.responder.edit(() => EmojiPairGame.renderContentAndUpdate(logic, context, true));
-          await context.end(true);
-          return;
-        }
+	public async currencyPlay(context: Game.Context) {
+		const logic = new EmojiPair.Logic(EmojiPairGame.pairs);
+		const collector = new Collector({
+			componentType: ComponentType.Button,
+			message: await context.responder.send(() => EmojiPairGame.renderContentAndUpdate(logic, context, false)),
+			time: seconds(10),
+			max: Infinity,
+			actions: {
+				[context.customId.create('reveal')]: async (ctx) => {
+					await edit(ctx.interaction, EmojiPairGame.renderContentAndUpdate(logic.reveal(), context, true));
+					return ctx.stop();
+				}
+			},
+			filter: async (button) => {
+				const contextual = button.user.id === context.command.user.id;
+				await button.deferUpdate();
+				return contextual;
+			},
+			end: async (ctx) => {
+				if (ctx.wasInternallyStopped()) {
+					await context.responder.edit(() => EmojiPairGame.renderContentAndUpdate(logic, context, true));
+					await context.end(true);
+					return;
+				}
 
-        await context.end();
-      }
-    });
+				await context.end();
+			}
+		});
 
-    await collector.start();
-  }
+		await collector.start();
+	}
 
-  private static renderContentAndUpdate(logic: EmojiPair.Logic, ctx: Game.Context, ended: boolean) {
-    const embed = EmbedTemplates.createCamouflaged().setAuthor({ name: `${ctx.command.user.username}'s pairing game`, iconURL: getUserAvatarURL(ctx.command.user) });
-    const button = createButton(button => button.setCustomId(ctx.customId.create('reveal')).setDisabled(logic.revealed || ended));
-    const description: string[] = [];
+	private static renderContentAndUpdate(logic: EmojiPair.Logic, ctx: Game.Context, ended: boolean) {
+		const embed = EmbedTemplates.createCamouflaged().setAuthor({
+			name: `${ctx.command.user.username}'s pairing game`,
+			iconURL: getUserAvatarURL(ctx.command.user)
+		});
+		const button = createButton((button) => button.setCustomId(ctx.customId.create('reveal')).setDisabled(logic.revealed || ended));
+		const description: string[] = [];
 
-    description.push(`${bold('>')} ${logic.pair.map((e, idx) => (ended && logic.revealed ? e.emoji : idx === 1 ? '❓' : e.emoji)).join('    ')} ${bold('<')}\n`)
+		description.push(
+			`${bold('>')} ${logic.pair.map((e, idx) => (ended && logic.revealed ? e.emoji : idx === 1 ? '❓' : e.emoji)).join('    ')} ${bold('<')}\n`
+		);
 
-    switch (true) {
-      case !logic.revealed && !ended: {
-        description.push('Click the button below to reveal the pair.');
+		switch (true) {
+			case !logic.revealed && !ended: {
+				description.push('Click the button below to reveal the pair.');
 
-        embed.setColor(Constants.Colors.BLURPLE);
-        button.setLabel('Reveal').setStyle(Constants.MessageButtonStyles.PRIMARY);
-        break;
-      }
-      
-      case !logic.revealed && ended: {
-        description.push("You didn't respond in time. You are keeping your money.", `You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`);
+				embed.setColor(Colors.Blurple);
+				button.setLabel('Reveal').setStyle(ButtonStyle.Primary);
+				break;
+			}
 
-        button.setLabel('Timed Out').setStyle(Constants.MessageButtonStyles.SECONDARY);
-        break;
-      }
+			case !logic.revealed && ended: {
+				description.push(
+					"You didn't respond in time. You are keeping your money.",
+					`You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`
+				);
 
-      case logic.isWin(): {
-        const winnings = roundZero(ctx.winnings 
-          .setBase(randomItem(logic.pair).multiplier)
-          .setMultiplier(ctx.db.multiplier.value)
-          .calculate(ctx.db.bet.value));
+				button.setLabel('Timed Out').setStyle(ButtonStyle.Secondary);
+				break;
+			}
 
-        ctx.db.run((db) => {
-          ctx.schema.win(winnings);
-          db.wallet.addValue(winnings);
-          db.bank.space.addValue(winnings);
-          db.energy.addValue();
-        });
+			case logic.isWin(): {
+				const winnings = roundZero(
+					ctx.winnings.setBase(randomItem(logic.pair).multiplier).setMultiplier(ctx.db.multiplier.value).calculate(ctx.db.bet.value)
+				);
 
-        description.push(`${bold('PAIRED!')} You won ${bold(winnings.toLocaleString())} coins.`, `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
+				ctx.db.run((db) => {
+					ctx.schema.win(winnings);
+					db.wallet.addValue(winnings);
+					db.bank.space.addValue(winnings);
+					db.energy.addValue();
+				});
 
-        embed.setColor(Constants.Colors.GREEN).setFooter(ctx.schema.wins.coins.highest > 0 ? { text: `Highest Coins Won: ${toReadable(ctx.schema.wins.coins.highest, 2)}` } : null);
-        button.setLabel('Winner Winner').setStyle(Constants.MessageButtonStyles.SUCCESS);
-        break;
-      }
+				description.push(
+					`${bold('PAIRED!')} You won ${bold(winnings.toLocaleString())} coins.`,
+					`You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`
+				);
 
-      case logic.isLose(): {
-        ctx.db.run(db => {
-          ctx.schema.lose(db.bet.value);
-          db.wallet.subValue(db.bet.value);
-          db.energy.subValue();
-        });
+				embed
+					.setColor(Colors.Green)
+					.setFooter(
+						ctx.schema.wins.coins.highest > 0 ? { text: `Highest Coins Won: ${toReadable(ctx.schema.wins.coins.highest, 2)}` } : null
+					);
+				button.setLabel('Winner Winner').setStyle(ButtonStyle.Success);
+				break;
+			}
 
-        description.push("You didn't get a unique pair sad. You lost your bet.", `You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`);
+			case logic.isLose(): {
+				ctx.db.run((db) => {
+					ctx.schema.lose(db.bet.value);
+					db.wallet.subValue(db.bet.value);
+					db.energy.subValue();
+				});
 
-        embed.setColor(Constants.Colors.RED);
-        button.setLabel('Loser Loser').setStyle(Constants.MessageButtonStyles.DANGER);
-        break;
-      }
-    }
+				description.push(
+					"You didn't get a unique pair sad. You lost your bet.",
+					`You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`
+				);
 
-    return new InteractionMessageContentBuilder()
-      .addEmbed(() => embed.setDescription(join(description)))
-      .addRow(row => row.addButtonComponent(() => button));
-  }
+				embed.setColor(Colors.Red);
+				button.setLabel('Loser Loser').setStyle(ButtonStyle.Danger);
+				break;
+			}
+		}
 
-  /**
-   * The array of emojis to pair with.
-   */
-  private static get pairs(): EmojiPair.Emoji[] {
-    return [
-      { emoji: '💰', multiplier: 10 },
-      { emoji: '💶', multiplier: 9 },
-      { emoji: '💵', multiplier: 2 },
-      { emoji: '🪙', multiplier: 1 }
-    ];
-  }
+		return new InteractionMessageContentBuilder()
+			.addEmbed(() => embed.setDescription(join(description)))
+			.addRow((row) => row.addButtonComponent(() => button));
+	}
+
+	/**
+	 * The array of emojis to pair with.
+	 */
+	private static get pairs(): EmojiPair.Emoji[] {
+		return [
+			{ emoji: '💰', multiplier: 10 },
+			{ emoji: '💶', multiplier: 9 },
+			{ emoji: '💵', multiplier: 2 },
+			{ emoji: '🪙', multiplier: 1 }
+		];
+	}
 }

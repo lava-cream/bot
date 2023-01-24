@@ -6,87 +6,87 @@ import { DonationTrackerSchema } from './donation-tracker.schema.js';
 import { isNullOrUndefined } from '@sapphire/utilities';
 import { container, Resolvers } from '@sapphire/framework';
 import { Result } from '@sapphire/result';
-import type { GuildMember, Role } from 'discord.js';
+import { ChannelType, GuildMember, Role } from 'discord.js';
 import { Collection } from '@discordjs/collection';
 import { toCollection } from '#lib/utilities';
 
 export class DonationTrackerManager extends Manager<DonationTrackerSchema> {
-  public constructor(client: DatabaseClient) {
-    super({ client, name: 'dank-memer.donation-tracker', holds: DonationTrackerSchema });
-  }
+	public constructor(client: DatabaseClient) {
+		super({ client, name: 'dank-memer.donation-tracker', holds: DonationTrackerSchema });
+	}
 
-  public async resolveOrCreateDonator(
-    db: DonationTrackerSchema.Document,
-    category: DonationTrackerCategorySchema,
-    donatorId: string
-  ): Promise<DonationTrackerCategoryDonatorSchema> {
-    const donator = category.donators.resolve(donatorId);
-    if (!isNullOrUndefined(donator)) return donator;
+	public async resolveOrCreateDonator(
+		db: DonationTrackerSchema.Document,
+		category: DonationTrackerCategorySchema,
+		donatorId: string
+	): Promise<DonationTrackerCategoryDonatorSchema> {
+		const donator = category.donators.resolve(donatorId);
+		if (!isNullOrUndefined(donator)) return donator;
 
-    const newDonator = category.donators.create({ id: donatorId, amount: 0 });
-    await db.save();
+		const newDonator = category.donators.create({ id: donatorId, amount: 0 });
+		await db.save();
 
-    return newDonator;
-  }
+		return newDonator;
+	}
 
-  public async updateDonator(db: DonationTrackerSchema.Document, options: DonationUpdateLoggerPayload): Promise<boolean> {
-    const { amount, context, method } = options;
-    const category = db.categories.resolve(context.donation.id);
-    const donator = category?.donators.resolve(context.donator.user.id) ?? category?.donators.create({ id: context.donator.user.id, amount: 0 });
-    if (isNullOrUndefined(category) || isNullOrUndefined(donator)) return false;
+	public async updateDonator(db: DonationTrackerSchema.Document, options: DonationUpdateLoggerPayload): Promise<boolean> {
+		const { amount, context, method } = options;
+		const category = db.categories.resolve(context.donation.id);
+		const donator = category?.donators.resolve(context.donator.user.id) ?? category?.donators.create({ id: context.donator.user.id, amount: 0 });
+		if (isNullOrUndefined(category) || isNullOrUndefined(donator)) return false;
 
-    switch (method) {
-      case DonationUpdateMethod.Increment: {
-        const addedAmount = Math.round(amount.amount * category.multiplier);
-        donator
-          .setAmount(donator.amount + addedAmount)
-          .season.setValue(donator.season.value + addedAmount)
-          .setTotal(donator.season.value);
-        break;
-      }
+		switch (method) {
+			case DonationUpdateMethod.Increment: {
+				const addedAmount = Math.round(amount.amount * category.multiplier);
+				donator
+					.setAmount(donator.amount + addedAmount)
+					.season.setValue(donator.season.value + addedAmount)
+					.setTotal(donator.season.value);
+				break;
+			}
 
-      case DonationUpdateMethod.Decrement: {
-        const removedAmount = amount.amount;
-        donator
-          .setAmount(donator.amount - removedAmount)
-          .season.setValue(donator.season.value - removedAmount)
-          .setTotal(donator.season.value);
-        break;
-      }
-    }
+			case DonationUpdateMethod.Decrement: {
+				const removedAmount = amount.amount;
+				donator
+					.setAmount(donator.amount - removedAmount)
+					.season.setValue(donator.season.value - removedAmount)
+					.setTotal(donator.season.value);
+				break;
+			}
+		}
 
-    await db.save();
-    await this.syncDonatorAutorole(db, category, context.donator);
+		await db.save();
+		await this.syncDonatorAutorole(db, category, context.donator);
 
-    const logged = await Result.fromAsync<void, false>(async () => {
-      if (isNullOrUndefined(category.logs.id)) throw false;
+		const logged = await Result.fromAsync<void, false>(async () => {
+			if (isNullOrUndefined(category.logs.id)) throw false;
 
-      const channel = Resolvers.resolveGuildChannel(category.logs.id, options.guild);
-      if (!channel.isOk() || !channel.unwrap().isText()) throw false;
+			const channel = Resolvers.resolveGuildChannel(category.logs.id, options.guild);
+			if (!channel.isOk() || channel.unwrap().type !== ChannelType.GuildText) throw false;
 
-      return void (await container.stores.get('loggers').get('donationUpdate').createLog(options));
-    });
+			return void (await container.stores.get('loggers').get('donationUpdate').createLog(options));
+		});
 
-    return logged.isOk();
-  }
+		return logged.isOk();
+	}
 
-  public async syncDonatorAutorole(
-    db: DonationTrackerSchema.Document,
-    category: DonationTrackerCategorySchema,
-    member: GuildMember
-  ): Promise<Role[]> {
-    const donator = await this.resolveOrCreateDonator(db, category, member.user.id);
-    if (db.autoroles.entries.length < 1) return [];
+	public async syncDonatorAutorole(
+		db: DonationTrackerSchema.Document,
+		category: DonationTrackerCategorySchema,
+		member: GuildMember
+	): Promise<Role[]> {
+		const donator = await this.resolveOrCreateDonator(db, category, member.user.id);
+		if (db.autoroles.entries.length < 1) return [];
 
-    const rolesToSet = toCollection([], new Collection(member.roles.cache.clone().entries()));
-    for (const autorole of db.autoroles.entries.values()) rolesToSet.delete(autorole.id);
+		const rolesToSet = toCollection([], new Collection(member.roles.cache.clone().entries()));
+		for (const autorole of db.autoroles.entries.values()) rolesToSet.delete(autorole.id);
 
-    const eligibleAutoroles = db.autoroles.entries.sort((a, b) => b.amount - a.amount).filter((e) => donator.amount >= e.amount);
-    const mappedEligibleRoles = eligibleAutoroles
-      .map((ear) => member.guild.roles.resolve(ear.id))
-      .filter<Role>((r): r is Role => !isNullOrUndefined(r));
+		const eligibleAutoroles = db.autoroles.entries.sort((a, b) => b.amount - a.amount).filter((e) => donator.amount >= e.amount);
+		const mappedEligibleRoles = eligibleAutoroles
+			.map((ear) => member.guild.roles.resolve(ear.id))
+			.filter<Role>((r): r is Role => !isNullOrUndefined(r));
 
-    await member.roles.set([...toCollection(mappedEligibleRoles, rolesToSet).values()]);
-    return mappedEligibleRoles;
-  }
+		await member.roles.set([...toCollection(mappedEligibleRoles, rolesToSet).values()]);
+		return mappedEligibleRoles;
+	}
 }

@@ -1,9 +1,9 @@
-import { type MessageSelectOptionData, MessageSelectMenu } from 'discord.js';
-import { Builder } from '../builder.js';
+import { StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from 'discord.js';
+import { Builder, BuilderCallback } from '../builder.js';
 import { Mixin } from 'ts-mixer';
 
-export class SelectMenuBuilder extends Mixin(MessageSelectMenu, Builder) {
-  public addOption(option: MessageSelectOptionData): this {
-    return this.addOptions(option);
-  }
+export class StringSelectMenuComponentBuilder extends Mixin(StringSelectMenuBuilder, Builder) {
+	public addOption(option: BuilderCallback<StringSelectMenuOptionBuilder>): this {
+		return super.addOptions(Builder.build(new StringSelectMenuOptionBuilder(), option));
+	}
 }

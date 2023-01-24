@@ -1,26 +1,34 @@
 import {
-  CommandInteraction,
-  Interaction,
-  CacheType,
-  GuildMember,
-  MessageAttachment,
-  Message,
-  User,
-  Util,
-  Constants,
-  Guild,
-  MessageActionRow,
-  UserResolvable,
-  GuildResolvable,
-  ApplicationCommandOptionType
+	CommandInteraction,
+	CacheType,
+	GuildMember,
+	AttachmentBuilder,
+	Message,
+	User,
+	Guild,
+	UserResolvable,
+	GuildResolvable,
+	ApplicationCommandOptionType,
+	MessageActionRowComponent,
+	ActionRow,
+	createComponentBuilder,
+	MessageActionRowComponentBuilder
 } from 'discord.js';
 import { isNullOrUndefined } from '@sapphire/utilities';
-import type { APIInteraction, APIMessage } from 'discord.js/node_modules/discord-api-types/v9.js';
 import { Args, Result, SapphireClient } from '@sapphire/framework';
 import { minutes, regexHasGroup, StrictSnowflake } from '#lib/utilities/common/index.js';
 import { SnowflakeRegex } from '@sapphire/discord-utilities';
 import { fetch, FetchResultTypes } from '@sapphire/fetch';
 import { DiscordSnowflake } from '@sapphire/snowflake';
+import { Colors } from 'discord.js';
+import { ActionRowBuilder } from '../builders';
+
+export function disableMessageComponents<T extends MessageActionRowComponent>(rows: ActionRow<T>[]) {
+	return rows.map((row) => {
+		const disabledComponents: MessageActionRowComponentBuilder[] = row.components.map((c) => createComponentBuilder(c.data).setDisabled(true));
+		return new ActionRowBuilder<MessageActionRowComponentBuilder>(row).setComponents(disabledComponents);
+	});
+}
 
 /**
  * Asserts the working client as ready.
@@ -28,59 +36,48 @@ import { DiscordSnowflake } from '@sapphire/snowflake';
  * @since 6.0.0
  */
 export function checkClientReadyStatus<T extends SapphireClient>(client: T): asserts client is typeof client & SapphireClient<true> {
-  if (!client.isReady()) {
-    throw new Error('The active client is not ready.');
-  }
+	if (!client.isReady()) {
+		throw new Error('The active client is not ready.');
+	}
 }
 
 /**
- * Create a unique message component custom identifier. 
+ * Create a unique message component custom identifier.
  * @since 6.0.0
  */
 export class CustomId {
-  /**
-   * The discord snowflake to use for the custom ID.
-   */
-  public snowflake: bigint;
+	/**
+	 * The discord snowflake to use for the custom ID.
+	 */
+	public snowflake: bigint;
 
-  /**
-   * The utility's constructor.
-   * @param date The date. This is the basis of the snowflake.
-   */
-  public constructor(public date = new Date()) {
-    this.snowflake = DiscordSnowflake.generate({ timestamp: this.date.getTime() });
-  }
-  
-  /**
-   * Sets the new date context.
-   * @param date The new date object to set.
-   * @returns This util.
-   */
-  public setDate(date: Date): this {
-    this.date = date;
-    this.snowflake = DiscordSnowflake.generate({ timestamp: date.getTime() });
-    return this;
-  }
+	/**
+	 * The utility's constructor.
+	 * @param date The date. This is the basis of the snowflake.
+	 */
+	public constructor(public date = new Date()) {
+		this.snowflake = DiscordSnowflake.generate({ timestamp: this.date.getTime() });
+	}
 
-  /**
-   * Creates an ID with a snowflake assigned in it.
-   * @param id The id to create.
-   * @returns A {@link CustomIdentifier} string.
-   */
-  public create<Id extends string>(id: Id): CustomIdentifier<Id> {
-    return `${this.snowflake}:${id}`;
-  }
-}
+	/**
+	 * Sets the new date context.
+	 * @param date The new date object to set.
+	 * @returns This util.
+	 */
+	public setDate(date: Date): this {
+		this.date = date;
+		this.snowflake = DiscordSnowflake.generate({ timestamp: date.getTime() });
+		return this;
+	}
 
-/**
- * Checks if a command contains a subcommand group.
- * @template Cached The command interaction's cache type.
- * @param command The command interaction to check from.
- * @param subcommandGroup The name of the subcommand group.
- * @since 6.0.0
- */
-export function commandHasSubcommandGroupOption<Cached extends CacheType>(command: CommandInteraction<Cached>, subcommandGroup: string): boolean {
-  return commandHasOption(command, subcommandGroup, 'SUB_COMMAND_GROUP');
+	/**
+	 * Creates an ID with a snowflake assigned in it.
+	 * @param id The id to create.
+	 * @returns A {@link CustomIdentifier} string.
+	 */
+	public create<Id extends string>(id: Id): CustomIdentifier<Id> {
+		return `${this.snowflake}:${id}`;
+	}
 }
 
 /**
@@ -90,23 +87,7 @@ export function commandHasSubcommandGroupOption<Cached extends CacheType>(comman
  * @since 6.0.0
  */
 export function isCommandInteractionExpired<Cached extends CacheType>(command: CommandInteraction<Cached>): boolean {
-  return Date.now() - command.createdTimestamp >= minutes(15);
-}
-
-/**
- * Checks if an option from a subcommand in a command interaction exists.
- * @template Cached The command interaction's cached type.
- * @param command The source command interaction.
- * @param subcommandGroup The subcommand group to check it from.
- * @param subcommand The name of the subcommand to check.
- * @since 6.0.0
- */
-export function commandHasSubcommandOption<Cached extends CacheType>(
-  command: CommandInteraction<Cached>,
-  subcommandGroup: string,
-  subcommand: string
-): boolean {
-  return commandHasSubcommandGroupOption(command, subcommandGroup) && commandHasOption(command, subcommand, 'SUB_COMMAND');
+	return Date.now() - command.createdTimestamp >= minutes(15);
 }
 
 /**
@@ -118,11 +99,11 @@ export function commandHasSubcommandOption<Cached extends CacheType>(
  * @since 6.0.0
  */
 export function commandHasOption<Cached extends CacheType>(
-  command: CommandInteraction<Cached>,
-  name: string,
-  type: ApplicationCommandOptionType
+	command: CommandInteraction<Cached>,
+	name: string,
+	type: ApplicationCommandOptionType
 ): boolean {
-  return command.options.data.some((opt) => opt.name === name && opt.type === type);
+	return command.options.data.some((opt) => opt.name === name && opt.type === type);
 }
 
 /**
@@ -133,14 +114,13 @@ export type CustomIdentifier<Id extends string> = `${bigint}:${Id}`;
 
 /**
  * Creates an attachment based from the attachment or url of the attachment provided.
- * @param attachmentOrUrl The url of the file to attach or a {@link MessageAttachment} instance.
+ * @param attachmentOrUrl The url of the file to attach or a {@link AttachmentBuilder} instance.
  * @param fileName The name of the file attachment.
  * @since 5.2.5
  */
-export async function fromAttachment(attachmentOrUrl: MessageAttachment | string, fileName?: string): Promise<MessageAttachment> {
-  attachmentOrUrl = typeof attachmentOrUrl === 'string' ? attachmentOrUrl : attachmentOrUrl.url;
-  const download = await fetch(attachmentOrUrl, FetchResultTypes.Buffer);
-  return new MessageAttachment(download, fileName);
+export async function fromAttachment(url: string, fileName?: string): Promise<AttachmentBuilder> {
+	const download = await fetch(url, FetchResultTypes.Buffer);
+	return new AttachmentBuilder(download, { name: fileName });
 }
 
 /**
@@ -150,10 +130,10 @@ export async function fromAttachment(attachmentOrUrl: MessageAttachment | string
  * @since 5.2.0
  */
 export function fromGuildResolvable(resolvable: GuildResolvable): string {
-  if (typeof resolvable === 'string') return resolvable;
-  if (resolvable instanceof Guild) return resolvable.id;
-  if (isNullOrUndefined(resolvable.guild)) throw new Error();
-  return resolvable.guild.id;
+	if (typeof resolvable === 'string') return resolvable;
+	if (resolvable instanceof Guild) return resolvable.id;
+	if (isNullOrUndefined(resolvable.guild)) throw new Error();
+	return resolvable.guild.id;
 }
 
 /**
@@ -163,9 +143,9 @@ export function fromGuildResolvable(resolvable: GuildResolvable): string {
  * @since 5.2.0
  */
 export function fromUserResolvable(resolvable: UserResolvable): string {
-  if (typeof resolvable === 'string') return resolvable;
-  if (resolvable instanceof Message) return resolvable.author.id;
-  return resolvable.id;
+	if (typeof resolvable === 'string') return resolvable;
+	if (resolvable instanceof Message) return resolvable.author.id;
+	return resolvable.id;
 }
 
 /**
@@ -175,33 +155,8 @@ export function fromUserResolvable(resolvable: UserResolvable): string {
  * @since 5.2.0
  */
 export function hasSnowflakeIdentifier<T extends { id: string }>(value: T): value is T & { id: StrictSnowflake } {
-  const snowflakeTest = SnowflakeRegex.exec(value.id);
-  return !isNullOrUndefined(snowflakeTest) && regexHasGroup(snowflakeTest, 'id');
-}
-
-/**
- * A type-guard checking if an {@link APIMessage} and {@link Message} is an actual {@link Message}.
- * A use case of this one would be checking for the returned value by a component/command interaction if it's a {@link Message} or not.
- * @param message The message to check for.
- * @returns A guarded type of {@link Message}.
- * @version 5.2.0
- * @since 5.0.0
- */
-export function isMessageInstance<Cached extends boolean = boolean>(message: APIMessage | Message<Cached>): message is Message<Cached> {
-  return hasSnowflakeIdentifier(message) && message instanceof Message;
-}
-
-/**
- * Checks if a specific thing is an interaction.
- * @param interaction The value to check for.
- * @returns A boolean.
- * @version 5.2.0
- * @since 5.0.0
- */
-export function isInteraction<Cached extends CacheType = CacheType>(
-  interaction: APIInteraction | Interaction<CacheType>
-): interaction is Interaction<Cached> {
-  return hasSnowflakeIdentifier(interaction) && interaction instanceof Interaction;
+	const snowflakeTest = SnowflakeRegex.exec(value.id);
+	return !isNullOrUndefined(snowflakeTest) && regexHasGroup(snowflakeTest, 'id');
 }
 
 /**
@@ -213,11 +168,11 @@ export function isInteraction<Cached extends CacheType = CacheType>(
  * @since 4.3.0
  */
 export async function getReferencedUser(message: Message, args: Args): Promise<User> {
-  const refMessage = await getReferenceMessage(message);
-  if (refMessage.isErr()) return message.author;
+	const refMessage = await getReferenceMessage(message);
+	if (refMessage.isErr()) return message.author;
 
-  const user = await args.pickResult('user');
-  return user.isOk() ? user.unwrap() : refMessage.unwrap().author; 
+	const user = await args.pickResult('user');
+	return user.isOk() ? user.unwrap() : refMessage.unwrap().author;
 }
 
 /**
@@ -227,7 +182,7 @@ export async function getReferencedUser(message: Message, args: Args): Promise<U
  * @returns The guild icon or `null` if none.
  */
 export function getGuildIconURL(guild: Guild, ...args: Parameters<Guild['iconURL']>): string | null {
-  return guild.iconURL({ dynamic: true, ...args.at(0) }) ?? null;
+	return guild.iconURL(...args) ?? null;
 }
 
 /**
@@ -236,8 +191,8 @@ export function getGuildIconURL(guild: Guild, ...args: Parameters<Guild['iconURL
  * @returns A hex color string.
  */
 export function getHighestRoleColor(member: GuildMember) {
-  const sorted = Util.discordSort(member.roles.cache.filter((r) => r.color !== 0));
-  return sorted.last()?.color ?? Constants.Colors.NOT_QUITE_BLACK;
+	const sorted = member.roles.cache.filter((r) => r.color !== 0).sort((a, b) => b.position - a.position);
+	return sorted.last()?.color ?? Colors.NotQuiteBlack;
 }
 
 /**
@@ -248,22 +203,13 @@ export function getHighestRoleColor(member: GuildMember) {
  * @since 4.2.0
  */
 export function getReferenceMessage(message: Message): Promise<Result<Message, null>> {
-  return Result.fromAsync(async () => {
-    try {
-      return await message.fetchReference();
-    } catch {
-      throw null;
-    }
-  });
-}
-
-/**
- * Disables all the components from user interaction.
- * @param rows The row of components to disable the components from.
- * @returns The rows with their components on a disabled state.
- */
-export function disableMessageComponents(rows: MessageActionRow[]): MessageActionRow[] {
-  return rows.map((row) => row.setComponents(row.components.map((c) => c.setDisabled(true))));
+	return Result.fromAsync(async () => {
+		try {
+			return await message.fetchReference();
+		} catch {
+			throw null;
+		}
+	});
 }
 
 /**
@@ -273,5 +219,5 @@ export function disableMessageComponents(rows: MessageActionRow[]): MessageActio
  * @returns The user's avatar URL.
  */
 export function getUserAvatarURL(user: User, ...args: Parameters<User['avatarURL']>): string {
-  return user.avatarURL({ dynamic: true, ...args.at(0) }) ?? user.defaultAvatarURL;
+	return user.avatarURL(...args) ?? user.defaultAvatarURL;
 }

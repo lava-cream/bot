@@ -1,15 +1,13 @@
 import {
-  Builder,
-  BuilderCallback,
-  type MessageActionRowBuilderComponents,
-  type ModalActionRowBuilderComponents,
-  TextInputComponentBuilder,
-  SelectMenuBuilder,
-  ButtonBuilder,
-  MessageActionRowBuilder,
-  ModalActionRowBuilder
+	Builder,
+	BuilderCallback,
+	type ActionRowComponentBuilder,
+	TextInputComponentBuilder,
+	StringSelectMenuComponentBuilder,
+	ButtonComponentBuilder,
+	ActionRowBuilder
 } from './index.js';
-import { MessageEmbed } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 
 /**
  * Creates a {@link TextInputComponentBuilder} out of a callback.
@@ -18,40 +16,29 @@ import { MessageEmbed } from 'discord.js';
  * @since 6.0.0
  */
 export function createTextInputComponent(fn: BuilderCallback<TextInputComponentBuilder>): TextInputComponentBuilder {
-  return Builder.build(new TextInputComponentBuilder(), fn);
+	return Builder.build(new TextInputComponentBuilder(), fn);
 }
 
 /**
- * Creates an {@link ModalActionRow} out of a callback.
+ * Creates a {@link StringSelectMenuComponentBuilder} out of a callback.
  * @param fn The callback.
- * @returns An {@link ModalActionRow} instance.
+ * @returns A {@link StringSelectMenuComponentBuilder} instance.
  * @version 6.0.0 - Use custom builders.
  * @since 5.0.0
  */
-export function createModalActionRow<T extends ModalActionRowBuilderComponents>(fn: BuilderCallback<ModalActionRowBuilder<T>>): ModalActionRowBuilder<T> {
-  return Builder.build(new ModalActionRowBuilder<T>(), fn);
+export function createSelectMenu(fn: BuilderCallback<StringSelectMenuComponentBuilder>): StringSelectMenuComponentBuilder {
+	return Builder.build(new StringSelectMenuComponentBuilder(), fn);
 }
 
 /**
- * Creates a {@link SelectMenuBuilder} out of a callback.
+ * Creates a {@link ButtonComponentBuilder} out of a callback.
  * @param fn The callback.
- * @returns A {@link SelectMenuBuilder} instance.
+ * @returns A {@link ButtonComponentBuilder} instance.
  * @version 6.0.0 - Use custom builders.
  * @since 5.0.0
  */
-export function createSelectMenu(fn: BuilderCallback<SelectMenuBuilder>): SelectMenuBuilder {
-  return Builder.build(new SelectMenuBuilder(), fn);
-}
-
-/**
- * Creates a {@link ButtonBuilder} out of a callback.
- * @param fn The callback.
- * @returns A {@link ButtonBuilder} instance.
- * @version 6.0.0 - Use custom builders.
- * @since 5.0.0
- */
-export function createButton(fn: BuilderCallback<ButtonBuilder>): ButtonBuilder {
-  return Builder.build(new ButtonBuilder(), fn);
+export function createButton(fn: BuilderCallback<ButtonComponentBuilder>): ButtonComponentBuilder {
+	return Builder.build(new ButtonComponentBuilder(), fn);
 }
 
 /**
@@ -61,19 +48,17 @@ export function createButton(fn: BuilderCallback<ButtonBuilder>): ButtonBuilder 
  * @version 6.0.0 - Use custom builders.
  * @since 5.0.0
  */
-export function createMessageActionRow<T extends MessageActionRowBuilderComponents>(
-  fn: BuilderCallback<MessageActionRowBuilder<T>>
-): MessageActionRowBuilder<T> {
-  return Builder.build(new MessageActionRowBuilder<T>(), fn);
+export function createMessageActionRow<T extends ActionRowComponentBuilder>(fn: BuilderCallback<ActionRowBuilder<T>>): ActionRowBuilder<T> {
+	return Builder.build(new ActionRowBuilder<T>(), fn);
 }
 
 /**
- * Creates an {@link MessageEmbed} out of a callback.
+ * Creates an {@link EmbedBuilder} out of a callback.
  * @param fn The callback.
- * @returns An {@link MessageEmbed} instance.
+ * @returns An {@link EmbedBuilder} instance.
  * @version 6.0.0 - Use custom builders.
  * @since 5.0.0
  */
-export function createEmbed(fn: BuilderCallback<MessageEmbed>): MessageEmbed {
-  return Builder.build(new MessageEmbed(), fn);
+export function createEmbed(fn: BuilderCallback<EmbedBuilder>): EmbedBuilder {
+	return Builder.build(new EmbedBuilder(), fn);
 }
