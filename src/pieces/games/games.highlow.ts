@@ -179,7 +179,7 @@ export default class HighlowGame extends Game {
 											`${logic.isJackpot() ? 'JACKPOT! ' : ''}You ${logic.isLose() ? 'lost' : 'won'} ${(logic.isLose()
 												? context.db.bet.value
 												: winnings ?? 0
-											).toLocaleString()} coins${logic.isWin() ? '!' : '.'}\n`
+											).toLocaleString()}${logic.isWin() ? '!' : '.'}\n`
 										),
 										`Your hint was ${bold(logic.hint.toLocaleString())}. The hidden number was ${bold(
 											logic.value.toLocaleString()

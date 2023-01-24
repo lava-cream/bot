@@ -109,7 +109,7 @@ export default class CoinFlipGame extends Game {
 									? !ended
 										? Common.join(
 												'Guess what side of the coin it would flip up to.',
-												`You placed ${bold(context.db.bet.value.toLocaleString())} coins.`
+												`You placed ${bold(context.db.bet.value.toLocaleString())}.`
 										  )
 										: Common.join(
 												"You didn't respond in time. You are keeping your money.\n",
@@ -118,7 +118,7 @@ export default class CoinFlipGame extends Game {
 									: Common.join(
 											`It was ${bold(game.opponent.value)}${game.isWin() ? '!' : '.'} You ${
 												game.isWin() ? 'won' : 'lost'
-											} ${bold((game.isWin() ? won : context.db.bet.value).toLocaleString())} coins.\n`,
+											} ${bold((game.isWin() ? won : context.db.bet.value).toLocaleString())}.\n`,
 											game.isWin() ? `${bold('Percent Won:')} ${percent(won, context.db.bet.value)}` : '',
 											`${bold('New Balance:')} ${context.db.wallet.value.toLocaleString()}.`
 									  )

@@ -75,7 +75,7 @@ export default class BlackjackGame extends Game {
 						.save();
 					game.outcome.extra = `You won ${bold(winnings.toLocaleString())} coins. You now have ${bold(
 						context.db.wallet.value.toLocaleString()
-					)} coins.`;
+					)}.`;
 
 					break;
 				}
@@ -95,7 +95,7 @@ export default class BlackjackGame extends Game {
 						.save();
 					game.outcome.extra = `You lost ${bold(context.db.bet.value.toLocaleString())} coins. You now have ${bold(
 						context.db.wallet.value.toLocaleString()
-					)} coins.`;
+					)}.`;
 					break;
 				}
 

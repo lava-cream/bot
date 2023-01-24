@@ -100,7 +100,7 @@ export default class DiceRollGame extends Game {
 							`${bold('Your Balance:')} ${ctx.db.wallet.value.toLocaleString()}`
 						)
 					)
-					.setFooter(ctx.schema.loses.streak.isActive() ? { text: `Lose Streak: ${ctx.schema.loses.streak.display}` } : null);
+					.setFooter(null);
 
 				break;
 			}
@@ -126,7 +126,7 @@ export default class DiceRollGame extends Game {
 					.setColor(Colors.Green)
 					.setDescription(
 						join(
-							`You won ${bold(winnings.toLocaleString())} coins.\n`,
+							`You won ${bold(winnings.toLocaleString())}.\n`,
 							`${bold('Percent Won:')} ${percent(winnings, ctx.db.bet.value)}`,
 							`${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`
 						)
@@ -155,7 +155,7 @@ export default class DiceRollGame extends Game {
 					.setColor(Colors.Red)
 					.setDescription(
 						join(
-							`You lost ${bold(ctx.db.bet.value.toLocaleString())} coins.\n`,
+							`You lost ${bold(ctx.db.bet.value.toLocaleString())}.\n`,
 							`${bold('New Balance:')} ${ctx.db.wallet.value.toLocaleString()}`
 						)
 					)

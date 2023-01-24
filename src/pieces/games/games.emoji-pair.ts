@@ -87,7 +87,7 @@ export default class EmojiPairGame extends Game {
 			case !logic.revealed && ended: {
 				description.push(
 					"You didn't respond in time. You are keeping your money.",
-					`You have ${bold(ctx.db.wallet.value.toLocaleString())} coins still.`
+					`You have ${bold(ctx.db.wallet.value.toLocaleString())} still.`
 				);
 
 				button.setLabel('Timed Out').setStyle(ButtonStyle.Secondary);
@@ -107,14 +107,14 @@ export default class EmojiPairGame extends Game {
 				});
 
 				description.push(
-					`${bold('PAIRED!')} You won ${bold(winnings.toLocaleString())} coins.`,
-					`You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`
+					`${bold('PAIRED!')} You won ${bold(winnings.toLocaleString())}.`,
+					`You now have ${bold(ctx.db.wallet.value.toLocaleString())}.`
 				);
 
 				embed
 					.setColor(Colors.Green)
 					.setFooter(
-						ctx.schema.wins.coins.highest > 0 ? { text: `Highest Coins Won: ${toReadable(ctx.schema.wins.coins.highest, 2)}` } : null
+						ctx.schema.wins.coins.highest > 0 ? { text: `Highest Winnings: ${toReadable(ctx.schema.wins.coins.highest, 2)}` } : null
 					);
 				button.setLabel('Winner Winner').setStyle(ButtonStyle.Success);
 				break;
@@ -129,7 +129,7 @@ export default class EmojiPairGame extends Game {
 
 				description.push(
 					"You didn't get a unique pair sad. You lost your bet.",
-					`You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`
+					`You now have ${bold(ctx.db.wallet.value.toLocaleString())}.`
 				);
 
 				embed.setColor(Colors.Red);

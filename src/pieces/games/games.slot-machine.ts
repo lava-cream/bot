@@ -123,8 +123,8 @@ export default class SlotMachineGame extends Game {
 				});
 
 				description.push(
-					`You lost ${bold(ctx.db.bet.value.toLocaleString())} coins.`,
-					`You now have ${bold(ctx.db.wallet.value.toLocaleString())} coins.`
+					`You lost ${bold(ctx.db.bet.value.toLocaleString())}.`,
+					`You now have ${bold(ctx.db.wallet.value.toLocaleString())}.`
 				);
 
 				embed.setColor(Colors.Red);
