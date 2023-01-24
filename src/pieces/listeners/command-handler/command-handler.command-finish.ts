@@ -1,7 +1,7 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
 import type { ChatInputCommand } from '@sapphire/framework';
 import { Listener, Events } from '@sapphire/framework';
-import chalk from 'chalk';
+import chalk from 'chalk-template';
 
 export class ChatInputCommandFinishListener extends Listener<typeof Events.ChatInputCommandFinish> {
 	public constructor(context: Listener.Context) {

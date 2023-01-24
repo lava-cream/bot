@@ -21,7 +21,7 @@ import { SnowflakeRegex } from '@sapphire/discord-utilities';
 import { fetch, FetchResultTypes } from '@sapphire/fetch';
 import { DiscordSnowflake } from '@sapphire/snowflake';
 import { Colors } from 'discord.js';
-import { ActionRowBuilder } from '../builders';
+import { ActionRowBuilder } from '../builders/index.js';
 
 export function disableMessageComponents<T extends MessageActionRowComponent>(rows: ActionRow<T>[]) {
 	return rows.map((row) => {

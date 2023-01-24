@@ -3,7 +3,7 @@ import { Guild, OAuth2Scopes, PermissionFlagsBits, Team, User } from 'discord.js
 import { isNullOrUndefined, toTitleCase } from '@sapphire/utilities';
 import { piecesDir, pluralise } from '#lib/utilities';
 import { BoosterStore, GameStore, LoggerStore } from '#lib/framework/structures/index.js';
-import chalk from 'chalk';
+import chalk from 'chalk-template';
 
 /**
  * Represents the discord client to use.
