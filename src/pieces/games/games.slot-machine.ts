@@ -140,13 +140,15 @@ export default class SlotMachineGame extends Game {
 
 	private static get emojis(): SlotMachine.Emoji[] {
 		return [
-			{ emoji: '🔥', multiplier: { jackpot: 100, win: 10 } },
-			{ emoji: '🐉', multiplier: { jackpot: 90, win: 9 } },
-			{ emoji: '🌟', multiplier: { jackpot: 80, win: 8 } },
-			{ emoji: '⭐', multiplier: { jackpot: 70, win: 7 } },
-			{ emoji: '💍', multiplier: { jackpot: 40, win: 4 } },
-			{ emoji: '💎', multiplier: { jackpot: 30, win: 3 } },
-			{ emoji: '😎', multiplier: { jackpot: 20, win: 2 } },
+			{ emoji: '🔥', multiplier: { jackpot: 500, win: 10 } },
+			{ emoji: '🐉', multiplier: { jackpot: 250, win: 9 } },
+			{ emoji: '🌟', multiplier: { jackpot: 175, win: 8 } },
+			{ emoji: '⭐', multiplier: { jackpot: 150, win: 7 } },
+			{ emoji: '✨', multiplier: { jackpot: 125, win: 6 } },
+			{ emoji: '💍', multiplier: { jackpot: 100, win: 5 } },
+			{ emoji: '💎', multiplier: { jackpot: 75, win: 4 } },
+			{ emoji: '😎', multiplier: { jackpot: 50, win: 3 } },
+			{ emoji: '😏', multiplier: { jackpot: 25, win: 2 } },
 			{ emoji: '🤡', multiplier: { jackpot: 10, win: 1 } }
 		];
 	}
