@@ -93,7 +93,7 @@ export async function edit<Cached extends CacheType, Components extends ActionRo
 		isFunction(content) ? content : (builder) => (typeof content === 'string' ? builder.setContent(content) : content)
 	);
 
-	if (target.isChatInputCommand()) {
+	if (target.isChatInputCommand() || (!target.replied && target.deferred)) {
 		return target.editReply(builder);
 	}
 	if (target.isModalSubmit()) {
