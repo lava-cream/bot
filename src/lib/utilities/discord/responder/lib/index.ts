@@ -5,7 +5,11 @@ import type {
 	ModalSubmitInteraction,
 	BooleanCache,
 	Message,
-	StringSelectMenuInteraction
+	StringSelectMenuInteraction,
+	ChannelSelectMenuInteraction,
+	RoleSelectMenuInteraction,
+	MentionableSelectMenuInteraction,
+	UserSelectMenuInteraction
 } from 'discord.js';
 import {
 	type BuilderCallback,
@@ -25,6 +29,10 @@ export type ResponderTarget<Cached extends CacheType> =
 	| ChatInputCommandInteraction<Cached>
 	| ButtonInteraction<Cached>
 	| StringSelectMenuInteraction<Cached>
+	| RoleSelectMenuInteraction<Cached>
+	| ChannelSelectMenuInteraction<Cached>
+	| MentionableSelectMenuInteraction<Cached>
+	| UserSelectMenuInteraction<Cached>
 	| ModalSubmitInteraction<Cached>;
 
 /**

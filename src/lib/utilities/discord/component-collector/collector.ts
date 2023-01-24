@@ -1,3 +1,4 @@
+import { EmbedTemplates, send } from '#lib/utilities';
 import { Builder, BuilderCallback } from '#lib/utilities/builders/builder.js';
 import { FirstArgument, isFunction, isNullOrUndefined } from '@sapphire/utilities';
 import type { MessageComponentType, MappedInteractionTypes, InteractionCollector, Collection } from 'discord.js';
@@ -53,6 +54,7 @@ export class Collector<in out T extends MessageComponentType, Cached extends boo
 
 			collector
 				.on('collect', (interaction) => Reflect.apply(this.onCollect, this, [interaction, collector]))
+				.on('ignore', (interaction) => Reflect.apply(this.onIgnore, this, [interaction]))
 				.on('end', (collected, reason) => Reflect.apply(this.onEnd, this, [collected, reason, collector]))
 				.once('end', () => resolve());
 		});
@@ -89,6 +91,14 @@ export class Collector<in out T extends MessageComponentType, Cached extends boo
 		};
 
 		return Reflect.apply(action.run, action, [context]);
+	}
+
+	/**
+	 * Represents this collector's handler for ignored (a.k.a interactions that didn't pass the filter) interactions.
+	 * @param interaction The interaction received by the attached {@link InteractionCollector}.
+	 */
+	private async onIgnore(interaction: MappedInteractionTypes<Cached>[T]): Promise<void> {
+		await send(interaction, (builder) => builder.setEphemeral(true).addEmbed(() => EmbedTemplates.createSimple('This menu is not for you!')));
 	}
 
 	/**
