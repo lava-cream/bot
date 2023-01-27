@@ -1,6 +1,6 @@
 import { Piece } from '@sapphire/framework';
 import type { Games } from '../game';
-import type { BoosterOptions, BoosterOffer, BoosterTypeKind, BoosterType } from './booster.options.js';
+import type { BoosterOptions, BoosterOfferData, BoosterTypeKind, BoosterTypeData } from './booster.options.js';
 
 /**
  * Represents a game boooster
@@ -9,8 +9,8 @@ import type { BoosterOptions, BoosterOffer, BoosterTypeKind, BoosterType } from 
 export abstract class Booster extends Piece<BoosterOptions> implements BoosterOptions {
 	public readonly id: string;
 	public readonly description: string;
-	public readonly offers: BoosterOffer[];
-	public readonly types: BoosterType[];
+	public readonly offers: BoosterOfferData[];
+	public readonly types: BoosterTypeData[];
 	public readonly excludedGames: Games.Keys[];
 	public constructor(context: Piece.Context, options: BoosterOptions) {
 		super(context, options);

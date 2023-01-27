@@ -13,12 +13,12 @@ export const enum BoosterOfferType {
  * The currency to use to purchase a booster.
  */
 export const enum BoosterOfferUnit {
-	Coins = 1,
+	Coin = 1,
 	Star = 2,
 	Energy = 3
 }
 
-export interface BoosterOffer {
+export interface BoosterOfferData {
 	/**
 	 * The unique id of this shop entry.
 	 */
@@ -38,7 +38,7 @@ export interface BoosterOffer {
 	 */
 	unit: BoosterOfferUnit;
 	/**
-	 * If `type` is {@link BoosterOfferType.Quantity}, this should be a constant quantity.
+	 * If `type` is {@link BoosterOfferType.Quantity}, this should be a constant value.
 	 * If `type` is {@link BoosterOfferType.Duration}, this should either be:
 	 * * A constant duration in ms format.
 	 * * A custom RNG.
@@ -68,7 +68,13 @@ export const enum BoosterTypeKind {
 	WinStreakSaver = 4
 }
 
-export interface BoosterType {
+/**
+ * Represents the booster's type data.
+ */
+export interface BoosterTypeData {
+	/**
+	 * The kind of the booster type.
+	 */
 	kind: BoosterTypeKind;
 	/**
 	 * The booster's value for this type.
@@ -76,10 +82,28 @@ export interface BoosterType {
 	value: number | { min: number; max: number };
 }
 
+/**
+ * Options to construct a booster.
+ */
 export interface BoosterOptions extends PieceOptions {
+	/**
+	 * Represents the booster's unique ID.
+	 */
 	readonly id: string;
+	/**
+	 * Represents the basic information regarding the booster.
+	 */
 	readonly description: string;
-	readonly offers: BoosterOffer[];
-	readonly types: BoosterType[];
+	/**
+	 * Represents the booster's offers.
+	 */
+	readonly offers: BoosterOfferData[];
+	/**
+	 * Represents the booster's types.
+	 */
+	readonly types: BoosterTypeData[];
+	/**
+	 * Array of game IDs which the player is not allowed to use this booster while playing it.
+	 */
 	readonly excludedGames?: Games.Keys[];
 }

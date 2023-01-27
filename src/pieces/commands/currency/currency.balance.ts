@@ -37,7 +37,7 @@ export default class BalanceCommand extends Command {
 		const customId = new CustomId(command.createdAt);
 		const message = await send(command, BalanceCommand.renderContent(command, user, db, customId, false));
 
-		if (command.user.id === user.id) return;
+		if (command.user.id !== user.id) return;
 
 		const collector = new Collector({
 			message,

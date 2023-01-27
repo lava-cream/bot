@@ -18,7 +18,7 @@ export default class TestBooster extends Booster {
 				{
 					id: 'coins.quantity.1',
 					cost: 80_000_000,
-					unit: BoosterOfferUnit.Coins,
+					unit: BoosterOfferUnit.Coin,
 					type: BoosterOfferType.Quantity,
 					value: 4
 				},

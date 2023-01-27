@@ -1,5 +1,5 @@
 import type { PlayerSchema } from '#lib/database';
-import { Booster, BoosterOffer, BoosterOfferType, BoosterOfferUnit } from '#lib/framework';
+import { Booster, BoosterOfferData, BoosterOfferType, BoosterOfferUnit } from '#lib/framework';
 import { Collector, CustomId, edit, EmbedTemplates, InteractionMessageContentBuilder, join, minutes, send } from '#lib/utilities';
 import { bold } from '@discordjs/builders';
 import { ApplyOptions } from '@sapphire/decorators';
@@ -19,7 +19,7 @@ export default class BoostersCommand extends Command {
 		const customId = new CustomId(command.createdAt);
 
 		let booster: Booster | null = null;
-		let boosterShopOffer: BoosterOffer | null = null;
+		let boosterShopOffer: BoosterOfferData | null = null;
 
 		const collector = new Collector({
 			message: await send(command, BoostersCommand.renderBoosterPickerContent(db, customId, booster, boosterShopOffer, false)),
@@ -58,7 +58,7 @@ export default class BoostersCommand extends Command {
 					const { name } = booster;
 
 					switch (unit) {
-						case BoosterOfferUnit.Coins: {
+						case BoosterOfferUnit.Coin: {
 							db.wallet.subValue(cost);
 							break;
 						}
@@ -114,7 +114,7 @@ export default class BoostersCommand extends Command {
 		db: PlayerSchema,
 		customId: CustomId,
 		selectedBooster: Booster | null,
-		selectedShopOffer: BoosterOffer | null,
+		selectedShopOffer: BoosterOfferData | null,
 		ended: boolean
 	) {
 		const content = new InteractionMessageContentBuilder()
