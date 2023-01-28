@@ -91,7 +91,7 @@ export default class BalanceCommand extends Command {
 				switch (bankControl) {
 					case BankControl.Deposit: {
 						db.wallet.subValue(parsedInput);
-						db.wallet.addValue(parsedInput);
+						db.bank.addValue(parsedInput);
 						break;
 					}
 
