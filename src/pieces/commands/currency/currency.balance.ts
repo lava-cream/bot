@@ -74,6 +74,8 @@ export default class BalanceCommand extends Command {
 					return;
 				}
 
+				await modal.deferUpdate();
+
 				const input = modal.fields.getTextInputValue(customId.create('input'));
 				const parsedInput = parseNumber(input, {
 					amount: bankControl === BankControl.Deposit ? db.wallet.value : db.bank.value,
