@@ -41,7 +41,7 @@ export default class LavaClient extends SapphireClient {
 
 	public override generateInvite(): string {
 		return super.generateInvite({
-			scopes: [OAuth2Scopes.ApplicationsCommands],
+			scopes: [OAuth2Scopes.ApplicationsCommands, OAuth2Scopes.Bot],
 			permissions: [
 				PermissionFlagsBits.UseApplicationCommands,
 				PermissionFlagsBits.ViewChannel,
