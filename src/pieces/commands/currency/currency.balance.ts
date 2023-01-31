@@ -69,10 +69,7 @@ export default class BalanceCommand extends Command {
 
 				await ctx.interaction.showModal(modalContent);
 				const modal = await ctx.interaction.awaitModalSubmit({ time: seconds(60) }).catch(() => null);
-				if (isNullOrUndefined(modal)) {
-					await ResponderError.send(ctx.interaction, "You didn't type anything!");
-					return;
-				}
+				if (isNullOrUndefined(modal)) return;
 
 				await modal.deferUpdate();
 
